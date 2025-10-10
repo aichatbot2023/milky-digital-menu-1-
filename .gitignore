@@ -1,0 +1,12 @@
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+.env
+*.env
+dist/
+build/
+backend/milky.db
+backend/uploads/
+.DS_Store
+Thumbs.db
