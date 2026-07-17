@@ -1,0 +1,79 @@
+import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
+
+interface AnalyzeParams {
+  imageDataUrl: string;
+  roomType: RoomType;
+  ageGroup: AgeGroup;
+  childName?: string;
+}
+
+// Skida "data:image/jpeg;base64," prefiks i vraća [mediaType, base64]
+function splitDataUrl(dataUrl: string): [string, string] {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
+  if (!match) throw new Error("Neispravna slika");
+  return [match[1], match[2]];
+}
+
+export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResult> {
+  const [mediaType, base64] = splitDataUrl(params.imageDataUrl);
+
+  const endpoint = import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api/analyze`
+    : "/api/analyze";
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      image: base64,
+      mediaType,
+      roomType: params.roomType,
+      ageGroup: params.ageGroup,
+      childName: params.childName,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Greška servera (${res.status})`);
+  }
+
+  const raw = await res.json();
+  const hazards: Hazard[] = (raw.hazards ?? []).map((h: Omit<Hazard, "id">, i: number) => ({
+    ...h,
+    id: `hz-${i}`,
+    resolved: false,
+  }));
+
+  return {
+    hazards,
+    safety_score: Math.max(0, Math.min(100, Math.round(raw.safety_score ?? 0))),
+    summary: raw.summary ?? "",
+  };
+}
+
+// Smanjuje sliku pre slanja (štedi tokene i ubrzava analizu)
+export async function downscaleImage(dataUrl: string, maxEdge = 1568): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+      if (scale === 1) {
+        resolve(dataUrl);
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => reject(new Error("Slika ne može da se učita"));
+    img.src = dataUrl;
+  });
+}
