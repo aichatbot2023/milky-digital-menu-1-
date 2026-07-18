@@ -1,14 +1,14 @@
 /**
  * Lokalna (in-browser) detekcija objekata — ISTI sistem kao omni
- * (ai-team-meeting-studio): transformers.js + Xenova/yolos-tiny, model fajlovi
- * kroz omni hf-proxy edge funkciju. Radi offline nakon prvog učitavanja,
- * bez API poziva — besplatno i neograničeno.
+ * (ai-team-meeting-studio): transformers.js + Xenova/yolos-tiny.
+ * Model se učitava direktno sa javnog HuggingFace CDN-a (omni koristi
+ * hf-proxy samo zato što njihova aplikacija ubacuje auth header u fetch —
+ * naša nema taj problem). Radi offline nakon prvog učitavanja, bez API
+ * poziva — besplatno i neograničeno.
  */
 import type { AgeGroup, Hazard } from "../types";
 import { mapDetectionsToHazards } from "./hazardKnowledge";
 
-const OMNI_HF_PROXY =
-  "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/hf-proxy";
 const MODEL = "Xenova/yolos-tiny-finetuned-coco";
 const THRESHOLD = 0.35;
 
@@ -28,7 +28,6 @@ async function getDetector() {
       env.allowLocalModels = false;
       env.useBrowserCache = true;
       env.allowRemoteModels = true;
-      env.remoteHost = OMNI_HF_PROXY;
       const det = await pipeline("object-detection", MODEL);
       return det as unknown as (input: string, opts: object) => Promise<RawDetection[]>;
     })();
