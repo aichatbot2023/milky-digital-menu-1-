@@ -3,6 +3,7 @@ import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
 import { SEVERITY_META } from "../types";
 import { analyzeImage } from "../lib/analyze";
 import { detectLocal, modelError, preloadDetector, retryDetector } from "../lib/detector";
+import { primeTts, speak, stopSpeaking } from "../lib/voice";
 import { HazardDetailSheet } from "./HazardDetailSheet";
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   ageGroup: AgeGroup;
   childName?: string;
   onClose: () => void;
+  /** Kraj sesije: sačuvan izveštaj (poslednji kadar + sve opasnosti iz sesije). */
+  onFinish: (imageDataUrl: string, result: AnalysisResult) => void;
 }
 
 // Dvoslojna detekcija (isti sistem kao omni):
@@ -18,13 +21,21 @@ interface Props {
 const LOCAL_INTERVAL_MS = 1200;
 const CLOUD_INTERVAL_MS = 10000;
 const CLOUD_EDGE = 1024;
+const SPEAK_GAP_MS = 4000;
 
-export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
+const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 } as const;
+
+export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const localBusy = useRef(false);
   const cloudBusy = useRef(false);
   const pausedRef = useRef(false);
+  // Sesija: sve jedinstvene opasnosti viđene tokom skeniranja (za izveštaj)
+  const sessionRef = useRef<Map<string, Hazard>>(new Map());
+  const spokenRef = useRef<Set<string>>(new Set());
+  const lastSpokeRef = useRef(0);
+  const soundRef = useRef(false);
 
   const [localHazards, setLocalHazards] = useState<Hazard[]>([]);
   const [cloudResult, setCloudResult] = useState<AnalysisResult | null>(null);
@@ -35,6 +46,8 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
   const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const [sessionCount, setSessionCount] = useState(0);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -89,6 +102,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     return () => {
       cancelled = true;
       stopStream();
+      stopSpeaking();
     };
   }, [stopStream]);
 
@@ -154,6 +168,50 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     };
   }, [captureFrame, roomType, ageGroup, childName]);
 
+  // Unija: lokalni (živi) + cloud (bogati) markeri
+  const hazards: Hazard[] = [...localHazards, ...(cloudResult?.hazards ?? [])].sort(
+    (a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity],
+  );
+  const count = hazards.length;
+  const topHazard = hazards[0] ?? null;
+
+  // Sesija + glasovna upozorenja na SVAKU novu opasnost
+  useEffect(() => {
+    for (const h of hazards) {
+      const prev = sessionRef.current.get(h.label);
+      if (!prev || SEV_ORDER[h.severity] < SEV_ORDER[prev.severity]) {
+        sessionRef.current.set(h.label, h);
+      }
+    }
+    setSessionCount(sessionRef.current.size);
+
+    if (soundRef.current && topHazard) {
+      const now = Date.now();
+      const fresh = hazards.find(
+        (h) =>
+          !spokenRef.current.has(h.label) &&
+          (h.severity === "critical" || h.severity === "high"),
+      );
+      if (fresh && now - lastSpokeRef.current > SPEAK_GAP_MS) {
+        spokenRef.current.add(fresh.label);
+        lastSpokeRef.current = now;
+        speak(
+          `Pažnja: ${fresh.label}. ${SEVERITY_META[fresh.severity].label} rizik. ${fresh.fix}`,
+        );
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localHazards, cloudResult]);
+
+  const toggleSound = () => {
+    primeTts(); // otključava TTS na korisnički dodir (iOS)
+    const next = !soundOn;
+    soundRef.current = next;
+    setSoundOn(next);
+    if (next) speak("Glasovna upozorenja uključena.");
+    else stopSpeaking();
+  };
+
   const pauseOn = (hazard: Hazard) => {
     pausedRef.current = true;
     setPaused(true);
@@ -170,12 +228,34 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
 
   const close = () => {
     stopStream();
+    stopSpeaking();
     onClose();
   };
 
-  // Unija: lokalni (živi) + cloud (bogati) markeri
-  const hazards: Hazard[] = [...localHazards, ...(cloudResult?.hazards ?? [])];
-  const count = hazards.length;
+  // Kraj sesije → izveštaj: poslednji kadar + SVE opasnosti viđene tokom skena
+  const finish = () => {
+    const frame = captureFrame(CLOUD_EDGE)?.dataUrl ?? frozenFrame;
+    stopStream();
+    stopSpeaking();
+    if (!frame) {
+      onClose();
+      return;
+    }
+    const all = [...sessionRef.current.values()].sort(
+      (a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity],
+    );
+    const score =
+      cloudResult?.safety_score ?? Math.max(15, 92 - all.length * 10);
+    const result: AnalysisResult = {
+      hazards: all.map((h, i) => ({ ...h, id: `live-${i}-${h.id}` })),
+      safety_score: score,
+      summary:
+        all.length > 0
+          ? `Uživo skeniranje završeno: tokom sesije uočeno je ${all.length} potencijalnih opasnosti. Prođite kroz listu, rešite ih jednu po jednu i označite kao rešene.`
+          : "Uživo skeniranje završeno bez uočenih opasnosti. Proverite i zone koje kamera ne vidi (utičnice, gajtani, hemikalije u ormarićima).",
+    };
+    onFinish(frame, result);
+  };
 
   const status = cameraError
     ? "⚠️ " + cameraError
@@ -184,8 +264,8 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
       : !modelReady
         ? "Učitavam AI model… (par sekundi, jednokratno)"
         : count > 0
-          ? `${count} ${count === 1 ? "opasnost uočena" : "opasnosti uočeno"}`
-          : "Skeniram — usmerite kameru na prostor";
+          ? `${count} ${count === 1 ? "opasnost u kadru" : "opasnosti u kadru"}`
+          : "Skeniram — polako pomerajte kameru kroz prostor";
 
   return (
     <div className="live-wrap">
@@ -210,8 +290,8 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
             onClick={() => pauseOn(h)}
             aria-label={h.label}
           >
-            <span className="hazard-pin" style={{ background: meta.color }}>
-              {i + 1}
+            <span className="live-tag" style={{ background: meta.color }}>
+              {i + 1} · {h.label} — {meta.label}
             </span>
           </button>
         );
@@ -222,26 +302,52 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
           {!cameraError && !paused && <span className="live-dot" />}
           {status}
         </span>
-        {cloudResult && (
-          <span
-            className="score"
-            data-level={
-              cloudResult.safety_score >= 70
-                ? "ok"
-                : cloudResult.safety_score >= 40
-                  ? "mid"
-                  : "bad"
-            }
+        <div className="live-topbtns">
+          <button
+            className={`live-iconbtn${soundOn ? " live-iconbtn-on" : ""}`}
+            onClick={toggleSound}
+            aria-label="Glasovna upozorenja"
           >
-            {cloudResult.safety_score}/100
-          </span>
-        )}
+            {soundOn ? "🔊" : "🔇"}
+          </button>
+          {cloudResult && (
+            <span
+              className="score"
+              data-level={
+                cloudResult.safety_score >= 70
+                  ? "ok"
+                  : cloudResult.safety_score >= 40
+                    ? "mid"
+                    : "bad"
+              }
+            >
+              {cloudResult.safety_score}/100
+            </span>
+          )}
+        </div>
       </div>
 
       {cloudError && !cameraError && (
         <div className="live-cloudnote">
           Lokalna detekcija aktivna · cloud analiza: {cloudError}
         </div>
+      )}
+
+      {/* ŽIVO objašnjenje najozbiljnije opasnosti u kadru */}
+      {topHazard && !paused && (
+        <button className="live-strip" onClick={() => pauseOn(topHazard)}>
+          <span
+            className="live-strip-sev"
+            style={{ background: SEVERITY_META[topHazard.severity].color }}
+          >
+            {SEVERITY_META[topHazard.severity].label}
+          </span>
+          <span className="live-strip-body">
+            <strong>{topHazard.label}</strong>
+            <span className="live-strip-why">{topHazard.why}</span>
+            <span className="live-strip-hint">Dodirnite za rešenje i statistiku →</span>
+          </span>
+        </button>
       )}
 
       <div className="live-bottombar">
@@ -262,8 +368,11 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
                 ↻ Pokušaj ponovo
               </button>
             )}
+            <button className="btn btn-primary btn-finish" onClick={finish}>
+              ✓ Završi sken{sessionCount > 0 ? ` (${sessionCount})` : ""}
+            </button>
             <button className="btn btn-close" onClick={close}>
-              ✕ Zatvori
+              ✕
             </button>
           </>
         )}

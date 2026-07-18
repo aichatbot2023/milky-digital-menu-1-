@@ -115,7 +115,20 @@ Pravila:
 - "box" je normalizovan (0–1): x,y gornji levi ugao, w,h širina/visina.
 - Ozbiljnost prilagodi razvojnim sposobnostima uzrasta.
 - Uključi i opasne ZONE (ivice, stepenice, prozor/terasa bez zaštite, ograda sa razmakom šipki > 10 cm, voda).
-- Sve na srpskom jeziku.`;
+- Sve na srpskom jeziku.
+
+OBAVEZNA PROVERA SITNIH DETALJA — pregledaj sliku pažljivo, deo po deo (pod, niske površine, ivice nameštaja), i prijavi ako uočiš:
+- SITNE PREDMETE na podu/niskim površinama: šrafovi, ekseri, novčići, dugmad, sitna plastika i delovi igračaka, perle, magneti, kamenčići — gušenje/gutanje (kritično do 3 g.)
+- BATERIJE (posebno dugmaste) i uređaje sa lako otvorivim poklopcem baterija — hemijske opekotine jednjaka
+- OLOVKE, hemijske, makazice, viljuške, čačkalice, štapiće — ubodne povrede oka/nepca
+- KABLOVE i GAJTANE: punjači u utičnici, gajtani roletni/zavesa, produžni kablovi — davljenje/struja
+- UTIČNICE bez zaštitnih poklopaca u visini deteta
+- LEKOVE, vitamine, kozmetiku, sredstva za čišćenje, kese (plastične!) — trovanje/gušenje
+- KESE, baloni (i pukli), folije — gušenje prekrivanjem disajnih puteva
+- VRUĆE: šolje/šerpe blizu ivice, ručke okrenute ka spolja, peglu, grejalice
+- STAKLO i keramiku na dohvat; oštre ivice nameštaja u visini glave deteta
+- NESTABILNO: TV/komode/police bez zidnog ankera, stolice uz prozor, merdevine
+Ako je slika mutna ili predmet sitan pa nisi siguran — prijavi ga sa severity "low" i u "why" napiši da je potrebna ručna provera, umesto da ga izostaviš.`;
 }
 
 async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {

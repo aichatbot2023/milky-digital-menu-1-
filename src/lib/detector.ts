@@ -6,6 +6,7 @@
  */
 import type { AgeGroup, Hazard } from "../types";
 import { mapDetectionsToHazards } from "./hazardKnowledge";
+import { thresholdAdjustment } from "./learning";
 
 type Source = HTMLVideoElement | HTMLImageElement | HTMLCanvasElement;
 
@@ -17,8 +18,30 @@ interface CocoModel {
   ): Promise<{ bbox: [number, number, number, number]; class: string; score: number }[]>;
 }
 
-const MAX_BOXES = 20;
-const THRESHOLD = 0.4;
+const MAX_BOXES = 30;
+// Detekcija ide sa NISKIM osnovnim pragom, a zatim se filtrira PO KLASI:
+// sitni opasni predmeti (nož, makaze, daljinski...) prolaze već sa malim
+// poverenjem, dok krupni nameštaj traži visoko poverenje da ne pravi šum.
+const RAW_THRESHOLD = 0.18;
+const DEFAULT_MIN = 0.35;
+const CLASS_MIN: Record<string, number> = {
+  // Sitni/opasni — maksimalna osetljivost (roditelj radije da vidi višak)
+  knife: 0.22, scissors: 0.22, fork: 0.25, spoon: 0.3, remote: 0.25,
+  "cell phone": 0.28, bottle: 0.28, "wine glass": 0.25, cup: 0.3,
+  "sports ball": 0.25, tie: 0.25, "hair drier": 0.25, clock: 0.3,
+  "teddy bear": 0.3, handbag: 0.3, backpack: 0.3, umbrella: 0.3,
+  "hot dog": 0.3, apple: 0.32, orange: 0.32, carrot: 0.32,
+  // Krupni objekti — stroži prag (model ih često "vidi" pogrešno)
+  chair: 0.5, couch: 0.5, bed: 0.5, "dining table": 0.5, tv: 0.45,
+  refrigerator: 0.5, oven: 0.45, sink: 0.45, toilet: 0.45, book: 0.45,
+};
+// Ispod ove normalizovane površine box je šum senzora, ne objekat
+const MIN_AREA = 0.0008;
+
+function effectiveThreshold(cocoClass: string): number {
+  const base = CLASS_MIN[cocoClass] ?? DEFAULT_MIN;
+  return Math.max(0.15, Math.min(0.9, base + thresholdAdjustment(cocoClass)));
+}
 
 let modelPromise: Promise<CocoModel> | null = null;
 
@@ -79,16 +102,19 @@ export async function detectLocal(
   ageGroup: AgeGroup,
 ): Promise<Hazard[]> {
   const model = await getModel();
-  const preds = await model.detect(source, MAX_BOXES, THRESHOLD);
-  const detections = preds.map((p) => ({
-    label: p.class,
-    score: p.score,
-    box: {
-      x: p.bbox[0] / srcW,
-      y: p.bbox[1] / srcH,
-      w: p.bbox[2] / srcW,
-      h: p.bbox[3] / srcH,
-    },
-  }));
+  const preds = await model.detect(source, MAX_BOXES, RAW_THRESHOLD);
+  const detections = preds
+    .filter((p) => p.score >= effectiveThreshold(p.class))
+    .map((p) => ({
+      label: p.class,
+      score: p.score,
+      box: {
+        x: p.bbox[0] / srcW,
+        y: p.bbox[1] / srcH,
+        w: p.bbox[2] / srcW,
+        h: p.bbox[3] / srcH,
+      },
+    }))
+    .filter((d) => d.box.w * d.box.h >= MIN_AREA);
   return mapDetectionsToHazards(detections, ageGroup);
 }

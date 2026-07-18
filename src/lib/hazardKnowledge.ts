@@ -213,6 +213,158 @@ const RULES: Record<string, HazardRule> = {
     stats: "Prevrtanje nameštaja (police, komode) izaziva teške povrede dece koja se penju (CPSC/CDC).",
     fix: "Pričvrstite police i komode na zid protiv prevrtanja.",
   },
+  remote: {
+    labelSr: "Daljinski (baterije!)",
+    category: "choking",
+    severity: { ...sev(YOUNG, "high"), ...sev(["6-12m", "1-2y"], "critical") },
+    why: "Daljinski upravljači sadrže dugmaste baterije — ako dete otvori poklopac i proguta bateriju, ona za 2 sata izaziva teške hemijske opekotine jednjaka.",
+    stats: "Gutanje dugmastih baterija je hitno stanje; broj teških slučajeva kod dece do 6 godina višestruko je porastao poslednjih godina (CDC/poison centri).",
+    fix: "Proverite da je poklopac baterija pričvršćen šrafom ili trakom; daljinski držite van domašaja.",
+  },
+  "sports ball": {
+    labelSr: "Loptica",
+    category: "choking",
+    severity: sev(["0-6m", "6-12m", "1-2y", "2-4y"], "medium"),
+    why: "Male lopte i njihovi delovi mogu zapušiti disajne puteve — sve što prođe kroz rolnu toalet papira je rizik gušenja za dete do 3 godine.",
+    stats: "Gušenje malim predmetima vodeći je uzrok smrti od nesreća kod dece mlađe od 1 godine (CDC).",
+    fix: "Lopte prečnika manjeg od 4,5 cm sklonite dok je dete malo; proveravajte igračke starije braće/sestara.",
+  },
+  "teddy bear": {
+    labelSr: "Plišana igračka",
+    category: "choking",
+    severity: sev(["0-6m"], "medium"),
+    why: "Plišane igračke u krevecu bebe su rizik gušenja tokom spavanja; plastične oči/nosevi koji se otkače su rizik gutanja.",
+    stats: "Meki predmeti u krevecu povezani su sa sindromom iznenadne smrti odojčeta — preporuka je prazan krevetac (AAP/SZO).",
+    fix: "Krevetac bebe do 12 meseci treba da bude prazan: bez plišanih igračaka, jastuka i ćebadi.",
+  },
+  handbag: {
+    labelSr: "Tašna (sadržaj!)",
+    category: "poisoning",
+    severity: sev(YOUNG, "high"),
+    why: "Tašne tipično sadrže lekove, sitninu, upaljače i kozmetiku — sve što dete istrese i stavi u usta. Radoznalost + niska visina tašne = čest scenario trovanja.",
+    stats: "Lekovi iz tašni baka/gostiju čest su uzrok slučajnih trovanja dece do 5 godina (poison centri, CDC).",
+    fix: "Tašne (svoje i gostiju) kačite visoko ili sklanjajte iza zatvorenih vrata, nikad na pod ili kauč.",
+  },
+  backpack: {
+    labelSr: "Ranac (sadržaj)",
+    category: "poisoning",
+    severity: sev(YOUNG, "medium"),
+    why: "Ranci sadrže sitne predmete, flašice, lekove ili makaze; kaiševi su rizik zaplitanja.",
+    stats: "Slučajna trovanja i gušenja sitnicama najčešće nastaju predmetima ostavljenim u torbama u visini deteta (CDC).",
+    fix: "Rance držite zakačene na visini; proverite šta stariji ukućani nose u njima.",
+  },
+  suitcase: {
+    labelSr: "Kofer",
+    category: "crush",
+    severity: sev(["1-2y", "2-4y"], "low"),
+    why: "Uspravan kofer se lako prevrne na dete koje se pridržava; točkovi i rajsferšlusi štipaju prste.",
+    stats: "Povrede prevrtanjem predmeta na točkovima česte su kod dece koja prohodavaju (EU Child Safety Alliance).",
+    fix: "Kofer polegnite ili sklonite u plakar posle putovanja.",
+  },
+  umbrella: {
+    labelSr: "Kišobran",
+    category: "cutting",
+    severity: sev(["1-2y", "2-4y", "4-7y"], "medium"),
+    why: "Vrhovi žica i mehanizam za otvaranje mogu ubosti oko ili prignječiti prste; automatsko otvaranje u lice je čest scenario.",
+    stats: "Povrede oka šiljatim kućnim predmetima najčešće su kod dece 2–7 godina (EU Child Safety Alliance).",
+    fix: "Držite kišobrane zatvorene i van domašaja, u stalku ili na čiviluku.",
+  },
+  tie: {
+    labelSr: "Kravata/traka",
+    category: "strangulation",
+    severity: sev(["0-6m", "6-12m", "1-2y", "2-4y"], "high"),
+    why: "Sve trake, kravate i gajtani duži od 20 cm su rizik davljenja — dete ih omota oko vrata ili se zaplete tokom igre/spavanja.",
+    stats: "Davljenje trakama i gajtanima (uklj. gajtane roletni) uzrokuje smrtne slučajeve dece do 4 godine svake godine (CPSC).",
+    fix: "Sklonite trake i gajtane van domašaja; gajtane roletni skratite ili zamenite bezgajtanskim.",
+  },
+  "hair drier": {
+    labelSr: "Fen za kosu",
+    category: "electric",
+    severity: { ...sev(["1-2y", "2-4y"], "high"), ...sev(["4-7y"], "medium") },
+    why: "Fen uključen u struju pored vode (lavabo, kada) je rizik strujnog udara; vrela rešetka fena izaziva kontaktne opekotine.",
+    stats: "Kupatilo je najrizičnija prostorija za povrede strujom u domu; uređaji pored vode su vodeći uzrok (SZO).",
+    fix: "Isključite fen iz utičnice odmah posle upotrebe i sklonite ga; nikad ga ne ostavljajte pored kade/lavaboa.",
+  },
+  dog: {
+    labelSr: "Pas",
+    category: "other",
+    severity: sev(["0-6m", "6-12m", "1-2y"], "medium"),
+    why: "Ni najmirniji pas ne sme biti sam sa bebom/malim detetom — dete ne ume da pročita signale upozorenja, a većina ujeda dece dolazi od poznatog psa.",
+    stats: "Deca do 4 godine najčešće su žrtve ujeda pasa, tipično od porodičnog psa u domu (CDC).",
+    fix: "Nikada ne ostavljajte dete i psa bez nadzora u istoj prostoriji; naučite dete da ne dira psa dok jede/spava.",
+  },
+  cat: {
+    labelSr: "Mačka",
+    category: "other",
+    severity: sev(["0-6m", "6-12m"], "low"),
+    why: "Mačka može da legne uz lice bebe koja spava (rizik disanja) ili ogrebe dete koje je vuče.",
+    stats: "Ogrebotine i ujedi mačaka kod male dece nose rizik infekcije i najčešći su kod dece koja tek uče kontakt sa životinjama (CDC).",
+    fix: "Držite mačku van sobe u kojoj beba spava; naučite dete nežnom kontaktu.",
+  },
+  "hot dog": {
+    labelSr: "Viršla/hrana",
+    category: "choking",
+    severity: { ...sev(["6-12m", "1-2y", "2-4y"], "critical") },
+    why: "Viršla je oblikom i prečnikom idealan čep za dečji disajni put — vodeći je pojedinačni uzrok fatalnog gušenja hranom kod dece.",
+    stats: "Viršle uzrokuju najviše smrtnih gušenja hranom kod dece do 3 godine (AAP/CDC).",
+    fix: "Secite viršle PO DUŽINI pa na male komade; dete uvek jede sedeći i pod nadzorom.",
+  },
+  apple: {
+    labelSr: "Tvrdo voće (komadi)",
+    category: "choking",
+    severity: sev(["6-12m", "1-2y", "2-4y"], "medium"),
+    why: "Tvrdi komadi jabuke (i sirovog povrća) lako zapuše disajni put deteta koje još nema kutnjake za žvakanje.",
+    stats: "Tvrda hrana (jabuka, šargarepa, orasi) među najčešćim je uzrocima gušenja dece do 4 godine (AAP).",
+    fix: "Rendajte ili kuvajte tvrdo voće/povrće za decu do 4 godine; secite na trake, ne kolutove.",
+  },
+  orange: {
+    labelSr: "Voće (komadi)",
+    category: "choking",
+    severity: sev(["6-12m", "1-2y"], "low"),
+    why: "Opne i veći komadi citrusa mogu izazvati davljenje kod dece koja tek uče da žvaću.",
+    stats: "Gušenje hranom najčešće je kod dece 6 meseci – 3 godine (AAP).",
+    fix: "Uklonite opne i secite na male komade; dete jede sedeći, uz nadzor.",
+  },
+  carrot: {
+    labelSr: "Sirova šargarepa",
+    category: "choking",
+    severity: sev(["6-12m", "1-2y", "2-4y"], "medium"),
+    why: "Sirova šargarepa je tvrda i lomi se u komade savršene veličine da zapuše dečji disajni put.",
+    stats: "Sirovo tvrdo povrće je u vrhu liste namirnica koje izazivaju gušenje male dece (AAP).",
+    fix: "Kuvajte ili rendajte šargarepu za decu do 4 godine.",
+  },
+  clock: {
+    labelSr: "Sat (baterije)",
+    category: "choking",
+    severity: sev(["6-12m", "1-2y", "2-4y"], "medium"),
+    why: "Stoni satovi sadrže baterije (često dugmaste) i staklo; pad sata sa police na dete je dodatni rizik.",
+    stats: "Dugmaste baterije iz kućnih uređaja su među najopasnijim predmetima za gutanje (poison centri).",
+    fix: "Satove držite visoko i proverite da su poklopci baterija sigurni.",
+  },
+  "baseball bat": {
+    labelSr: "Palica/štap",
+    category: "crush",
+    severity: sev(["1-2y", "2-4y", "4-7y"], "low"),
+    why: "Teški sportski rekviziti oslonjeni o zid padaju kad ih dete povuče; zamah starije dece pogađa mlađu.",
+    stats: "Povrede sportskim rekvizitima u domu najčešće pogađaju mlađu braću/sestre (CPSC).",
+    fix: "Sportsku opremu držite u ormanu ili stalku, ne oslonjenu o zid.",
+  },
+  skateboard: {
+    labelSr: "Skejtbord",
+    category: "fall",
+    severity: sev(["1-2y", "2-4y", "4-7y"], "medium"),
+    why: "Dete koje stane na skejt u kući pada unazad na tvrdu podlogu — tipičan mehanizam povrede glave.",
+    stats: "Padovi na točkićima (skejt, romobil) bez kacige česti su uzrok povreda glave dece (CDC).",
+    fix: "Sklonite skejt/romobil iz prostora gde se dete igra; napolju uvek kaciga.",
+  },
+  bicycle: {
+    labelSr: "Bicikl",
+    category: "fall",
+    severity: sev(["1-2y", "2-4y"], "low"),
+    why: "Bicikl oslonjen o zid pada na dete koje ga povuče; lanac i zupčanici štipaju prste.",
+    stats: "Prignječenja prstiju mehanizmima bicikla česta su kod male dece (EU Child Safety Alliance).",
+    fix: "Parkirajte bicikl na nožicu ili držač, dalje od prostora za igru.",
+  },
 };
 
 export function mapDetectionsToHazards(
@@ -240,9 +392,39 @@ export function mapDetectionsToHazards(
       stats: rule.stats,
       fix: rule.fix,
       resolved: false,
+      sourceClass: d.label,
     });
   }
   // Kritične prve
   const order: Severity[] = ["critical", "high", "medium", "low"];
   return hazards.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+}
+
+/**
+ * Odgovor asistenta BEZ interneta: kada cloud "mozak" nije dostupan,
+ * odgovaramo iz lokalne baze znanja i konteksta poslednjeg skena —
+ * dugme asistenta uvek funkcioniše.
+ */
+export function offlineAssistantAnswer(question: string, hazards: Hazard[]): string {
+  const q = question.toLowerCase();
+  // 1) Pitanje o konkretnoj uočenoj opasnosti → njen "zašto" + rešenje
+  for (const h of hazards) {
+    const words = h.label.toLowerCase().split(/[\s/(),—-]+/).filter((w) => w.length > 3);
+    if (words.some((w) => q.includes(w))) {
+      return `${h.why} Rešenje: ${h.fix}`;
+    }
+  }
+  // 2) Opšte pitanje uz postojeći sken → tri najvažnija koraka
+  if (hazards.length > 0) {
+    const order = { critical: 0, high: 1, medium: 2, low: 3 } as const;
+    const top = [...hazards]
+      .sort((a, b) => order[a.severity] - order[b.severity])
+      .slice(0, 3);
+    return (
+      "Evo najvažnijih koraka na osnovu skena: " +
+      top.map((h, i) => `${i + 1}. ${h.label} — ${h.fix}`).join(" ")
+    );
+  }
+  // 3) Bez skena → osnovni saveti
+  return "Najvažnije zone za proveru: utičnice (zaštitni poklopci), gajtani roletni i kablovi (davljenje), sitni predmeti i baterije (gušenje), hemikalije i lekovi (zaključati), šporet i vrele tečnosti, prozori i stepenice (zaštitne ograde). Skenirajte prostor kamerom pa me pitajte za detalje.";
 }

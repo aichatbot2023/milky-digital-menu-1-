@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { Hazard } from "../types";
 import { CATEGORY_LABELS, SEVERITY_META } from "../types";
+import { recordFeedback } from "../lib/learning";
 
 interface Props {
   hazard: Hazard;
@@ -9,6 +11,14 @@ interface Props {
 
 export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) {
   const meta = SEVERITY_META[hazard.severity];
+  const [voted, setVoted] = useState<null | "up" | "down">(null);
+
+  const vote = (correct: boolean) => {
+    if (voted || !hazard.sourceClass) return;
+    recordFeedback(hazard.sourceClass, correct);
+    setVoted(correct ? "up" : "down");
+  };
+
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
@@ -35,6 +45,26 @@ export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) 
           <h3>✅ Kako rešiti</h3>
           <p>{hazard.fix}</p>
         </section>
+
+        {hazard.sourceClass && (
+          <section className="feedback">
+            <h3>🧠 Da li je AI pogodio?</h3>
+            {voted ? (
+              <p className="ok">
+                Hvala! Aplikacija uči iz vaše ocene i sledeći put će biti preciznija.
+              </p>
+            ) : (
+              <div className="feedback-row">
+                <button className="btn btn-outline" onClick={() => vote(true)}>
+                  👍 Tačno, opasnost
+                </button>
+                <button className="btn btn-outline" onClick={() => vote(false)}>
+                  👎 Nije opasnost
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="sheet-actions">
           <button

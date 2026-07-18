@@ -3,10 +3,12 @@ import type { AgeGroup, Hazard, RoomType } from "../types";
 import {
   askAssistant,
   listenOnce,
+  primeTts,
   speak,
   speechInputSupported,
   stopSpeaking,
 } from "../lib/voice";
+import { offlineAssistantAnswer } from "../lib/hazardKnowledge";
 
 interface Props {
   roomType: RoomType;
@@ -42,8 +44,12 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
       });
       setAnswer(a);
       speak(a);
-    } catch (e: any) {
-      setError(e?.message ?? "Asistent nije dostupan");
+    } catch {
+      // Cloud "mozak" nedostupan → odgovor iz lokalne baze znanja.
+      // Dugme asistenta uvek daje odgovor, i bez interneta.
+      const a = offlineAssistantAnswer(q, hazards);
+      setAnswer(a);
+      speak(a);
     } finally {
       setBusy(false);
     }
@@ -56,6 +62,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
     }
     stopSpeaking();
     setTranscript("");
+    setError(null);
     setListening(true);
     const { promise, stop } = listenOnce(setTranscript);
     stopRef.current = stop;
@@ -65,12 +72,22 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
     if (text) {
       setTranscript(text);
       await ask(text);
+    } else {
+      setError(
+        "Nisam čuo pitanje — proverite dozvolu za mikrofon ili upišite pitanje ispod.",
+      );
     }
   };
 
   if (!open) {
     return (
-      <button className="btn btn-primary va-fab" onClick={() => setOpen(true)}>
+      <button
+        className="btn btn-primary va-fab"
+        onClick={() => {
+          primeTts(); // iOS: otključaj TTS na korisnički dodir
+          setOpen(true);
+        }}
+      >
         🎤 Pitaj asistenta
       </button>
     );
@@ -96,7 +113,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
         „Kako da obezbedim terasu?"
       </p>
 
-      {speechInputSupported && (
+      {speechInputSupported ? (
         <button
           className={`btn ${listening ? "btn-outline" : "btn-primary"}`}
           onClick={toggleMic}
@@ -104,6 +121,11 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
         >
           {listening ? "⏹ Zaustavi (slušam…)" : "🎤 Govori"}
         </button>
+      ) : (
+        <p className="muted">
+          Glasovni unos nije podržan u ovom pregledaču — upišite pitanje, a
+          odgovor ću izgovoriti naglas. 🔊
+        </p>
       )}
 
       <div className="va-textrow">

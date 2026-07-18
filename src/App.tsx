@@ -126,6 +126,22 @@ export default function App() {
         ageGroup={selectedChild?.age ?? "1-2y"}
         childName={selectedChild?.name}
         onClose={() => setView("home")}
+        onFinish={(imageDataUrl, result) => {
+          // Kraj uživo sesije → sačuvan izveštaj, isti tok kao foto sken
+          const scan: ScanRecord = {
+            id: `scan-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            roomType,
+            childId: selectedChildId,
+            imageDataUrl,
+            result,
+          };
+          saveScan(scan);
+          setScans(loadScans());
+          setCurrentScan(scan);
+          setSelectedHazardId(null);
+          setView("result");
+        }}
       />
     );
   }
@@ -243,10 +259,18 @@ export default function App() {
 
       <button className="btn btn-primary btn-scan" onClick={() => setView("live")}>
         🎥 Uživo skeniranje
+        <span className="btn-sub">AI označava i objašnjava opasnosti u realnom vremenu</span>
       </button>
       <button className="btn btn-outline btn-scan" onClick={startScan}>
         📷 Skeniraj fotografiju
+        <span className="btn-sub">Detaljna analiza jedne slike prostora</span>
       </button>
+
+      <VoiceAssistant
+        roomType={roomType}
+        ageGroup={selectedChild?.age ?? "1-2y"}
+        hazards={scans[0]?.result.hazards ?? []}
+      />
 
       <ScanHistory
         scans={scans}

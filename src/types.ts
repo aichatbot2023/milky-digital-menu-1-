@@ -39,6 +39,8 @@ export interface Hazard {
   stats: string;
   fix: string;
   resolved?: boolean;
+  /** COCO klasa lokalnog detektora — osnova za samoučenje (feedback). */
+  sourceClass?: string;
 }
 
 export interface AnalysisResult {

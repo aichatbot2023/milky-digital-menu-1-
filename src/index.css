@@ -75,7 +75,16 @@ body {
   border: 1.5px solid var(--primary);
 }
 .btn-ghost { background: transparent; color: var(--primary-dark); padding-left: 0; }
-.btn-scan { padding: 16px; font-size: 1.15rem; box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35); }
+.btn-scan {
+  padding: 16px;
+  font-size: 1.15rem;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.btn-sub { font-size: 0.78rem; font-weight: 400; opacity: 0.85; }
 
 .profiles, .room-picker, .history {
   background: var(--card);
@@ -344,7 +353,82 @@ body {
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.65rem;
 }
-.live-bottombar { gap: 10px; }
+.live-bottombar { gap: 10px; padding: 0 12px; }
+.btn-finish { box-shadow: 0 4px 14px rgba(15, 118, 110, 0.5); }
+
+/* Oznaka na svakom live boxu: broj + naziv + ozbiljnost */
+.live-tag {
+  position: absolute;
+  top: -26px;
+  left: -2px;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  max-width: 70vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Živa traka sa objašnjenjem najozbiljnije opasnosti u kadru */
+.live-strip {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  left: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(8px);
+  border: none;
+  border-radius: 14px;
+  padding: 12px;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.live-strip-sev {
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.live-strip-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.live-strip-body strong { font-size: 0.95rem; }
+.live-strip-why {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.live-strip-hint { font-size: 0.72rem; color: #5eead4; font-weight: 600; }
+
+.live-topbtns { display: flex; align-items: center; gap: 8px; }
+.live-iconbtn {
+  background: rgba(15, 23, 42, 0.7);
+  border: none;
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.live-iconbtn-on { background: var(--primary); box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.6); }
+
+/* Samoučenje — ocena detekcije */
+.feedback-row { display: flex; gap: 10px; }
+.feedback-row .btn { flex: 1; font-size: 0.9rem; }
 
 /* Glasovni asistent */
 .va-fab { margin-top: 4px; }
