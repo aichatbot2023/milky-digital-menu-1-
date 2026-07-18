@@ -15,23 +15,40 @@ function splitDataUrl(dataUrl: string): [string, string] {
 }
 
 export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResult> {
-  const [mediaType, base64] = splitDataUrl(params.imageDataUrl);
+  // Primarni backend: OMNI kamera AI API obrazac — Supabase edge funkcija
+  // `analyze-hazards` (OpenRouter vision, isti kao u ai-team-meeting-studio).
+  // Fallback: Vercel /api/analyze (Anthropic Claude vision).
+  const omniUrl = import.meta.env.VITE_OMNI_FUNCTION_URL as string | undefined;
 
-  const endpoint = import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL}/api/analyze`
-    : "/api/analyze";
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      image: base64,
-      mediaType,
-      roomType: params.roomType,
-      ageGroup: params.ageGroup,
-      childName: params.childName,
-    }),
-  });
+  let res: Response;
+  if (omniUrl) {
+    res = await fetch(omniUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: params.imageDataUrl,
+        roomType: params.roomType,
+        ageGroup: params.ageGroup,
+        childName: params.childName,
+      }),
+    });
+  } else {
+    const [mediaType, base64] = splitDataUrl(params.imageDataUrl);
+    const endpoint = import.meta.env.VITE_API_URL
+      ? `${import.meta.env.VITE_API_URL}/api/analyze`
+      : "/api/analyze";
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: base64,
+        mediaType,
+        roomType: params.roomType,
+        ageGroup: params.ageGroup,
+        childName: params.childName,
+      }),
+    });
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
