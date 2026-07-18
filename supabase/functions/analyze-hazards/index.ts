@@ -1,12 +1,15 @@
 /**
  * analyze-hazards — AI detekcija opasnosti po decu na fotografiji prostora.
  *
- * Koristi ISTI AI API obrazac kao OMNI kamere (ai-team-meeting-studio):
- * OpenRouter vision chat/completions, isti OPENROUTER_API_KEY secret,
- * primarni jeftini vision model + besplatni fallback.
+ * VIŠE BESPLATNIH PROVAJDERA sa automatskim prebacivanjem: kada se jedan
+ * potroši (429/402) ili padne, prelazi se na sledeći. Svi ključevi već
+ * postoje na omni Supabase projektu (ai-team-meeting-studio).
+ *
+ * Redosled: OpenRouter free modeli → Groq (llama-4 vision, free tier)
+ *           → Lovable AI gateway (gemini-2.5-flash).
  *
  * Body: { image: JPEG/PNG data URL, roomType, ageGroup, childName? }
- * Vraća: { hazards: [...], safety_score, summary }
+ * Vraća: { hazards: [...], safety_score, summary, _provider, _model }
  */
 
 const CORS = {
@@ -14,13 +17,39 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const OPENROUTER_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
-// SAMO besplatni vision modeli (":free" na OpenRouteru ne troši kredite).
-// Redosled: prvi koji uspe. Može se pregaziti env varijablom FREE_MODELS
-// (zarezom razdvojena lista).
-const FREE_MODELS = (Deno.env.get('FREE_MODELS') ??
-  'qwen/qwen-2.5-vl-7b-instruct:free,google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free'
-).split(',').map((m) => m.trim()).filter(Boolean);
+interface Provider {
+  name: string;
+  key: string | undefined;
+  url: string;
+  models: string[];
+  extraHeaders?: Record<string, string>;
+}
+
+// Lanac provajdera — svi OpenAI-kompatibilni (chat/completions + image_url).
+// Provajder bez ključa se preskače. FREE_MODELS env pregazi OpenRouter listu.
+const PROVIDERS: Provider[] = [
+  {
+    name: 'openrouter',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: (Deno.env.get('FREE_MODELS') ??
+      'qwen/qwen-2.5-vl-7b-instruct:free,google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free'
+    ).split(',').map((m) => m.trim()).filter(Boolean),
+    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
+  },
+  {
+    name: 'groq',
+    key: Deno.env.get('GROQ_API_KEY'),
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    models: ['meta-llama/llama-4-scout-17b-16e-instruct'],
+  },
+  {
+    name: 'lovable',
+    key: Deno.env.get('LOVABLE_API_KEY'),
+    url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+    models: ['google/gemini-2.5-flash'],
+  },
+];
 
 const ROOM_SR: Record<string, string> = {
   living_room: 'dnevna soba',
@@ -74,19 +103,17 @@ Pravila:
 - Sve na srpskom jeziku.`;
 }
 
-async function callVision(model: string, image: string, prompt: string): Promise<any> {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {
+  const res = await fetch(p.url, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      'Authorization': `Bearer ${p.key}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://omnimeeting.app',
-      'X-Title': 'SafeNest AI',
+      ...(p.extraHeaders ?? {}),
     },
     body: JSON.stringify({
       model,
       max_tokens: 4000,
-      response_format: { type: 'json_object' },
       messages: [{
         role: 'user',
         content: [
@@ -96,21 +123,41 @@ async function callVision(model: string, image: string, prompt: string): Promise
       }],
     }),
   });
-  if (!res.ok) throw new Error(`upstream ${res.status}`);
+  if (!res.ok) throw new Error(`${p.name}/${model}: upstream ${res.status}`);
   const data = await res.json();
   let out: string = data.choices?.[0]?.message?.content?.trim();
-  if (!out) throw new Error('empty response');
-  // Skini eventualne markdown ograde
+  if (!out) throw new Error(`${p.name}/${model}: empty response`);
   out = out.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  // Neki modeli dodaju tekst oko JSON-a — izvuci prvi {...} blok
+  if (!out.startsWith('{')) {
+    const m = out.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error(`${p.name}/${model}: no JSON in response`);
+    out = m[0];
+  }
   const parsed = JSON.parse(out);
-  if (!Array.isArray(parsed.hazards)) throw new Error('bad shape');
+  if (!Array.isArray(parsed.hazards)) throw new Error(`${p.name}/${model}: bad shape`);
+  // Ograniči box vrednosti na 0-1
+  parsed.hazards = parsed.hazards.map((h: any) => ({
+    ...h,
+    box: {
+      x: Math.max(0, Math.min(1, Number(h.box?.x) || 0)),
+      y: Math.max(0, Math.min(1, Number(h.box?.y) || 0)),
+      w: Math.max(0.02, Math.min(1, Number(h.box?.w) || 0.1)),
+      h: Math.max(0.02, Math.min(1, Number(h.box?.h) || 0.1)),
+    },
+  }));
+  parsed.safety_score = Math.max(0, Math.min(100, Number(parsed.safety_score) || 0));
+  parsed._provider = p.name;
+  parsed._model = model;
   return parsed;
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
-  if (!OPENROUTER_KEY) return json({ error: 'AI analiza nije konfigurisana (nedostaje OPENROUTER_API_KEY).' }, 501);
+
+  const active = PROVIDERS.filter((p) => p.key);
+  if (active.length === 0) return json({ error: 'Nijedan AI provajder nije konfigurisan.' }, 501);
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
@@ -121,13 +168,16 @@ Deno.serve(async (req) => {
 
   const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined);
 
-  let lastError = 'nepoznata greška';
-  for (const model of FREE_MODELS) {
-    try {
-      return json(await callVision(model, image, prompt));
-    } catch (e: any) {
-      lastError = e?.message ?? String(e);
+  const errors: string[] = [];
+  for (const provider of active) {
+    for (const model of provider.models) {
+      try {
+        return json(await callVision(provider, model, image, prompt));
+      } catch (e: any) {
+        errors.push(e?.message ?? String(e));
+      }
     }
   }
-  return json({ error: `AI analiza nije uspela (${lastError}). Pokušajte ponovo za nekoliko sekundi.` }, 502);
+  console.error('all providers failed:', errors.join(' | '));
+  return json({ error: `Svi AI provajderi trenutno nedostupni. Pokušajte za minut. (${errors[errors.length - 1]})` }, 502);
 });

@@ -45,12 +45,32 @@ export default function App() {
     setView("scanning");
     try {
       const imageDataUrl = await downscaleImage(photo);
-      const result = await analyzeImage({
-        imageDataUrl,
-        roomType,
-        ageGroup: selectedChild?.age ?? "1-2y",
-        childName: selectedChild?.name,
-      });
+      const age = selectedChild?.age ?? "1-2y";
+      let result;
+      try {
+        result = await analyzeImage({
+          imageDataUrl,
+          roomType,
+          ageGroup: age,
+          childName: selectedChild?.name,
+        });
+      } catch (cloudErr: any) {
+        // Cloud AI nedostupan → lokalna YOLO detekcija u browseru (omni sistem)
+        const { detectLocal } = await import("./lib/detector");
+        const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve({ w: img.width, h: img.height });
+          img.onerror = () => reject(cloudErr);
+          img.src = imageDataUrl;
+        });
+        const hazards = await detectLocal(imageDataUrl, dims.w, dims.h, age);
+        result = {
+          hazards,
+          safety_score: Math.max(20, 90 - hazards.length * 12),
+          summary:
+            "Rezultat lokalne AI detekcije (cloud analiza trenutno nedostupna). Prikazani su prepoznati rizični objekti za izabrani uzrast.",
+        };
+      }
       const scan: ScanRecord = {
         id: `scan-${Date.now()}`,
         createdAt: new Date().toISOString(),

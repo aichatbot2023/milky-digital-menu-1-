@@ -323,3 +323,15 @@ body {
   color: #fff;
   backdrop-filter: blur(6px);
 }
+
+.live-cloudnote {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 80px);
+  left: 12px;
+  right: 12px;
+  z-index: 3;
+  text-align: center;
+  color: #fbbf24;
+  font-size: 0.75rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}

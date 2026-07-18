@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
 import { SEVERITY_META } from "../types";
 import { analyzeImage } from "../lib/analyze";
+import { detectLocal, preloadDetector } from "../lib/detector";
 import { HazardDetailSheet } from "./HazardDetailSheet";
 
 interface Props {
@@ -11,44 +12,58 @@ interface Props {
   onClose: () => void;
 }
 
-const ANALYZE_INTERVAL_MS = 4000;
-const MAX_EDGE = 1024;
+// Dvoslojna detekcija (isti sistem kao omni):
+//  1. LOKALNI YOLO u browseru — svake ~1.2s, besplatno i neograničeno
+//  2. CLOUD vision AI — svakih 10s, bogata analiza (zašto/statistika/rešenje)
+const LOCAL_INTERVAL_MS = 1200;
+const CLOUD_INTERVAL_MS = 10000;
+const LOCAL_EDGE = 640;
+const CLOUD_EDGE = 1024;
 
-// Živi prikaz kamere: svakih ~4s frejm ide na AI analizu, markeri se
-// iscrtavaju preko videa. Tap na marker pauzira i otvara detalje.
 export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const inFlight = useRef(false);
+  const localBusy = useRef(false);
+  const cloudBusy = useRef(false);
   const pausedRef = useRef(false);
 
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [localHazards, setLocalHazards] = useState<Hazard[]>([]);
+  const [cloudResult, setCloudResult] = useState<AnalysisResult | null>(null);
+  const [modelReady, setModelReady] = useState(false);
+  const [cloudError, setCloudError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
   const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }, []);
 
-  const captureFrame = useCallback((): string | null => {
-    const video = videoRef.current;
-    if (!video || video.videoWidth === 0) return null;
-    const scale = Math.min(1, MAX_EDGE / Math.max(video.videoWidth, video.videoHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.8);
-  }, []);
+  const captureFrame = useCallback(
+    (maxEdge: number): { dataUrl: string; w: number; h: number } | null => {
+      const video = videoRef.current;
+      if (!video || video.videoWidth === 0) return null;
+      const scale = Math.min(1, maxEdge / Math.max(video.videoWidth, video.videoHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return {
+        dataUrl: canvas.toDataURL("image/jpeg", 0.8),
+        w: canvas.width,
+        h: canvas.height,
+      };
+    },
+    [],
+  );
 
-  // Pokretanje kamere
+  // Kamera
   useEffect(() => {
+    preloadDetector();
     let cancelled = false;
     (async () => {
       try {
@@ -66,7 +81,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
           await videoRef.current.play().catch(() => {});
         }
       } catch {
-        setError(
+        setCameraError(
           "Kamera nije dostupna ili je pristup odbijen. Dozvolite kameru u podešavanjima ili koristite foto mod.",
         );
       }
@@ -77,33 +92,54 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     };
   }, [stopStream]);
 
-  // Petlja analize
+  // Lokalni YOLO — brza petlja
   useEffect(() => {
     const tick = async () => {
-      if (inFlight.current || pausedRef.current) return;
-      const frame = captureFrame();
+      if (localBusy.current || pausedRef.current) return;
+      const frame = captureFrame(LOCAL_EDGE);
       if (!frame) return;
-      inFlight.current = true;
-      setAnalyzing(true);
+      localBusy.current = true;
+      try {
+        const hazards = await detectLocal(frame.dataUrl, frame.w, frame.h, ageGroup);
+        setModelReady(true);
+        if (!pausedRef.current) setLocalHazards(hazards);
+      } catch {
+        // model se možda još učitava — pokušaće opet u sledećem ciklusu
+      } finally {
+        localBusy.current = false;
+      }
+    };
+    const id = setInterval(tick, LOCAL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [captureFrame, ageGroup]);
+
+  // Cloud AI — spora petlja (bogata analiza)
+  useEffect(() => {
+    const tick = async () => {
+      if (cloudBusy.current || pausedRef.current) return;
+      const frame = captureFrame(CLOUD_EDGE);
+      if (!frame) return;
+      cloudBusy.current = true;
       try {
         const res = await analyzeImage({
-          imageDataUrl: frame,
+          imageDataUrl: frame.dataUrl,
           roomType,
           ageGroup,
           childName,
         });
-        if (!pausedRef.current) setResult(res);
-        setError(null);
+        if (!pausedRef.current) {
+          setCloudResult(res);
+          setCloudError(null);
+        }
       } catch (e: any) {
-        setError(e?.message ?? "Analiza nije uspela");
+        // Cloud pad NIJE fatalan — lokalna detekcija nastavlja da radi
+        setCloudError(e?.message ?? "Cloud analiza trenutno nedostupna");
       } finally {
-        inFlight.current = false;
-        setAnalyzing(false);
+        cloudBusy.current = false;
       }
     };
-    const id = setInterval(tick, ANALYZE_INTERVAL_MS);
-    // prvi frejm čim se video pokrene
-    const startId = setTimeout(tick, 1200);
+    const startId = setTimeout(tick, 2500);
+    const id = setInterval(tick, CLOUD_INTERVAL_MS);
     return () => {
       clearInterval(id);
       clearTimeout(startId);
@@ -113,7 +149,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
   const pauseOn = (hazard: Hazard) => {
     pausedRef.current = true;
     setPaused(true);
-    setFrozenFrame(captureFrame());
+    setFrozenFrame(captureFrame(CLOUD_EDGE)?.dataUrl ?? null);
     setSelectedHazard(hazard);
   };
 
@@ -129,8 +165,17 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     onClose();
   };
 
-  const hazards = result?.hazards ?? [];
-  const unresolvedCount = hazards.length;
+  // Unija: lokalni (živi) + cloud (bogati) markeri
+  const hazards: Hazard[] = [...localHazards, ...(cloudResult?.hazards ?? [])];
+  const count = hazards.length;
+
+  const status = cameraError
+    ? "⚠️ " + cameraError
+    : !modelReady
+      ? "Učitavam AI model… (jednokratno, ~25 MB)"
+      : count > 0
+        ? `${count} ${count === 1 ? "opasnost uočena" : "opasnosti uočeno"}`
+        : "Skeniram — usmerite kameru na prostor";
 
   return (
     <div className="live-wrap">
@@ -139,7 +184,6 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
         <img src={frozenFrame} alt="" className="live-video live-frozen" />
       )}
 
-      {/* Markeri preko videa */}
       {hazards.map((h, i) => {
         const meta = SEVERITY_META[h.severity];
         return (
@@ -163,29 +207,32 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
         );
       })}
 
-      {/* Status traka */}
       <div className="live-topbar">
         <span className="live-status">
-          {analyzing && <span className="live-dot" />}
-          {error
-            ? "⚠️ " + error
-            : analyzing
-              ? "Analiziram…"
-              : result
-                ? `${unresolvedCount} ${unresolvedCount === 1 ? "opasnost uočena" : "opasnosti uočeno"}`
-                : "Usmerite kameru na prostor"}
+          {!cameraError && !paused && <span className="live-dot" />}
+          {status}
         </span>
-        {result && (
+        {cloudResult && (
           <span
             className="score"
             data-level={
-              result.safety_score >= 70 ? "ok" : result.safety_score >= 40 ? "mid" : "bad"
+              cloudResult.safety_score >= 70
+                ? "ok"
+                : cloudResult.safety_score >= 40
+                  ? "mid"
+                  : "bad"
             }
           >
-            {result.safety_score}/100
+            {cloudResult.safety_score}/100
           </span>
         )}
       </div>
+
+      {cloudError && !cameraError && (
+        <div className="live-cloudnote">
+          Lokalna detekcija aktivna · cloud analiza: {cloudError}
+        </div>
+      )}
 
       <div className="live-bottombar">
         {paused ? (
