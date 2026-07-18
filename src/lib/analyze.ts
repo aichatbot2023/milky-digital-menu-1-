@@ -14,35 +14,38 @@ function splitDataUrl(dataUrl: string): [string, string] {
   return [match[1], match[2]];
 }
 
+// Podrazumevani backend: OMNI Supabase projekat (edge funkcija analyze-hazards,
+// besplatni OpenRouter vision modeli — nula troškova po pozivu).
+const DEFAULT_OMNI_URL =
+  "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/analyze-hazards";
+
 export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResult> {
-  // Primarni backend: OMNI kamera AI API obrazac — Supabase edge funkcija
-  // `analyze-hazards` (OpenRouter vision, isti kao u ai-team-meeting-studio).
-  // Fallback: Vercel /api/analyze (Anthropic Claude vision).
-  const omniUrl = import.meta.env.VITE_OMNI_FUNCTION_URL as string | undefined;
+  const omniUrl =
+    (import.meta.env.VITE_OMNI_FUNCTION_URL as string | undefined) ?? DEFAULT_OMNI_URL;
+  const vercelUrl = import.meta.env.VITE_API_URL as string | undefined;
 
   let res: Response;
-  if (omniUrl) {
-    res = await fetch(omniUrl, {
+  if (vercelUrl) {
+    // Opcioni alternativni backend (Vercel + Anthropic Claude) — samo ako je
+    // eksplicitno podešen VITE_API_URL.
+    const [mediaType, base64] = splitDataUrl(params.imageDataUrl);
+    res = await fetch(`${vercelUrl}/api/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        image: params.imageDataUrl,
+        image: base64,
+        mediaType,
         roomType: params.roomType,
         ageGroup: params.ageGroup,
         childName: params.childName,
       }),
     });
   } else {
-    const [mediaType, base64] = splitDataUrl(params.imageDataUrl);
-    const endpoint = import.meta.env.VITE_API_URL
-      ? `${import.meta.env.VITE_API_URL}/api/analyze`
-      : "/api/analyze";
-    res = await fetch(endpoint, {
+    res = await fetch(omniUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        image: base64,
-        mediaType,
+        image: params.imageDataUrl,
         roomType: params.roomType,
         ageGroup: params.ageGroup,
         childName: params.childName,

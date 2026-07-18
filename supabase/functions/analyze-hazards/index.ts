@@ -15,9 +15,12 @@ const CORS = {
 };
 
 const OPENROUTER_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
-// Isti izbor modela kao u omni describe-incident: jeftin vision primarni, free fallback
-const MODEL      = 'google/gemini-2.5-flash-lite';
-const MODEL_FREE = 'qwen/qwen-2.5-vl-7b-instruct:free';
+// SAMO besplatni vision modeli (":free" na OpenRouteru ne troši kredite).
+// Redosled: prvi koji uspe. Može se pregaziti env varijablom FREE_MODELS
+// (zarezom razdvojena lista).
+const FREE_MODELS = (Deno.env.get('FREE_MODELS') ??
+  'qwen/qwen-2.5-vl-7b-instruct:free,google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free'
+).split(',').map((m) => m.trim()).filter(Boolean);
 
 const ROOM_SR: Record<string, string> = {
   living_room: 'dnevna soba',
@@ -118,13 +121,13 @@ Deno.serve(async (req) => {
 
   const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined);
 
-  try {
-    return json(await callVision(MODEL, image, prompt));
-  } catch {
+  let lastError = 'nepoznata greška';
+  for (const model of FREE_MODELS) {
     try {
-      return json(await callVision(MODEL_FREE, image, prompt));
+      return json(await callVision(model, image, prompt));
     } catch (e: any) {
-      return json({ error: `AI analiza nije uspela: ${e.message}` }, 502);
+      lastError = e?.message ?? String(e);
     }
   }
+  return json({ error: `AI analiza nije uspela (${lastError}). Pokušajte ponovo za nekoliko sekundi.` }, 502);
 });
