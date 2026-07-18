@@ -23,7 +23,22 @@ const DEFAULT_OMNI_URL =
 const OMNI_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
 
+const CLOUD_TIMEOUT_MS = 15000;
+
 export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResult> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), CLOUD_TIMEOUT_MS);
+  try {
+    return await doAnalyze(params, abort.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function doAnalyze(
+  params: AnalyzeParams,
+  signal: AbortSignal,
+): Promise<AnalysisResult> {
   const omniUrl =
     (import.meta.env.VITE_OMNI_FUNCTION_URL as string | undefined) ?? DEFAULT_OMNI_URL;
   const vercelUrl = import.meta.env.VITE_API_URL as string | undefined;
@@ -35,6 +50,7 @@ export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResul
     const [mediaType, base64] = splitDataUrl(params.imageDataUrl);
     res = await fetch(`${vercelUrl}/api/analyze`, {
       method: "POST",
+      signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         image: base64,
@@ -47,6 +63,7 @@ export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResul
   } else {
     res = await fetch(omniUrl, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${OMNI_ANON_KEY}`,

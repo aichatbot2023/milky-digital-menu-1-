@@ -46,30 +46,39 @@ export default function App() {
     try {
       const imageDataUrl = await downscaleImage(photo);
       const age = selectedChild?.age ?? "1-2y";
-      let result;
-      try {
-        result = await analyzeImage({
-          imageDataUrl,
-          roomType,
-          ageGroup: age,
-          childName: selectedChild?.name,
-        });
-      } catch (cloudErr: any) {
-        // Cloud AI nedostupan → lokalna detekcija u browseru (COCO-SSD)
+
+      // LOKALNO-PRVO: detekcija u browseru radi uvek (model je u aplikaciji);
+      // cloud analiza se pokušava paralelno i koristi se ako uspe (bogatija).
+      const localPromise = (async () => {
         const { detectLocal } = await import("./lib/detector");
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
           const el = new Image();
           el.onload = () => resolve(el);
-          el.onerror = () => reject(cloudErr);
+          el.onerror = () => reject(new Error("Slika ne može da se učita"));
           el.src = imageDataUrl;
         });
         const hazards = await detectLocal(img, img.width, img.height, age);
-        result = {
+        return {
           hazards,
           safety_score: Math.max(20, 90 - hazards.length * 12),
           summary:
-            "Rezultat lokalne AI detekcije (cloud analiza trenutno nedostupna). Prikazani su prepoznati rizični objekti za izabrani uzrast.",
+            hazards.length > 0
+              ? "Lokalna AI detekcija: prepoznati su rizični objekti za izabrani uzrast. Dodirnite marker za objašnjenje i rešenje."
+              : "Lokalna AI detekcija nije uočila rizične objekte na slici. Proverite i zone koje model ne vidi (utičnice, ivice, kablovi).",
         };
+      })();
+      const cloudPromise = analyzeImage({
+        imageDataUrl,
+        roomType,
+        ageGroup: age,
+        childName: selectedChild?.name,
+      });
+
+      let result;
+      try {
+        result = await cloudPromise;
+      } catch {
+        result = await localPromise; // cloud pao → lokalni rezultat
       }
       const scan: ScanRecord = {
         id: `scan-${Date.now()}`,

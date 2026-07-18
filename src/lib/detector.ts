@@ -1,8 +1,8 @@
 /**
- * Lokalna (in-browser) detekcija objekata — TensorFlow.js COCO-SSD
- * (Google-ov zvanični browser model). Težine se učitavaju sa javnog Google
- * CDN-a (storage.googleapis.com) — bez autentikacije, stabilno godinama.
- * ~4 MB, WebGL ubrzanje na telefonu, bez API poziva — besplatno i neograničeno.
+ * Lokalna (in-browser) detekcija objekata — TensorFlow.js COCO-SSD.
+ * Model je SPAKOVAN U APLIKACIJU (public/model/) i služi se sa istog domena
+ * kao i sajt — NEMA spoljnih preuzimanja u runtime-u, nema šta da padne.
+ * WebGL ubrzanje na telefonu, bez API poziva — besplatno i neograničeno.
  */
 import type { AgeGroup, Hazard } from "../types";
 import { mapDetectionsToHazards } from "./hazardKnowledge";
@@ -31,8 +31,9 @@ function loadModel(): Promise<CocoModel> {
     const tf = await import("@tensorflow/tfjs");
     await tf.ready();
     const cocoSsd = await import("@tensorflow-models/coco-ssd");
-    // lite_mobilenet_v2: najmanji i najbrži — pravi izbor za live mod na telefonu
-    return cocoSsd.load({ base: "lite_mobilenet_v2" });
+    // Model sa NAŠEG domena (spakovan u build) — bez ijednog spoljnog zahteva
+    const modelUrl = `${location.origin}${import.meta.env.BASE_URL}model/model.json`;
+    return cocoSsd.load({ base: "lite_mobilenet_v2", modelUrl });
   })();
 }
 
