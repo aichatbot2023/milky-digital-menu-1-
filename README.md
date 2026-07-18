@@ -12,17 +12,30 @@ Platforme: **iOS + Android** (Capacitor) i **macOS/web** (ista React aplikacija)
 - [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md) — master prompt / kompletna specifikacija proizvoda + AI sistem prompt
 - [`docs/BUSINESS_MODEL.md`](docs/BUSINESS_MODEL.md) — biznis model, cene, go-to-market plan
 
-## Arhitektura
+## Arhitektura (100% besplatna infrastruktura)
 
 ```
-React + TypeScript + Vite  ──►  Capacitor (iOS / Android)  /  PWA (macOS, web)
+React + TypeScript + Vite  ──►  Capacitor (iOS / Android)  /  GitHub Pages (web/macOS)
         │
-        └── POST /api/analyze  (Vercel serverless funkcija)
-                 └── Anthropic Claude (claude-opus-4-8, vision + structured outputs)
+        └── POST analyze-hazards  (Supabase edge funkcija — omni projekat)
+                 └── OpenRouter BESPLATNI vision modeli (qwen-2.5-vl:free, ...)
 ```
 
-- API ključ postoji **samo na backend-u** (`ANTHROPIC_API_KEY`).
+- **Hosting:** GitHub Pages (deploy na svaki push) → https://aichatbot2023.github.io/milky-digital-menu-1-/
+- **AI:** samo `:free` OpenRouter modeli — nula troškova po pozivu; koristi postojeći
+  `OPENROUTER_API_KEY` sa omni Supabase projekta (`equjrxwpxrkchicetyvs`).
+- Opcioni premium backend (Anthropic Claude preko Vercel-a) ostaje u `api/analyze.ts` —
+  aktivira se samo ako se postavi `VITE_API_URL`.
 - Slike se ne čuvaju na serveru; profili dece i istorija skenova su lokalno na uređaju.
+
+### Deploy AI funkcije (jednom)
+
+```bash
+npx supabase login
+npx supabase functions deploy analyze-hazards --project-ref equjrxwpxrkchicetyvs --no-verify-jwt
+```
+
+`OPENROUTER_API_KEY` secret već postoji na tom projektu (koristi ga omni `describe-incident`).
 
 ## Pokretanje (web / razvoj)
 
