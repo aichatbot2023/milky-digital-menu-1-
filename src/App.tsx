@@ -247,6 +247,8 @@ export default function App() {
 
       <footer className="disclaimer">
         SafeNest AI je pomoćni alat i ne zamenjuje nadzor odrasle osobe.
+        <br />
+        verzija {__APP_VERSION__}
       </footer>
     </div>
   );

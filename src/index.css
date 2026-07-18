@@ -335,3 +335,13 @@ body {
   font-size: 0.75rem;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
+
+.live-version {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 4px);
+  right: 10px;
+  z-index: 3;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.65rem;
+}
+.live-bottombar { gap: 10px; }

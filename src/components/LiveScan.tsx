@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
 import { SEVERITY_META } from "../types";
 import { analyzeImage } from "../lib/analyze";
-import { detectLocal, preloadDetector } from "../lib/detector";
+import {
+  detectLocal,
+  modelError,
+  onModelProgress,
+  preloadDetector,
+  retryDetector,
+} from "../lib/detector";
 import { HazardDetailSheet } from "./HazardDetailSheet";
 
 interface Props {
@@ -30,6 +36,8 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
   const [localHazards, setLocalHazards] = useState<Hazard[]>([]);
   const [cloudResult, setCloudResult] = useState<AnalysisResult | null>(null);
   const [modelReady, setModelReady] = useState(false);
+  const [modelPct, setModelPct] = useState(0);
+  const [modelFail, setModelFail] = useState<string | null>(null);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
@@ -63,6 +71,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
 
   // Kamera
   useEffect(() => {
+    onModelProgress(setModelPct);
     preloadDetector();
     let cancelled = false;
     (async () => {
@@ -88,6 +97,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     })();
     return () => {
       cancelled = true;
+      onModelProgress(null);
       stopStream();
     };
   }, [stopStream]);
@@ -102,9 +112,12 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
       try {
         const hazards = await detectLocal(frame.dataUrl, frame.w, frame.h, ageGroup);
         setModelReady(true);
+        setModelFail(null);
         if (!pausedRef.current) setLocalHazards(hazards);
-      } catch {
-        // model se možda još učitava — pokušaće opet u sledećem ciklusu
+      } catch (e: any) {
+        // Učitavanje modela palo — prikaži razlog umesto večnog "Učitavam…"
+        if (modelError) setModelFail(modelError);
+        else if (e?.message) setModelFail(e.message);
       } finally {
         localBusy.current = false;
       }
@@ -171,11 +184,13 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
 
   const status = cameraError
     ? "⚠️ " + cameraError
-    : !modelReady
-      ? "Učitavam AI model… (jednokratno, ~25 MB)"
-      : count > 0
-        ? `${count} ${count === 1 ? "opasnost uočena" : "opasnosti uočeno"}`
-        : "Skeniram — usmerite kameru na prostor";
+    : modelFail
+      ? `⚠️ Model: ${modelFail.slice(0, 80)}`
+      : !modelReady
+        ? `Učitavam AI model… ${modelPct}% (jednokratno)`
+        : count > 0
+          ? `${count} ${count === 1 ? "opasnost uočena" : "opasnosti uočeno"}`
+          : "Skeniram — usmerite kameru na prostor";
 
   return (
     <div className="live-wrap">
@@ -240,11 +255,26 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
             ▶ Nastavi skeniranje
           </button>
         ) : (
-          <button className="btn btn-close" onClick={close}>
-            ✕ Zatvori
-          </button>
+          <>
+            {modelFail && (
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setModelFail(null);
+                  setModelPct(0);
+                  retryDetector();
+                }}
+              >
+                ↻ Pokušaj ponovo
+              </button>
+            )}
+            <button className="btn btn-close" onClick={close}>
+              ✕ Zatvori
+            </button>
+          </>
         )}
       </div>
+      <div className="live-version">v{__APP_VERSION__}</div>
 
       {selectedHazard && (
         <HazardDetailSheet

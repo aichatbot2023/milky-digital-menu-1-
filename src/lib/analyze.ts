@@ -18,6 +18,10 @@ function splitDataUrl(dataUrl: string): [string, string] {
 // besplatni OpenRouter vision modeli — nula troškova po pozivu).
 const DEFAULT_OMNI_URL =
   "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/analyze-hazards";
+// Javni anon ključ omni projekta (isti kao u omni frontend kodu) — omogućava
+// poziv i ako je funkcija deploy-ovana sa uključenom JWT proverom.
+const OMNI_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
 
 export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResult> {
   const omniUrl =
@@ -43,7 +47,11 @@ export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResul
   } else {
     res = await fetch(omniUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OMNI_ANON_KEY}`,
+        "apikey": OMNI_ANON_KEY,
+      },
       body: JSON.stringify({
         image: params.imageDataUrl,
         roomType: params.roomType,

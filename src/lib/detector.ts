@@ -1,10 +1,8 @@
 /**
  * Lokalna (in-browser) detekcija objekata — ISTI sistem kao omni
  * (ai-team-meeting-studio): transformers.js + Xenova/yolos-tiny.
- * Model se učitava direktno sa javnog HuggingFace CDN-a (omni koristi
- * hf-proxy samo zato što njihova aplikacija ubacuje auth header u fetch —
- * naša nema taj problem). Radi offline nakon prvog učitavanja, bez API
- * poziva — besplatno i neograničeno.
+ * Model se učitava direktno sa javnog HuggingFace CDN-a. Radi offline nakon
+ * prvog učitavanja, bez API poziva — besplatno i neograničeno.
  */
 import type { AgeGroup, Hazard } from "../types";
 import { mapDetectionsToHazards } from "./hazardKnowledge";
@@ -18,28 +16,71 @@ interface RawDetection {
   box: { xmin: number; ymin: number; xmax: number; ymax: number };
 }
 
-let detectorPromise: Promise<(input: string, opts: object) => Promise<RawDetection[]>> | null = null;
+type Detector = (input: string, opts: object) => Promise<RawDetection[]>;
 
-async function getDetector() {
+let detectorPromise: Promise<Detector> | null = null;
+
+/** Napredak preuzimanja modela 0-100 (za prikaz u UI). */
+export let modelProgress = 0;
+/** Poslednja greška učitavanja modela (null = nema greške). */
+export let modelError: string | null = null;
+
+let progressListener: ((pct: number) => void) | null = null;
+export function onModelProgress(cb: ((pct: number) => void) | null) {
+  progressListener = cb;
+}
+
+function loadDetector(): Promise<Detector> {
+  return (async () => {
+    modelError = null;
+    const { env, pipeline } = await import("@huggingface/transformers");
+    env.allowLocalModels = false;
+    env.useBrowserCache = true;
+    env.allowRemoteModels = true;
+    const files: Record<string, { loaded: number; total: number }> = {};
+    const det = await pipeline("object-detection", MODEL, {
+      dtype: "q8", // kvantizovan model — manji download, brže na telefonu
+      progress_callback: (p: any) => {
+        if (p.status === "progress" && p.file && p.total) {
+          files[p.file] = { loaded: p.loaded, total: p.total };
+          const loaded = Object.values(files).reduce((s, f) => s + f.loaded, 0);
+          const total = Object.values(files).reduce((s, f) => s + f.total, 0);
+          modelProgress = Math.min(99, Math.round((loaded / total) * 100));
+          progressListener?.(modelProgress);
+        }
+        if (p.status === "ready") {
+          modelProgress = 100;
+          progressListener?.(100);
+        }
+      },
+    });
+    return det as unknown as Detector;
+  })();
+}
+
+async function getDetector(): Promise<Detector> {
   if (!detectorPromise) {
-    detectorPromise = (async () => {
-      // Lazy import — ~1MB JS + ~25MB model (jednom, potom keširano)
-      const { env, pipeline } = await import("@huggingface/transformers");
-      env.allowLocalModels = false;
-      env.useBrowserCache = true;
-      env.allowRemoteModels = true;
-      const det = await pipeline("object-detection", MODEL);
-      return det as unknown as (input: string, opts: object) => Promise<RawDetection[]>;
-    })();
+    detectorPromise = loadDetector();
+    detectorPromise.catch((e) => {
+      // Neuspeh NE sme trajno da zaglavi aplikaciju — resetuj za novi pokušaj
+      modelError = e?.message ?? "Model nije mogao da se učita";
+      detectorPromise = null;
+    });
   }
   return detectorPromise;
 }
 
 /** Pokreće preuzimanje modela unapred (poziva se pri ulasku u live mod). */
 export function preloadDetector() {
-  getDetector().catch(() => {
-    detectorPromise = null; // dozvoli ponovni pokušaj
-  });
+  getDetector().catch(() => {});
+}
+
+/** Ručni ponovni pokušaj učitavanja (dugme u UI). */
+export function retryDetector() {
+  detectorPromise = null;
+  modelError = null;
+  modelProgress = 0;
+  preloadDetector();
 }
 
 /**
