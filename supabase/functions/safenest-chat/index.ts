@@ -33,7 +33,7 @@ const PROVIDERS: Provider[] = [
     name: 'nvidia',
     key: Deno.env.get('NVIDIA_NIM_API_KEY'),
     url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-30b-a3b', 'meta/llama-3.3-70b-instruct'],
+    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning', 'meta/llama-3.3-70b-instruct'],
   },
   {
     name: 'groq',

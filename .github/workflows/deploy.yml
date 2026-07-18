@@ -27,6 +27,9 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /milky-digital-menu-1-/
+      - name: Fresh-path copy (/v2/) — cache-proof entry URL
+        run: |
+          mkdir /tmp/v2 && cp dist/index.html /tmp/v2/ && mv /tmp/v2 dist/v2
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:

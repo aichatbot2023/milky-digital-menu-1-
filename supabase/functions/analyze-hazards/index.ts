@@ -31,6 +31,13 @@ interface Provider {
 // FREE_MODELS env pregazi OpenRouter listu modela.
 const PROVIDERS: Provider[] = [
   {
+    // PRIMARNI: NVIDIA Nemotron OMNI — multimodalni agent za slike/video
+    name: 'nvidia',
+    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
+    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
+  },
+  {
     name: 'openrouter',
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
@@ -50,12 +57,6 @@ const PROVIDERS: Provider[] = [
     key: Deno.env.get('GROQ_API_KEY'),
     url: 'https://api.groq.com/openai/v1/chat/completions',
     models: ['meta-llama/llama-4-scout-17b-16e-instruct'],
-  },
-  {
-    name: 'nvidia',
-    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['meta/llama-3.2-90b-vision-instruct'],
   },
   {
     name: 'lovable',
