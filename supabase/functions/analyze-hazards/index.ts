@@ -25,23 +25,37 @@ interface Provider {
   extraHeaders?: Record<string, string>;
 }
 
-// Lanac provajdera — svi OpenAI-kompatibilni (chat/completions + image_url).
-// Provajder bez ključa se preskače. FREE_MODELS env pregazi OpenRouter listu.
+// Lanac provajdera — freeLlmRouter obrazac (lovable-chatbot-studio):
+// svi OpenAI-kompatibilni (chat/completions + image_url), ključevi u Supabase
+// secrets, provajder bez ključa se preskače, failover na 402/429/greške.
+// FREE_MODELS env pregazi OpenRouter listu modela.
 const PROVIDERS: Provider[] = [
   {
     name: 'openrouter',
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
     models: (Deno.env.get('FREE_MODELS') ??
-      'qwen/qwen-2.5-vl-7b-instruct:free,google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free'
+      'nvidia/nemotron-3-nano-30b-a3b:free,qwen/qwen-2.5-vl-7b-instruct:free,google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free'
     ).split(',').map((m) => m.trim()).filter(Boolean),
     extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
+  },
+  {
+    name: 'gemini',
+    key: Deno.env.get('GEMINI_API_KEY'),
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    models: ['gemini-2.5-flash'],
   },
   {
     name: 'groq',
     key: Deno.env.get('GROQ_API_KEY'),
     url: 'https://api.groq.com/openai/v1/chat/completions',
     models: ['meta-llama/llama-4-scout-17b-16e-instruct'],
+  },
+  {
+    name: 'nvidia',
+    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
+    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    models: ['meta/llama-3.2-90b-vision-instruct'],
   },
   {
     name: 'lovable',

@@ -33,7 +33,14 @@ function loadModel(): Promise<CocoModel> {
     const cocoSsd = await import("@tensorflow-models/coco-ssd");
     // Model sa NAŠEG domena (spakovan u build) — bez ijednog spoljnog zahteva
     const modelUrl = `${location.origin}${import.meta.env.BASE_URL}model/model.json`;
-    return cocoSsd.load({ base: "lite_mobilenet_v2", modelUrl });
+    const model = await cocoSsd.load({ base: "lite_mobilenet_v2", modelUrl });
+    // Warmup: prva inferencija kompajlira WebGL šejdere (najsporiji korak) —
+    // uradi je odmah na praznom platnu da prava detekcija krene bez čekanja
+    const warm = document.createElement("canvas");
+    warm.width = 300;
+    warm.height = 300;
+    await model.detect(warm, 1, 0.5).catch(() => {});
+    return model;
   })();
 }
 
