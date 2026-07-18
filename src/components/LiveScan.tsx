@@ -2,13 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
 import { SEVERITY_META } from "../types";
 import { analyzeImage } from "../lib/analyze";
-import {
-  detectLocal,
-  modelError,
-  onModelProgress,
-  preloadDetector,
-  retryDetector,
-} from "../lib/detector";
+import { detectLocal, modelError, preloadDetector, retryDetector } from "../lib/detector";
 import { HazardDetailSheet } from "./HazardDetailSheet";
 
 interface Props {
@@ -23,7 +17,6 @@ interface Props {
 //  2. CLOUD vision AI — svakih 10s, bogata analiza (zašto/statistika/rešenje)
 const LOCAL_INTERVAL_MS = 1200;
 const CLOUD_INTERVAL_MS = 10000;
-const LOCAL_EDGE = 640;
 const CLOUD_EDGE = 1024;
 
 export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
@@ -36,7 +29,6 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
   const [localHazards, setLocalHazards] = useState<Hazard[]>([]);
   const [cloudResult, setCloudResult] = useState<AnalysisResult | null>(null);
   const [modelReady, setModelReady] = useState(false);
-  const [modelPct, setModelPct] = useState(0);
   const [modelFail, setModelFail] = useState<string | null>(null);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
@@ -71,7 +63,6 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
 
   // Kamera
   useEffect(() => {
-    onModelProgress(setModelPct);
     preloadDetector();
     let cancelled = false;
     (async () => {
@@ -97,20 +88,24 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     })();
     return () => {
       cancelled = true;
-      onModelProgress(null);
       stopStream();
     };
   }, [stopStream]);
 
-  // Lokalni YOLO — brza petlja
+  // Lokalna detekcija — brza petlja (video element ide direktno u model)
   useEffect(() => {
     const tick = async () => {
       if (localBusy.current || pausedRef.current) return;
-      const frame = captureFrame(LOCAL_EDGE);
-      if (!frame) return;
+      const video = videoRef.current;
+      if (!video || video.videoWidth === 0) return;
       localBusy.current = true;
       try {
-        const hazards = await detectLocal(frame.dataUrl, frame.w, frame.h, ageGroup);
+        const hazards = await detectLocal(
+          video,
+          video.videoWidth,
+          video.videoHeight,
+          ageGroup,
+        );
         setModelReady(true);
         setModelFail(null);
         if (!pausedRef.current) setLocalHazards(hazards);
@@ -124,7 +119,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     };
     const id = setInterval(tick, LOCAL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [captureFrame, ageGroup]);
+  }, [ageGroup]);
 
   // Cloud AI — spora petlja (bogata analiza)
   useEffect(() => {
@@ -187,7 +182,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
     : modelFail
       ? `⚠️ Model: ${modelFail.slice(0, 80)}`
       : !modelReady
-        ? `Učitavam AI model… ${modelPct}% (jednokratno)`
+        ? "Učitavam AI model… (par sekundi, jednokratno)"
         : count > 0
           ? `${count} ${count === 1 ? "opasnost uočena" : "opasnosti uočeno"}`
           : "Skeniram — usmerite kameru na prostor";
@@ -261,7 +256,6 @@ export function LiveScan({ roomType, ageGroup, childName, onClose }: Props) {
                 className="btn btn-primary"
                 onClick={() => {
                   setModelFail(null);
-                  setModelPct(0);
                   retryDetector();
                 }}
               >

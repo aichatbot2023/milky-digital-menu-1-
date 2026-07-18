@@ -55,15 +55,15 @@ export default function App() {
           childName: selectedChild?.name,
         });
       } catch (cloudErr: any) {
-        // Cloud AI nedostupan → lokalna YOLO detekcija u browseru (omni sistem)
+        // Cloud AI nedostupan → lokalna detekcija u browseru (COCO-SSD)
         const { detectLocal } = await import("./lib/detector");
-        const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve({ w: img.width, h: img.height });
-          img.onerror = () => reject(cloudErr);
-          img.src = imageDataUrl;
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(cloudErr);
+          el.src = imageDataUrl;
         });
-        const hazards = await detectLocal(imageDataUrl, dims.w, dims.h, age);
+        const hazards = await detectLocal(img, img.width, img.height, age);
         result = {
           hazards,
           safety_score: Math.max(20, 90 - hazards.length * 12),

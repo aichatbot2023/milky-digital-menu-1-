@@ -1,110 +1,85 @@
 /**
- * Lokalna (in-browser) detekcija objekata — ISTI sistem kao omni
- * (ai-team-meeting-studio): transformers.js + Xenova/yolos-tiny.
- * Model fajlovi su SELF-HOSTOVANI na našem GitHub Pages sajtu (CI ih preuzme
- * pri build-u) — bez HuggingFace-a u runtime-u, bez 401/limita, besplatno.
+ * Lokalna (in-browser) detekcija objekata — TensorFlow.js COCO-SSD
+ * (Google-ov zvanični browser model). Težine se učitavaju sa javnog Google
+ * CDN-a (storage.googleapis.com) — bez autentikacije, stabilno godinama.
+ * ~4 MB, WebGL ubrzanje na telefonu, bez API poziva — besplatno i neograničeno.
  */
 import type { AgeGroup, Hazard } from "../types";
 import { mapDetectionsToHazards } from "./hazardKnowledge";
 
-const MODEL = "Xenova/yolos-tiny-finetuned-coco";
-const THRESHOLD = 0.35;
+type Source = HTMLVideoElement | HTMLImageElement | HTMLCanvasElement;
 
-interface RawDetection {
-  score: number;
-  label: string;
-  box: { xmin: number; ymin: number; xmax: number; ymax: number };
+interface CocoModel {
+  detect(
+    source: Source,
+    maxNumBoxes?: number,
+    minScore?: number,
+  ): Promise<{ bbox: [number, number, number, number]; class: string; score: number }[]>;
 }
 
-type Detector = (input: string, opts: object) => Promise<RawDetection[]>;
+const MAX_BOXES = 20;
+const THRESHOLD = 0.4;
 
-let detectorPromise: Promise<Detector> | null = null;
+let modelPromise: Promise<CocoModel> | null = null;
 
-/** Napredak preuzimanja modela 0-100 (za prikaz u UI). */
-export let modelProgress = 0;
 /** Poslednja greška učitavanja modela (null = nema greške). */
 export let modelError: string | null = null;
 
-let progressListener: ((pct: number) => void) | null = null;
-export function onModelProgress(cb: ((pct: number) => void) | null) {
-  progressListener = cb;
-}
-
-function loadDetector(): Promise<Detector> {
+function loadModel(): Promise<CocoModel> {
   return (async () => {
     modelError = null;
-    const { env, pipeline } = await import("@huggingface/transformers");
-    env.allowLocalModels = false;
-    env.useBrowserCache = true;
-    env.allowRemoteModels = true;
-    // Model se služi sa NAŠEG sajta (dist/models/, preuzeto u CI build koraku)
-    env.remoteHost = `${location.origin}${import.meta.env.BASE_URL}models`;
-    const files: Record<string, { loaded: number; total: number }> = {};
-    const det = await pipeline("object-detection", MODEL, {
-      dtype: "q8", // kvantizovan model — manji download, brže na telefonu
-      progress_callback: (p: any) => {
-        if (p.status === "progress" && p.file && p.total) {
-          files[p.file] = { loaded: p.loaded, total: p.total };
-          const loaded = Object.values(files).reduce((s, f) => s + f.loaded, 0);
-          const total = Object.values(files).reduce((s, f) => s + f.total, 0);
-          modelProgress = Math.min(99, Math.round((loaded / total) * 100));
-          progressListener?.(modelProgress);
-        }
-        if (p.status === "ready") {
-          modelProgress = 100;
-          progressListener?.(100);
-        }
-      },
-    });
-    return det as unknown as Detector;
+    const tf = await import("@tensorflow/tfjs");
+    await tf.ready();
+    const cocoSsd = await import("@tensorflow-models/coco-ssd");
+    // lite_mobilenet_v2: najmanji i najbrži — pravi izbor za live mod na telefonu
+    return cocoSsd.load({ base: "lite_mobilenet_v2" });
   })();
 }
 
-async function getDetector(): Promise<Detector> {
-  if (!detectorPromise) {
-    detectorPromise = loadDetector();
-    detectorPromise.catch((e) => {
+function getModel(): Promise<CocoModel> {
+  if (!modelPromise) {
+    modelPromise = loadModel();
+    modelPromise.catch((e) => {
       // Neuspeh NE sme trajno da zaglavi aplikaciju — resetuj za novi pokušaj
       modelError = e?.message ?? "Model nije mogao da se učita";
-      detectorPromise = null;
+      modelPromise = null;
     });
   }
-  return detectorPromise;
+  return modelPromise;
 }
 
 /** Pokreće preuzimanje modela unapred (poziva se pri ulasku u live mod). */
 export function preloadDetector() {
-  getDetector().catch(() => {});
+  getModel().catch(() => {});
 }
 
 /** Ručni ponovni pokušaj učitavanja (dugme u UI). */
 export function retryDetector() {
-  detectorPromise = null;
+  modelPromise = null;
   modelError = null;
-  modelProgress = 0;
   preloadDetector();
 }
 
 /**
- * Detektuje objekte na slici (data URL) i mapira ih u opasnosti po uzrastu.
- * imageW/imageH su dimenzije prosleđene slike (za normalizaciju box-ova).
+ * Detektuje objekte na izvoru (video / slika / canvas) i mapira ih u opasnosti
+ * po uzrastu. srcW/srcH su stvarne dimenzije sadržaja (za normalizaciju).
  */
 export async function detectLocal(
-  imageDataUrl: string,
-  imageW: number,
-  imageH: number,
+  source: Source,
+  srcW: number,
+  srcH: number,
   ageGroup: AgeGroup,
 ): Promise<Hazard[]> {
-  const detector = await getDetector();
-  const preds = await detector(imageDataUrl, { threshold: THRESHOLD });
+  const model = await getModel();
+  const preds = await model.detect(source, MAX_BOXES, THRESHOLD);
   const detections = preds.map((p) => ({
-    label: p.label,
+    label: p.class,
     score: p.score,
     box: {
-      x: p.box.xmin / imageW,
-      y: p.box.ymin / imageH,
-      w: (p.box.xmax - p.box.xmin) / imageW,
-      h: (p.box.ymax - p.box.ymin) / imageH,
+      x: p.bbox[0] / srcW,
+      y: p.bbox[1] / srcH,
+      w: p.bbox[2] / srcW,
+      h: p.bbox[3] / srcH,
     },
   }));
   return mapDetectionsToHazards(detections, ageGroup);
