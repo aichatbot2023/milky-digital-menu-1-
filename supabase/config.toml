@@ -3,3 +3,6 @@ project_id = "equjrxwpxrkchicetyvs"
 # Aplikacija nema Supabase auth — funkcija je javna (rate-limit je na OpenRouter strani)
 [functions.analyze-hazards]
 verify_jwt = false
+
+[functions.safenest-chat]
+verify_jwt = false

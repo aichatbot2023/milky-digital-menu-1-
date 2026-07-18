@@ -12,6 +12,7 @@ import {
   updateScan,
 } from "./lib/storage";
 import { ChildProfiles } from "./components/ChildProfiles";
+import { VoiceAssistant } from "./components/VoiceAssistant";
 import { HazardOverlay } from "./components/HazardOverlay";
 import { HazardDetailSheet } from "./components/HazardDetailSheet";
 import { LiveScan } from "./components/LiveScan";
@@ -188,6 +189,12 @@ export default function App() {
             </button>
           ))}
         </div>
+
+        <VoiceAssistant
+          roomType={currentScan.roomType}
+          ageGroup={selectedChild?.age ?? "1-2y"}
+          hazards={hazards}
+        />
 
         {selectedHazard && (
           <HazardDetailSheet
