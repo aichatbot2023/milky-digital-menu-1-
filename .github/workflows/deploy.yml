@@ -27,6 +27,14 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /milky-digital-menu-1-/
+      - name: Self-host YOLO model files (no HuggingFace at runtime)
+        run: |
+          M=dist/models/Xenova/yolos-tiny-finetuned-coco/resolve/main
+          mkdir -p "$M/onnx"
+          curl -fsSL -o "$M/config.json" https://huggingface.co/Xenova/yolos-tiny-finetuned-coco/resolve/main/config.json
+          curl -fsSL -o "$M/preprocessor_config.json" https://huggingface.co/Xenova/yolos-tiny-finetuned-coco/resolve/main/preprocessor_config.json
+          curl -fsSL -o "$M/onnx/model_quantized.onnx" https://huggingface.co/Xenova/yolos-tiny-finetuned-coco/resolve/main/onnx/model_quantized.onnx
+          ls -la "$M" "$M/onnx"
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:

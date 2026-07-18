@@ -1,8 +1,8 @@
 /**
  * Lokalna (in-browser) detekcija objekata — ISTI sistem kao omni
  * (ai-team-meeting-studio): transformers.js + Xenova/yolos-tiny.
- * Model se učitava direktno sa javnog HuggingFace CDN-a. Radi offline nakon
- * prvog učitavanja, bez API poziva — besplatno i neograničeno.
+ * Model fajlovi su SELF-HOSTOVANI na našem GitHub Pages sajtu (CI ih preuzme
+ * pri build-u) — bez HuggingFace-a u runtime-u, bez 401/limita, besplatno.
  */
 import type { AgeGroup, Hazard } from "../types";
 import { mapDetectionsToHazards } from "./hazardKnowledge";
@@ -37,6 +37,8 @@ function loadDetector(): Promise<Detector> {
     env.allowLocalModels = false;
     env.useBrowserCache = true;
     env.allowRemoteModels = true;
+    // Model se služi sa NAŠEG sajta (dist/models/, preuzeto u CI build koraku)
+    env.remoteHost = `${location.origin}${import.meta.env.BASE_URL}models`;
     const files: Record<string, { loaded: number; total: number }> = {};
     const det = await pipeline("object-detection", MODEL, {
       dtype: "q8", // kvantizovan model — manji download, brže na telefonu
