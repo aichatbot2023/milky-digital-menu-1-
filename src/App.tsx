@@ -14,9 +14,10 @@ import {
 import { ChildProfiles } from "./components/ChildProfiles";
 import { HazardOverlay } from "./components/HazardOverlay";
 import { HazardDetailSheet } from "./components/HazardDetailSheet";
+import { LiveScan } from "./components/LiveScan";
 import { ScanHistory } from "./components/ScanHistory";
 
-type View = "home" | "scanning" | "result";
+type View = "home" | "scanning" | "result" | "live";
 
 export default function App() {
   const [view, setView] = useState<View>("home");
@@ -87,6 +88,17 @@ export default function App() {
 
   const selectedHazard =
     currentScan?.result.hazards.find((h) => h.id === selectedHazardId) ?? null;
+
+  if (view === "live") {
+    return (
+      <LiveScan
+        roomType={roomType}
+        ageGroup={selectedChild?.age ?? "1-2y"}
+        childName={selectedChild?.name}
+        onClose={() => setView("home")}
+      />
+    );
+  }
 
   if (view === "scanning") {
     return (
@@ -193,8 +205,11 @@ export default function App() {
         </div>
       </div>
 
-      <button className="btn btn-primary btn-scan" onClick={startScan}>
-        📷 Skeniraj prostor
+      <button className="btn btn-primary btn-scan" onClick={() => setView("live")}>
+        🎥 Uživo skeniranje
+      </button>
+      <button className="btn btn-outline btn-scan" onClick={startScan}>
+        📷 Skeniraj fotografiju
       </button>
 
       <ScanHistory
