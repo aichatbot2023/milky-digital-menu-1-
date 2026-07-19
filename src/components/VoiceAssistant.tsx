@@ -4,9 +4,11 @@ import {
   askAssistant,
   listenOnce,
   primeTts,
+  recordAudio,
   speak,
   speechInputSupported,
   stopSpeaking,
+  transcribeAudio,
 } from "../lib/voice";
 import { offlineAssistantAnswer } from "../lib/hazardKnowledge";
 import { t } from "../lib/i18n";
@@ -56,6 +58,8 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
     }
   };
 
+  const [transcribing, setTranscribing] = useState(false);
+
   const toggleMic = async () => {
     if (listening) {
       stopRef.current?.();
@@ -65,11 +69,29 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
     setTranscript("");
     setError(null);
     setListening(true);
-    const { promise, stop } = listenOnce(setTranscript);
-    stopRef.current = stop;
-    const text = await promise;
-    setListening(false);
-    stopRef.current = null;
+
+    let text: string | null = null;
+    if (speechInputSupported) {
+      // Ugrađeno prepoznavanje govora (Chrome/Android)
+      const { promise, stop } = listenOnce(setTranscript);
+      stopRef.current = stop;
+      text = await promise;
+      setListening(false);
+      stopRef.current = null;
+    } else {
+      // iOS Safari i ostali bez podrške: snimi zvuk → Whisper na serveru
+      const { promise, stop } = recordAudio();
+      stopRef.current = stop;
+      const blob = await promise;
+      setListening(false);
+      stopRef.current = null;
+      if (blob) {
+        setTranscribing(true);
+        text = await transcribeAudio(blob);
+        setTranscribing(false);
+      }
+    }
+
     if (text) {
       setTranscript(text);
       await ask(text);
@@ -109,17 +131,14 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
       </div>
       <p className="muted">{t("va.hint")}</p>
 
-      {speechInputSupported ? (
-        <button
-          className={`btn ${listening ? "btn-outline" : "btn-primary"}`}
-          onClick={toggleMic}
-          disabled={busy}
-        >
-          {listening ? t("va.stop") : t("va.speak")}
-        </button>
-      ) : (
-        <p className="muted">{t("va.unsupported")}</p>
-      )}
+      <button
+        className={`btn ${listening ? "btn-outline" : "btn-primary"}`}
+        onClick={toggleMic}
+        disabled={busy || transcribing}
+      >
+        {listening ? t("va.stop") : t("va.speak")}
+      </button>
+      {transcribing && <p className="muted">{t("va.transcribing")}</p>}
 
       <div className="va-textrow">
         <input

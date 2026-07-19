@@ -136,6 +136,100 @@ export function listenOnce(
   };
 }
 
+/**
+ * REZERVNI glasovni unos za telefone bez Web Speech podrške (iOS Safari):
+ * snimi mikrofon (MediaRecorder) → Groq Whisper transkripcija na serveru.
+ */
+export function recordAudio(maxMs = 15000): {
+  promise: Promise<Blob | null>;
+  stop: () => void;
+} {
+  let stopFn = () => {};
+  const promise = (async (): Promise<Blob | null> => {
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      return null;
+    }
+    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg"].find(
+      (m) => (globalThis as any).MediaRecorder?.isTypeSupported?.(m),
+    );
+    let rec: MediaRecorder;
+    try {
+      rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    } catch {
+      stream.getTracks().forEach((t) => t.stop());
+      return null;
+    }
+    const chunks: BlobPart[] = [];
+    rec.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+    const done = new Promise<void>((resolve) => {
+      rec.onstop = () => resolve();
+      rec.onerror = () => resolve();
+    });
+    rec.start();
+    const timer = setTimeout(() => {
+      try { rec.stop(); } catch { /* ignoriši */ }
+    }, maxMs);
+    stopFn = () => {
+      clearTimeout(timer);
+      try { rec.stop(); } catch { /* ignoriši */ }
+    };
+    await done;
+    stream.getTracks().forEach((t) => t.stop());
+    if (chunks.length === 0) return null;
+    return new Blob(chunks, { type: rec.mimeType || mime || "audio/webm" });
+  })();
+  return { promise, stop: () => stopFn() };
+}
+
+const TRANSCRIBE_URL =
+  (import.meta.env.VITE_TRANSCRIBE_FUNCTION_URL as string | undefined) ??
+  "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/transcribe";
+
+/** Pošalji snimak na Whisper transkripciju; vraća tekst ili null. */
+export async function transcribeAudio(blob: Blob): Promise<string | null> {
+  try {
+    const b64 = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+      r.onerror = () => reject(new Error("read fail"));
+      r.readAsDataURL(blob);
+    });
+    if (!b64) return null;
+    const ANON_T =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 25000);
+    try {
+      const res = await fetch(TRANSCRIBE_URL, {
+        method: "POST",
+        signal: abort.signal,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${ANON_T}`,
+          "apikey": ANON_T,
+        },
+        body: JSON.stringify({
+          audio: b64,
+          mime: blob.type,
+          language: speechLocale().slice(0, 2),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return null;
+      return (data.text as string) || null;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+}
+
 /** Pozovi safenest-chat funkciju (Nemotron lanac) sa kontekstom skena. */
 export async function askAssistant(params: {
   question: string;

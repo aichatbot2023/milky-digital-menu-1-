@@ -275,6 +275,7 @@ const D: Dict = {
   "va.type": { en: "…or type your question", sr: "…ili upišite pitanje" },
   "va.send": { en: "Send", sr: "Pošalji" },
   "va.thinking": { en: "Thinking…", sr: "Razmišljam…" },
+  "va.transcribing": { en: "Transcribing your voice…", sr: "Prepoznajem govor…" },
   "va.noMic": {
     en: "I couldn't hear you — check the microphone permission or type your question below.",
     sr: "Nisam čuo pitanje — proverite dozvolu za mikrofon ili upišite pitanje ispod.",
