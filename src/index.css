@@ -604,3 +604,7 @@ body {
   padding: 12px;
 }
 .va-answer p { line-height: 1.5; margin-bottom: 6px; }
+
+/* Jezik — vidljiv čip u vrhu početnog ekrana */
+.hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lang-chip { flex-shrink: 0; font-weight: 700; color: var(--primary-dark); border-color: #99f6e4; background: #f0fdfa; }

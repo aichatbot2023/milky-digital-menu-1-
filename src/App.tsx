@@ -14,7 +14,7 @@ import {
   updateScan,
 } from "./lib/storage";
 import { getStatus, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
-import { ageLabel, applyDir, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
+import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { ChildProfiles } from "./components/ChildProfiles";
 import { FoodResult } from "./components/FoodResult";
@@ -366,7 +366,16 @@ export default function App() {
   return (
     <div className="app">
       <header className="hero">
-        <h1>🛡️ SafeNest AI</h1>
+        <div className="hero-top">
+          <h1>🛡️ SafeNest AI</h1>
+          <button
+            className="chip lang-chip"
+            onClick={() => setLangReady(false)}
+            aria-label="Change language"
+          >
+            🌐 {LANGS.find((l) => l.code === getLang())?.native ?? "Language"}
+          </button>
+        </div>
         <p>{t("hero.sub")}</p>
       </header>
 
