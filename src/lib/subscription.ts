@@ -12,10 +12,17 @@ const SUB_KEY = "safenest.subscribed";
 export const TRIAL_DAYS = 7;
 export const PRICE_LABEL = "7 € mesečno";
 
-/** Stripe Payment Link (podešava se pri build-u); prazan = kontakt mejl. */
+/** Stripe Payment Link — 7 €/mes, prvih 7 dana besplatno. */
 export const CHECKOUT_URL =
-  (import.meta.env.VITE_CHECKOUT_URL as string | undefined) ?? "";
+  (import.meta.env.VITE_CHECKOUT_URL as string | undefined) ??
+  "https://buy.stripe.com/dRmfZg7ae6AIeEU8zY7AI0f";
 export const CONTACT_EMAIL = "office@aichatbot.rs";
+
+const VERIFY_URL =
+  (import.meta.env.VITE_VERIFY_FUNCTION_URL as string | undefined) ??
+  "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/verify-subscription";
+const ANON =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
 
 // Aktivacioni kodovi (šalju se korisniku posle uplate)
 const PROMO_CODES = ["SAFENEST-OSNIVAC", "SAFENEST-PRO-2026"];
@@ -43,6 +50,40 @@ export function getStatus(): SubStatus {
   } catch {
     // Bez localStorage (privatni mod) ne zaključavamo aplikaciju
     return { state: "trial", daysLeft: TRIAL_DAYS };
+  }
+}
+
+/**
+ * AUTOMATSKI pristup posle uplate: Stripe posle checkout-a vraća korisnika
+ * na sajt sa ?session_id=cs_...; ovde ga serverski verifikujemo kod
+ * Stripe-a i tek onda otključavamo Premium.
+ */
+export async function verifyCheckoutSession(sessionId: string): Promise<boolean> {
+  try {
+    const res = await fetch(VERIFY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${ANON}`,
+        "apikey": ANON,
+      },
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.active) {
+      try {
+        localStorage.setItem(SUB_KEY, "1");
+        if (data.subscription) {
+          localStorage.setItem("safenest.stripeSubId", String(data.subscription));
+        }
+      } catch {
+        /* ignoriši */
+      }
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
   }
 }
 

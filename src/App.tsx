@@ -13,7 +13,7 @@ import {
   saveScan,
   updateScan,
 } from "./lib/storage";
-import { getStatus, type SubStatus } from "./lib/subscription";
+import { getStatus, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
 import { ChildProfiles } from "./components/ChildProfiles";
 import { FoodResult } from "./components/FoodResult";
 import { Paywall } from "./components/Paywall";
@@ -54,6 +54,28 @@ export default function App() {
   };
 
   useEffect(() => saveProfiles(profiles), [profiles]);
+
+  // Povratak sa Stripe checkout-a: ?session_id=cs_... → serverska provera
+  // uplate kod Stripe-a → Premium se aktivira automatski
+  const [payMsg, setPayMsg] = useState<string | null>(null);
+  useEffect(() => {
+    const sid = new URLSearchParams(window.location.search).get("session_id");
+    if (!sid) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    setPayMsg("Proveravam uplatu…");
+    verifyCheckoutSession(sid).then((ok) => {
+      if (ok) {
+        setSubStatus(getStatus());
+        setShowPaywall(false);
+        setPayMsg("🎉 Hvala na pretplati! Premium je aktiviran.");
+      } else {
+        setPayMsg(
+          "Uplata još nije potvrđena. Ako ste platili, sačekajte minut pa osvežite stranicu — ili nam pišite na office@aichatbot.rs.",
+        );
+      }
+      setTimeout(() => setPayMsg(null), 12000);
+    });
+  }, []);
 
   const selectedChild = useMemo(
     () => profiles.find((p) => p.id === selectedChildId) ?? null,
@@ -361,6 +383,7 @@ export default function App() {
       </header>
 
       {error && <div className="error">{error}</div>}
+      {payMsg && <div className="paymsg">{payMsg}</div>}
 
       <button className="subbar" onClick={() => setShowPaywall(true)}>
         {subStatus.state === "subscribed"

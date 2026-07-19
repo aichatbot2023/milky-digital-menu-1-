@@ -19,7 +19,9 @@ export function Paywall({ expired, onClose, onSubscribed }: Props) {
 
   const subscribe = () => {
     if (CHECKOUT_URL) {
-      window.open(CHECKOUT_URL, "_blank", "noopener");
+      // Isti tab: posle uplate Stripe vraća korisnika na sajt sa
+      // ?session_id=... i Premium se aktivira automatski
+      window.location.href = CHECKOUT_URL;
     } else {
       window.location.href = `mailto:${CONTACT_EMAIL}?subject=SafeNest%20AI%20pretplata&body=Zdravo,%20želim%20da%20se%20pretplatim%20na%20SafeNest%20AI%20(${encodeURIComponent(PRICE_LABEL)}).`;
     }
@@ -62,8 +64,13 @@ export function Paywall({ expired, onClose, onSubscribed }: Props) {
           Pretplati se — {PRICE_LABEL}
         </button>
 
+        <p className="muted">
+          Posle uplate bićete automatski vraćeni u aplikaciju i Premium se
+          uključuje sam — bez ikakvih kodova.
+        </p>
+
         <div className="paywall-code">
-          <p className="muted">Već ste platili? Unesite aktivacioni kod:</p>
+          <p className="muted">Rezervna opcija — imate aktivacioni kod?</p>
           <div className="va-textrow">
             <input
               placeholder="npr. SAFENEST-…"

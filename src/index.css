@@ -479,6 +479,15 @@ body {
   gap: 8px;
   color: #334155;
 }
+.paymsg {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-weight: 600;
+}
+
 .paywall-code {
   border-top: 1px solid #e2e8f0;
   padding-top: 12px;

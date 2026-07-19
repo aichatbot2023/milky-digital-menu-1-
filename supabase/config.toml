@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.analyze-food]
 verify_jwt = false
+
+[functions.verify-subscription]
+verify_jwt = false
