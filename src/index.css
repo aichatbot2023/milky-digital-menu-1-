@@ -428,6 +428,54 @@ body {
 }
 .live-iconbtn-on { background: var(--primary); box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.6); }
 
+/* Kritični okviri pulsiraju — ne mogu da se previde ni pomešaju */
+.live-box[data-sev="critical"] {
+  animation: crit-pulse 1.1s ease-in-out infinite;
+  border-width: 3.5px;
+}
+@keyframes crit-pulse {
+  50% { box-shadow: 0 0 0 6px rgba(225, 29, 72, 0.35); }
+}
+
+/* Birač jezika */
+.langpick { gap: 14px; }
+.lang-search {
+  padding: 12px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius);
+  font-size: 1rem;
+}
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.lang-item {
+  background: var(--card);
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: start;
+}
+.lang-item strong { font-size: 1rem; }
+.lang-item span { color: var(--muted); font-size: 0.8rem; }
+.lang-item-active, .lang-item:active { border-color: var(--primary); background: #f0fdfa; }
+.lang-note { text-align: center; }
+.lang-switch {
+  background: none;
+  border: none;
+  color: var(--primary-dark);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0;
+  text-decoration: underline;
+}
+.disclaimer a { color: var(--primary-dark); }
+
 /* Samoučenje — ocena detekcije */
 .feedback-row { display: flex; gap: 10px; }
 .feedback-row .btn { flex: 1; font-size: 0.9rem; }

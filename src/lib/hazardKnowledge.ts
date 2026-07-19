@@ -4,6 +4,7 @@
  * činjenice sa izvorom — bez izmišljenih brojeva.
  */
 import type { AgeGroup, Hazard, HazardCategory, Severity } from "../types";
+import { isSr, t } from "./i18n";
 
 export interface Detection {
   label: string;
@@ -367,6 +368,53 @@ const RULES: Record<string, HazardRule> = {
   },
 };
 
+/** Engleski tekstovi pravila — koriste se za sve jezike osim sr/hr/bs. */
+interface RuleEn { label: string; why: string; stats: string; fix: string }
+const RULES_EN: Record<string, RuleEn> = {
+  knife: { label: "Knife", why: "A sharp object within the child's reach. Children who grab and climb can seize the blade or pull it off the surface.", stats: "Cuts are among the most common kitchen injuries in young children; sharp objects are the leading cause of cuts needing stitches (CDC).", fix: "Move the knife to a child-locked drawer or out of reach immediately." },
+  scissors: { label: "Scissors", why: "Scissors within reach — risk of finger and face cuts, especially for children imitating adults.", stats: "Sharp household objects account for a large share of ER visits for children aged 1–4 (EU Child Safety Alliance).", fix: "Keep scissors in a closed drawer; give older children blunt-tip safety scissors." },
+  fork: { label: "Fork", why: "Sharp tines can injure the mouth or eye if the child falls holding it or pulls it off the table.", stats: "Cutlery injuries are most frequent in children under 4 during meals (CDC).", fix: "Keep cutlery away from the table edge; use rounded children's cutlery." },
+  bottle: { label: "Bottle", why: "Bottles may contain liquids dangerous to a child (chemicals, alcohol) or shatter. Children under 3 taste everything.", stats: "Home poisonings are a leading cause of poison-control calls for children under 5 (WHO).", fix: "Check the contents; lock away chemicals and alcohol, keep glass out of reach." },
+  "wine glass": { label: "Glass", why: "Glass within a child's reach tips over and shatters easily; shards cause deep cuts.", stats: "Broken glass is a common cause of cuts in young children at home (EU Child Safety Alliance).", fix: "Use plastic cups while your child is small; clear glassware right after use." },
+  cup: { label: "Cup / mug", why: "It may hold a hot drink — a child pulling the tablecloth or reaching the edge spills scalding liquid on themselves.", stats: "Hot-drink scalds are the most common burn type in children under 4 (WHO).", fix: "Keep hot drinks in the middle of the table, no hanging tablecloth; never hold a hot drink and a child at once." },
+  bowl: { label: "Bowl", why: "A bowl of hot food near the edge — a child can tip it onto themselves.", stats: "Hot food and liquids cause most kitchen scalds in young children (WHO).", fix: "Move it deeper onto the counter or table, away from the edge." },
+  vase: { label: "Vase", why: "A heavy or glass vase can fall on a child who pulls up on furniture or tugs what it stands on.", stats: "Falling objects from furniture commonly cause head injuries in toddlers (CDC).", fix: "Move the vase to a stable, high surface away from the edge." },
+  "potted plant": { label: "Potted plant", why: "Some houseplants are poisonous if chewed, and the pot and soil can fall on the child.", stats: "Plants are among the top 10 causes of poison-control calls for young children (WHO).", fix: "Check if the plant is toxic (ficus, dieffenbachia…); move it out of reach." },
+  oven: { label: "Oven / stove", why: "Oven doors and burners stay hot long after use; a child at door height can lean on it or grab pot handles.", stats: "Contact burns from stoves and ovens are among the most common burns in children 1–4 (WHO).", fix: "Fit a stove guard and an oven door lock; turn pot handles inward." },
+  microwave: { label: "Microwave", why: "Children can overheat food or liquids — steam and superheated liquids cause scalds.", stats: "Steam and microwave-liquid scalds increase in children 4+ (CDC).", fix: "Place the microwave out of reach; teach older children heating rules." },
+  toaster: { label: "Toaster", why: "Hot surfaces and a dangling cord — a child can pull the toaster off the counter.", stats: "Small appliances with hanging cords are a frequent cause of pull-down burns (EU Child Safety Alliance).", fix: "Tuck the cord away and push the toaster back from the edge." },
+  tv: { label: "TV", why: "A child pulling up or climbing can tip the TV over — a falling screen causes severe head injuries.", stats: "A TV or furniture tip-over sends a child to the ER roughly every 30 minutes (CPSC/CDC, US).", fix: "Anchor the TV to the wall with a mount or anti-tip straps." },
+  laptop: { label: "Laptop & cable", why: "The charger cable is easy to grab — pulling it brings the laptop down, and cable and socket are a chewing risk.", stats: "Electrical injuries in young children most often involve cords and low sockets (WHO).", fix: "Charge devices out of reach; use socket covers." },
+  "cell phone": { label: "Phone / charger", why: "A charger cable in a child's mouth while plugged in is an electric-shock risk.", stats: "Chewing or swallowing cables is a frequent reason for interventions in children under 2 (CDC).", fix: "Unplug chargers when not in use; keep cables out of reach." },
+  chair: { label: "Chair", why: "A chair is a ladder for a child — climbing it reaches tables, counters or windows.", stats: "Falls are the #1 cause of non-fatal injuries in children 0–4 (~44% of ER visits — CDC).", fix: "Push chairs in; never leave them by windows, the stove or counters." },
+  "dining table": { label: "Table edges", why: "The table edge is at toddler head height; a hanging tablecloth can bring everything down on the child.", stats: "Furniture-edge impacts are among the most common head injuries in children 1–3 (EU Child Safety Alliance).", fix: "Fit corner guards; avoid tablecloths while your child is small." },
+  couch: { label: "Sofa", why: "A baby left on a sofa can roll off; cushions near a baby's face are a suffocation risk.", stats: "Falls from furniture are the most common injury in babies under 12 months (CDC).", fix: "Never leave a baby alone on a sofa; change nappies on the floor or in a cot." },
+  bed: { label: "Bed", why: "Falls from adult beds are common for babies and toddlers; bedding and pillows are a suffocation risk for infants.", stats: "Falls from beds account for a large share of head injuries in children under 2 (WHO).", fix: "Babies sleep in a cot with rails; fit a bed guard for older children." },
+  sink: { label: "Sink", why: "Water and chemicals under the sink; a child climbing to the tap risks hot-water scalds.", stats: "Hot tap water causes serious scalds in young children; WHO recommends boiler ≤ 50°C.", fix: "Move or lock away under-sink chemicals; limit the boiler temperature." },
+  toilet: { label: "Toilet", why: "A child leaning into the bowl can lose balance — little water is enough for a small child to drown.", stats: "Drowning is possible in just 5 cm of water; bathrooms are high-risk for children under 3 (WHO).", fix: "Fit a toilet-lid lock and keep the bathroom door closed." },
+  refrigerator: { label: "Fridge", why: "Finger crush in the door, and glass jars within reach when it opens.", stats: "Door finger-crush injuries are common minor injuries in young children (EU Child Safety Alliance).", fix: "Fit a fridge lock if your child opens the door alone." },
+  book: { label: "Shelf / books", why: "If books sit on an unanchored shelf, a climbing child can pull the whole unit over.", stats: "Furniture tip-overs (shelves, dressers) cause severe injuries to climbing children (CPSC/CDC).", fix: "Anchor shelves and dressers to the wall." },
+  remote: { label: "Remote (batteries!)", why: "Remotes contain button batteries — a swallowed battery causes severe chemical burns to the oesophagus within 2 hours.", stats: "Button-battery ingestion is a medical emergency; severe cases in children under 6 have risen sharply (CDC/poison centres).", fix: "Make sure the battery cover is screwed or taped shut; keep remotes out of reach." },
+  "sports ball": { label: "Small ball", why: "Small balls and their parts can block the airway — anything that fits through a toilet-paper tube is a choking risk under 3.", stats: "Choking on small objects is a leading cause of accidental death in children under 1 (CDC).", fix: "Remove balls under 4.5 cm while your child is small; check older siblings' toys." },
+  "teddy bear": { label: "Plush toy", why: "Plush toys in a baby's cot are a suffocation risk during sleep; detachable plastic eyes/noses can be swallowed.", stats: "Soft objects in the cot are linked to SIDS — the recommendation is a bare cot (AAP/WHO).", fix: "Keep the cot empty for babies under 12 months: no plush toys, pillows or blankets." },
+  handbag: { label: "Handbag (contents!)", why: "Bags typically hold medicines, coins, lighters and cosmetics — everything a child empties out and mouths.", stats: "Medicines from visitors' and grandparents' bags are a frequent cause of accidental poisoning under 5 (CDC).", fix: "Hang bags high or behind closed doors — never on the floor or sofa." },
+  backpack: { label: "Backpack (contents)", why: "Backpacks hold small objects, bottles, medicines or scissors; straps are an entanglement risk.", stats: "Accidental poisonings and chokings often involve items left in bags at child height (CDC).", fix: "Hang backpacks up high; check what older family members carry." },
+  suitcase: { label: "Suitcase", why: "An upright suitcase tips easily onto a child pulling up on it; wheels and zips pinch fingers.", stats: "Tip-over injuries from wheeled objects are common in toddlers (EU Child Safety Alliance).", fix: "Lay the suitcase flat or put it away after travelling." },
+  umbrella: { label: "Umbrella", why: "Rib tips and the opening mechanism can stab an eye or pinch fingers; auto-open into the face is a classic scenario.", stats: "Eye injuries from pointed household objects peak in children 2–7 (EU Child Safety Alliance).", fix: "Keep umbrellas closed and out of reach, in a stand or on a hook." },
+  tie: { label: "Tie / ribbon", why: "Any ribbon, tie or cord longer than 20 cm is a strangulation risk — children wrap them around their neck or get tangled during play or sleep.", stats: "Strangulation by cords (incl. blind cords) causes child deaths every year (CPSC).", fix: "Keep ribbons and cords out of reach; shorten blind cords or switch to cordless blinds." },
+  "hair drier": { label: "Hair dryer", why: "A plugged-in dryer near water (sink, bath) is an electrocution risk; the hot grille causes contact burns.", stats: "Bathrooms are the highest-risk room for electrical injuries at home; appliances near water lead (WHO).", fix: "Unplug and put the dryer away right after use; never leave it near the bath or sink." },
+  dog: { label: "Dog", why: "Even the calmest dog must never be alone with a baby or toddler — a child can't read warning signals, and most child bites come from a familiar dog.", stats: "Children under 4 are the most frequent dog-bite victims, typically from the family dog at home (CDC).", fix: "Never leave a child and dog unsupervised together; teach your child not to touch a dog that's eating or sleeping." },
+  cat: { label: "Cat", why: "A cat may lie next to a sleeping baby's face (breathing risk) or scratch a child who pulls it.", stats: "Cat scratches and bites in young children carry infection risk and are most common as children learn animal contact (CDC).", fix: "Keep the cat out of the room where the baby sleeps; teach gentle contact." },
+  "hot dog": { label: "Hot dog / food", why: "A hot dog's shape and diameter make it a perfect plug for a child's airway — the single leading cause of fatal food choking in children.", stats: "Hot dogs cause the most fatal food chokings in children under 3 (AAP/CDC).", fix: "Cut hot dogs LENGTHWISE, then into small pieces; children always eat seated and supervised." },
+  apple: { label: "Hard fruit (pieces)", why: "Hard apple pieces (and raw vegetables) easily block the airway of a child without molars.", stats: "Hard foods (apple, carrot, nuts) are among the top choking causes under 4 (AAP).", fix: "Grate or cook hard fruit/veg for children under 4; cut into strips, not rounds." },
+  orange: { label: "Fruit (pieces)", why: "Membranes and larger citrus pieces can choke children still learning to chew.", stats: "Food choking is most common between 6 months and 3 years (AAP).", fix: "Remove membranes and cut small; child eats seated, supervised." },
+  carrot: { label: "Raw carrot", why: "Raw carrot is hard and snaps into pieces perfectly sized to block a child's airway.", stats: "Raw hard vegetables are top of the choking list for young children (AAP).", fix: "Cook or grate carrots for children under 4." },
+  clock: { label: "Clock (batteries)", why: "Desk clocks contain batteries (often button cells) and glass; a clock falling from a shelf is an extra risk.", stats: "Button batteries from household devices are among the most dangerous swallowed objects (poison centres).", fix: "Keep clocks high and check battery covers are secure." },
+  "baseball bat": { label: "Bat / stick", why: "Heavy sports gear leaning on a wall falls when pulled; an older child's swing hits a younger one.", stats: "Home sports-equipment injuries most often affect younger siblings (CPSC).", fix: "Store sports gear in a cupboard or rack, not leaning against the wall." },
+  skateboard: { label: "Skateboard", why: "A child stepping on a skateboard indoors falls backwards onto a hard floor — the classic head-injury mechanism.", stats: "Wheeled falls (skateboard, scooter) without a helmet commonly cause child head injuries (CDC).", fix: "Keep the skateboard/scooter out of play areas; always a helmet outdoors." },
+  bicycle: { label: "Bicycle", why: "A bike leaning on a wall falls on a child who pulls it; chain and sprockets pinch fingers.", stats: "Finger injuries from bike mechanisms are common in young children (EU Child Safety Alliance).", fix: "Park the bike on a stand or holder, away from play areas." },
+};
+
 export function mapDetectionsToHazards(
   detections: Detection[],
   ageGroup: AgeGroup,
@@ -385,15 +433,19 @@ export function mapDetectionsToHazards(
     // Nesiguran nalaz se JASNO obeležava — ne tvrdimo ono što model nagađa
     // (npr. bebeća flašica ≠ čaša); roditelj ocenom 👎 uči aplikaciju.
     const uncertain = d.score < 0.55;
+    // Tekstovi na jeziku korisnika: sr/hr/bs → srpski, ostali → engleski
+    const en = RULES_EN[d.label];
+    const useEn = !isSr() && en;
+    const baseLabel = useEn ? en.label : rule.labelSr;
     hazards.push({
       id: `local-${hazards.length}-${d.label.replace(/\s/g, "_")}`,
-      label: uncertain ? `Moguće: ${rule.labelSr}` : rule.labelSr,
+      label: uncertain ? `${t("maybe")} ${baseLabel}` : baseLabel,
       category: rule.category,
       severity,
       box: d.box,
-      why: rule.why,
-      stats: rule.stats,
-      fix: rule.fix,
+      why: useEn ? en.why : rule.why,
+      stats: useEn ? en.stats : rule.stats,
+      fix: useEn ? en.fix : rule.fix,
       resolved: false,
       sourceClass: d.label,
       confidence: d.score,
@@ -410,12 +462,13 @@ export function mapDetectionsToHazards(
  * dugme asistenta uvek funkcioniše.
  */
 export function offlineAssistantAnswer(question: string, hazards: Hazard[]): string {
+  const sr = isSr();
   const q = question.toLowerCase();
   // 1) Pitanje o konkretnoj uočenoj opasnosti → njen "zašto" + rešenje
   for (const h of hazards) {
     const words = h.label.toLowerCase().split(/[\s/(),—-]+/).filter((w) => w.length > 3);
     if (words.some((w) => q.includes(w))) {
-      return `${h.why} Rešenje: ${h.fix}`;
+      return `${h.why} ${sr ? "Rešenje:" : "Fix:"} ${h.fix}`;
     }
   }
   // 2) Opšte pitanje uz postojeći sken → tri najvažnija koraka
@@ -425,10 +478,14 @@ export function offlineAssistantAnswer(question: string, hazards: Hazard[]): str
       .sort((a, b) => order[a.severity] - order[b.severity])
       .slice(0, 3);
     return (
-      "Evo najvažnijih koraka na osnovu skena: " +
+      (sr
+        ? "Evo najvažnijih koraka na osnovu skena: "
+        : "Here are the most important steps based on your scan: ") +
       top.map((h, i) => `${i + 1}. ${h.label} — ${h.fix}`).join(" ")
     );
   }
   // 3) Bez skena → osnovni saveti
-  return "Najvažnije zone za proveru: utičnice (zaštitni poklopci), gajtani roletni i kablovi (davljenje), sitni predmeti i baterije (gušenje), hemikalije i lekovi (zaključati), šporet i vrele tečnosti, prozori i stepenice (zaštitne ograde). Skenirajte prostor kamerom pa me pitajte za detalje.";
+  return sr
+    ? "Najvažnije zone za proveru: utičnice (zaštitni poklopci), gajtani roletni i kablovi (davljenje), sitni predmeti i baterije (gušenje), hemikalije i lekovi (zaključati), šporet i vrele tečnosti, prozori i stepenice (zaštitne ograde). Skenirajte prostor kamerom pa me pitajte za detalje."
+    : "Key zones to check: electrical outlets (safety covers), blind cords and cables (strangulation), small objects and batteries (choking), chemicals and medicines (lock away), stove and hot liquids, windows and stairs (safety gates). Scan a room with the camera, then ask me for details.";
 }

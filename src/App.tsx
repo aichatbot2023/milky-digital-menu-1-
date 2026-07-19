@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChildProfile, RoomType, ScanRecord } from "./types";
-import { AGE_LABELS, ROOM_LABELS } from "./types";
+import { ROOM_LABELS } from "./types";
 import { analyzeFood, offlineFoodGuidance, type FoodAnalysis } from "./lib/food";
 import { analyzeImage, downscaleImage } from "./lib/analyze";
 import { boxIou, detectLocal } from "./lib/detector";
@@ -14,6 +14,8 @@ import {
   updateScan,
 } from "./lib/storage";
 import { getStatus, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
+import { ageLabel, applyDir, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
+import { LanguagePicker } from "./components/LanguagePicker";
 import { ChildProfiles } from "./components/ChildProfiles";
 import { FoodResult } from "./components/FoodResult";
 import { Paywall } from "./components/Paywall";
@@ -27,6 +29,8 @@ type View = "home" | "scanning" | "result" | "live" | "food-scanning" | "food-re
 
 export default function App() {
   const [view, setView] = useState<View>("home");
+  const [langReady, setLangReady] = useState(() => langChosen());
+  useEffect(() => applyDir(), [langReady]);
   const [profiles, setProfiles] = useState<ChildProfile[]>(() => loadProfiles());
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
     () => loadProfiles()[0]?.id ?? null,
@@ -62,16 +66,14 @@ export default function App() {
     const sid = new URLSearchParams(window.location.search).get("session_id");
     if (!sid) return;
     window.history.replaceState(null, "", window.location.pathname);
-    setPayMsg("Proveravam uplatu…");
+    setPayMsg(t("pay.checking"));
     verifyCheckoutSession(sid).then((ok) => {
       if (ok) {
         setSubStatus(getStatus());
         setShowPaywall(false);
-        setPayMsg("🎉 Hvala na pretplati! Premium je aktiviran.");
+        setPayMsg(t("pay.thanks"));
       } else {
-        setPayMsg(
-          "Uplata još nije potvrđena. Ako ste platili, sačekajte minut pa osvežite stranicu — ili nam pišite na office@aichatbot.rs.",
-        );
+        setPayMsg(t("pay.failed"));
       }
       setTimeout(() => setPayMsg(null), 12000);
     });
@@ -128,7 +130,7 @@ export default function App() {
           hazards: [...cloud.hazards, ...extras],
           summary:
             extras.length > 0
-              ? `${cloud.summary} Lokalni AI je precizno uočio još ${extras.length} ${extras.length === 1 ? "objekat" : "objekta/objekata"}.`
+              ? `${cloud.summary} ${t("scan.extras")} ${extras.length} ${t("scan.extrasTail")}`
               : cloud.summary,
         };
       } else if (localS.status === "fulfilled") {
@@ -137,13 +139,13 @@ export default function App() {
           safety_score: Math.max(20, 90 - localHazards.length * 12),
           summary:
             localHazards.length > 0
-              ? "Precizna lokalna AI analiza (višeslojno skeniranje slike): prepoznati su rizični objekti za izabrani uzrast. Dodirnite marker za objašnjenje i rešenje."
-              : "Precizna lokalna AI analiza nije uočila rizične objekte. Proverite i zone koje model ne vidi (utičnice, ivice, kablovi).",
+              ? t("scan.localSummary")
+              : t("scan.localNone"),
         };
       } else {
         throw new Error(
           (cloudS as PromiseRejectedResult).reason?.message ??
-            "Analiza nije uspela. Pokušajte ponovo.",
+            t("scan.failed"),
         );
       }
       const scan: ScanRecord = {
@@ -160,7 +162,7 @@ export default function App() {
       setSelectedHazardId(null);
       setView("result");
     } catch (e: any) {
-      setError(e?.message ?? "Analiza nije uspela. Pokušajte ponovo.");
+      setError(e?.message ?? t("scan.failed"));
       setView("home");
     }
   };
@@ -192,7 +194,7 @@ export default function App() {
       }
       setView("food-result");
     } catch (e: any) {
-      setError(e?.message ?? "Analiza hrane nije uspela. Pokušajte ponovo.");
+      setError(e?.message ?? t("scan.failed"));
       setView("home");
     }
   };
@@ -215,6 +217,10 @@ export default function App() {
 
   const selectedHazard =
     currentScan?.result.hazards.find((h) => h.id === selectedHazardId) ?? null;
+
+  if (!langReady) {
+    return <LanguagePicker onDone={() => setLangReady(true)} />;
+  }
 
   if (view === "live") {
     return (
@@ -247,10 +253,9 @@ export default function App() {
     return (
       <div className="app center">
         <div className="spinner" />
-        <h2>AI proverava hranu…</h2>
+        <h2>{t("food.checking")}</h2>
         <p className="muted">
-          Sastojci, alergeni i rizik gušenja za uzrast{" "}
-          {AGE_LABELS[selectedChild?.age ?? "1-2y"]}.
+          {t("food.checkingSub")} {ageLabel(selectedChild?.age ?? "1-2y")}.
         </p>
       </div>
     );
@@ -262,7 +267,7 @@ export default function App() {
         image={foodImage}
         result={foodResult}
         offlineGuidance={foodOffline}
-        ageLabel={AGE_LABELS[selectedChild?.age ?? "1-2y"]}
+        ageLabel={ageLabel(selectedChild?.age ?? "1-2y")}
         onAgain={startFoodScan}
         onBack={() => setView("home")}
       />
@@ -273,11 +278,10 @@ export default function App() {
     return (
       <div className="app center">
         <div className="spinner" />
-        <h2>AI analizira prostor…</h2>
+        <h2>{t("scanning.title")}</h2>
         <p className="muted">
-          Višeslojna precizna analiza (lokalni AI + cloud) — tražimo i sitne
-          predmete opasne za {selectedChild ? `${selectedChild.name}` : "dete"}.
-          Ovo traje 10–30 sekundi.
+          {t("scanning.sub1")} {selectedChild ? selectedChild.name : t("scanning.child")}.{" "}
+          {t("scanning.sub2")}
         </p>
       </div>
     );
@@ -289,10 +293,10 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <button className="btn btn-ghost" onClick={() => setView("home")}>
-            ← Nazad
+            {t("back")}
           </button>
           <span className="score" data-level={safety_score >= 70 ? "ok" : safety_score >= 40 ? "mid" : "bad"}>
-            Bezbednost: {safety_score}/100
+            {t("safety")}: {safety_score}/100
           </span>
         </header>
 
@@ -312,27 +316,20 @@ export default function App() {
               if (n === 0) return null;
               return (
                 <span key={s} className="stat-chip" data-sev={s}>
-                  {s === "critical"
-                    ? "Kritično"
-                    : s === "high"
-                      ? "Visoko"
-                      : s === "medium"
-                        ? "Srednje"
-                        : "Nisko"}{" "}
-                  {n}
+                  {severityLabel(s)} {n}
                 </span>
               );
             })}
-            <span className="stat-chip stat-total">Ukupno {hazards.length}</span>
+            <span className="stat-chip stat-total">{t("stats.total")} {hazards.length}</span>
             <span className="stat-chip stat-done">
-              Rešeno {hazards.filter((h) => h.resolved).length}
+              {t("stats.resolved")} {hazards.filter((h) => h.resolved).length}
             </span>
           </div>
         )}
 
         <div className="hazard-list">
           {hazards.length === 0 && (
-            <p className="ok">Nismo uočili opasnosti na ovoj fotografiji. 🎉</p>
+            <p className="ok">{t("result.none")}</p>
           )}
           {hazards.map((h, i) => (
             <button
@@ -343,13 +340,7 @@ export default function App() {
               <span className="hazard-num">{h.resolved ? "✓" : i + 1}</span>
               <span className="hazard-row-label">{h.label}</span>
               <span className="hazard-row-sev" data-sev={h.severity}>
-                {h.severity === "critical"
-                  ? "Kritično"
-                  : h.severity === "high"
-                    ? "Visoko"
-                    : h.severity === "medium"
-                      ? "Srednje"
-                      : "Nisko"}
+                {severityLabel(h.severity)}
               </span>
             </button>
           ))}
@@ -376,10 +367,7 @@ export default function App() {
     <div className="app">
       <header className="hero">
         <h1>🛡️ SafeNest AI</h1>
-        <p>
-          Skenirajte prostor kamerom — AI označava opasnosti po vaše dete i
-          pokazuje kako da ih uklonite.
-        </p>
+        <p>{t("hero.sub")}</p>
       </header>
 
       {error && <div className="error">{error}</div>}
@@ -387,10 +375,10 @@ export default function App() {
 
       <button className="subbar" onClick={() => setShowPaywall(true)}>
         {subStatus.state === "subscribed"
-          ? "⭐ Premium aktivan — hvala vam!"
+          ? t("sub.active")
           : subStatus.state === "trial"
-            ? `🎁 Besplatni period: još ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? "dan" : "dana"} · Pretplata 7 €/mes.`
-            : "⚠️ Besplatni period je istekao — pretplatite se za 7 €/mes."}
+            ? `${t("sub.trial")} ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? t("sub.dayLeft") : t("sub.daysLeft")} ${t("sub.trialTail")}`
+            : t("sub.expired")}
       </button>
 
       <ChildProfiles
@@ -401,7 +389,7 @@ export default function App() {
       />
 
       <div className="room-picker">
-        <h3>Tip prostora</h3>
+        <h3>{t("room.title")}</h3>
         <div className="profile-chips">
           {(Object.keys(ROOM_LABELS) as RoomType[]).map((r) => (
             <button
@@ -409,7 +397,7 @@ export default function App() {
               className={`chip${r === roomType ? " chip-active" : ""}`}
               onClick={() => setRoomType(r)}
             >
-              {ROOM_LABELS[r]}
+              {roomLabel(r)}
             </button>
           ))}
         </div>
@@ -421,18 +409,16 @@ export default function App() {
           if (requireAccess()) setView("live");
         }}
       >
-        🎥 Uživo skeniranje
-        <span className="btn-sub">AI označava i objašnjava opasnosti u realnom vremenu</span>
+        {t("btn.live")}
+        <span className="btn-sub">{t("btn.live.sub")}</span>
       </button>
       <button className="btn btn-outline btn-scan" onClick={startScan}>
-        📷 Skeniraj fotografiju
-        <span className="btn-sub">Detaljna analiza jedne slike prostora</span>
+        {t("btn.photo")}
+        <span className="btn-sub">{t("btn.photo.sub")}</span>
       </button>
       <button className="btn btn-outline btn-scan btn-food" onClick={startFoodScan}>
-        🍼 Skeniraj hranu i piće
-        <span className="btn-sub">
-          Da li dete sme ovo da jede? Sastojci, alergeni, rizik gušenja — po uzrastu
-        </span>
+        {t("btn.food")}
+        <span className="btn-sub">{t("btn.food.sub")}</span>
       </button>
 
       <VoiceAssistant
@@ -455,9 +441,16 @@ export default function App() {
       />
 
       <footer className="disclaimer">
-        SafeNest AI je pomoćni alat i ne zamenjuje nadzor odrasle osobe.
+        {t("footer.disclaimer")}
         <br />
-        verzija {__APP_VERSION__}
+        {t("footer.company")}
+        <br />
+        <a href="/privacy.html">Privacy (GDPR)</a> · <a href="/terms.html">Terms</a> ·{" "}
+        <button className="lang-switch" onClick={() => setLangReady(false)}>
+          🌐 Language
+        </button>
+        <br />
+        {t("footer.version")} {__APP_VERSION__}
       </footer>
 
       {showPaywall && (

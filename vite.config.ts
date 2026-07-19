@@ -1,7 +1,17 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
+  // Dve stranice: landing (/) + aplikacija (/app/)
+  build: {
+    rollupOptions: {
+      input: {
+        landing: resolve(__dirname, "index.html"),
+        app: resolve(__dirname, "app/index.html"),
+      },
+    },
+  },
   // BASE_PATH se postavlja u CI za GitHub Pages (/<ime-repoa>/)
   base: process.env.BASE_PATH || "/",
   // Verzija vidljiva u aplikaciji — da uvek znamo koja verzija radi na uređaju

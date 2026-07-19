@@ -9,6 +9,7 @@ import {
   stopSpeaking,
 } from "../lib/voice";
 import { offlineAssistantAnswer } from "../lib/hazardKnowledge";
+import { t } from "../lib/i18n";
 
 interface Props {
   roomType: RoomType;
@@ -73,9 +74,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
       setTranscript(text);
       await ask(text);
     } else {
-      setError(
-        "Nisam čuo pitanje — proverite dozvolu za mikrofon ili upišite pitanje ispod.",
-      );
+      setError(t("va.noMic"));
     }
   };
 
@@ -88,7 +87,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
           setOpen(true);
         }}
       >
-        🎤 Pitaj asistenta
+        {t("va.fab")}
       </button>
     );
   }
@@ -96,7 +95,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
   return (
     <div className="va-panel">
       <div className="va-head">
-        <strong>🎤 Glasovni asistent</strong>
+        <strong>{t("va.title")}</strong>
         <button
           className="va-close"
           onClick={() => {
@@ -108,10 +107,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
           ×
         </button>
       </div>
-      <p className="muted">
-        Pitajte bilo šta o bezbednosti — npr. „Zašto je šporet opasan?" ili
-        „Kako da obezbedim terasu?"
-      </p>
+      <p className="muted">{t("va.hint")}</p>
 
       {speechInputSupported ? (
         <button
@@ -119,18 +115,15 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
           onClick={toggleMic}
           disabled={busy}
         >
-          {listening ? "⏹ Zaustavi (slušam…)" : "🎤 Govori"}
+          {listening ? t("va.stop") : t("va.speak")}
         </button>
       ) : (
-        <p className="muted">
-          Glasovni unos nije podržan u ovom pregledaču — upišite pitanje, a
-          odgovor ću izgovoriti naglas. 🔊
-        </p>
+        <p className="muted">{t("va.unsupported")}</p>
       )}
 
       <div className="va-textrow">
         <input
-          placeholder="…ili upišite pitanje"
+          placeholder={t("va.type")}
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           onKeyDown={(e) => {
@@ -148,18 +141,18 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
             setTextInput("");
           }}
         >
-          Pošalji
+          {t("va.send")}
         </button>
       </div>
 
       {transcript && <p className="va-transcript">„{transcript}"</p>}
-      {busy && <p className="muted">Razmišljam…</p>}
+      {busy && <p className="muted">{t("va.thinking")}</p>}
       {error && <p className="warn">{error}</p>}
       {answer && (
         <div className="va-answer">
           <p>{answer}</p>
           <button className="btn btn-ghost" onClick={() => speak(answer)}>
-            🔊 Ponovi
+            {t("va.repeat")}
           </button>
         </div>
       )}

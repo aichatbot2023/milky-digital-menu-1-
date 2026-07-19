@@ -6,6 +6,8 @@
  * baza znanja (offlineAssistantAnswer) — asistent NIKAD ne ćuti.
  */
 
+import { languageEnglishName, speechLocale } from "./i18n";
+
 const SR = (globalThis as any).SpeechRecognition ?? (globalThis as any).webkitSpeechRecognition;
 
 export const speechInputSupported = Boolean(SR);
@@ -31,11 +33,15 @@ if (speechOutputSupported) {
 
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = cachedVoices.length > 0 ? cachedVoices : speechSynthesis.getVoices();
+  const loc = speechLocale().toLowerCase();
+  const lang2 = loc.slice(0, 2);
+  // Tačan lokal → isti jezik → srodni južnoslovenski (za sr)
   return (
-    voices.find((v) => v.lang.toLowerCase().startsWith("sr")) ??
-    voices.find((v) => v.lang.toLowerCase().startsWith("hr")) ??
-    voices.find((v) => v.lang.toLowerCase().startsWith("bs")) ??
-    null
+    voices.find((v) => v.lang.toLowerCase() === loc) ??
+    voices.find((v) => v.lang.toLowerCase().startsWith(lang2)) ??
+    (lang2 === "sr"
+      ? voices.find((v) => /^(hr|bs)/.test(v.lang.toLowerCase())) ?? null
+      : null)
   );
 }
 
@@ -64,7 +70,7 @@ export function speak(text: string) {
     // Safari ume da ostane "paused" posle cancel — probudi ga
     if (speechSynthesis.paused) speechSynthesis.resume();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "sr-RS";
+    u.lang = speechLocale();
     const voice = pickVoice();
     if (voice) u.voice = voice;
     u.rate = 1.0;
@@ -95,7 +101,7 @@ export function listenOnce(
   } catch {
     return { promise: Promise.resolve(null), stop: () => {} };
   }
-  rec.lang = "sr-RS";
+  rec.lang = speechLocale();
   rec.interimResults = true;
   rec.maxAlternatives = 1;
 
@@ -154,7 +160,7 @@ export async function askAssistant(params: {
         "Authorization": `Bearer ${ANON}`,
         "apikey": ANON,
       },
-      body: JSON.stringify(params),
+      body: JSON.stringify({ ...params, language: languageEnglishName() }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Greška (${res.status})`);

@@ -1,4 +1,5 @@
 import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
+import { languageEnglishName } from "./i18n";
 
 interface AnalyzeParams {
   imageDataUrl: string;
@@ -74,6 +75,7 @@ async function doAnalyze(
         roomType: params.roomType,
         ageGroup: params.ageGroup,
         childName: params.childName,
+        language: languageEnglishName(),
       }),
     });
   }

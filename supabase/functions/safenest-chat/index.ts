@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
   if (!question) return json({ error: 'Missing question' }, 400);
 
   const age = AGE_SR[body?.ageGroup] ?? body?.ageGroup ?? 'malo dete';
+  const language = String(body?.language ?? 'Serbian').slice(0, 30);
   const hazardCtx = Array.isArray(body?.hazards) && body.hazards.length > 0
     ? `Na poslednjem skeniranju prostora uočeno je: ${body.hazards
         .slice(0, 12)
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
   const system = `Ti si SafeNest glasovni asistent — ekspert za bezbednost dece u domu (childproofing, pedijatrijska prevencija povreda; SZO/CDC/EU izvori).
 Kontekst: dete uzrasta ${age}. ${hazardCtx}
 Pravila odgovora:
-- Odgovaraj na srpskom, toplo i smireno, bez izazivanja panike.
+- RESPOND ENTIRELY IN ${language} — this is mandatory. Warm and calm tone, no panic.
 - KRATKO: 2-4 rečenice, jer se odgovor izgovara naglas.
 - Uvek daj konkretan, odmah izvodljiv savet.
 - Statistike samo stvarne, sa izvorom; nikad izmišljene brojeve.

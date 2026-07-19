@@ -5,6 +5,7 @@ import {
   PRICE_LABEL,
   redeemCode,
 } from "../lib/subscription";
+import { t } from "../lib/i18n";
 
 interface Props {
   expired: boolean;
@@ -40,37 +41,32 @@ export function Paywall({ expired, onClose, onSubscribed }: Props) {
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet paywall" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-        <h2>⭐ SafeNest AI Premium</h2>
+        <h2>{t("paywall.title")}</h2>
         <p className="muted">
-          {expired
-            ? "Vaših 7 besplatnih dana je isteklo. Nastavite da štitite svoj dom uz Premium."
-            : "Prvih 7 dana je potpuno besplatno — bez kartice. Posle toga:"}
+          {expired ? t("paywall.expired") : t("paywall.trial")}
         </p>
 
         <div className="paywall-price">
-          <strong>{PRICE_LABEL}</strong>
-          <span className="muted">otkažite bilo kada</span>
+          <strong>{t("paywall.price")}</strong>
+          <span className="muted">{t("paywall.cancel")}</span>
         </div>
 
         <ul className="paywall-benefits">
-          <li>🎥 Neograničeno uživo skeniranje sa AI objašnjenjima</li>
-          <li>🔬 Precizna višeslojna analiza fotografija (i sitni predmeti)</li>
-          <li>🎤 Glasovni AI asistent za bezbednost, 24/7</li>
-          <li>🧠 Aplikacija uči iz vaših ocena i postaje preciznija</li>
-          <li>👶 Profili za više dece, prilagođeno uzrastu</li>
+          <li>{t("paywall.b1")}</li>
+          <li>{t("paywall.b2")}</li>
+          <li>{t("paywall.b3")}</li>
+          <li>{t("paywall.b4")}</li>
+          <li>{t("paywall.b5")}</li>
         </ul>
 
         <button className="btn btn-primary" onClick={subscribe}>
-          Pretplati se — {PRICE_LABEL}
+          {t("paywall.subscribe")} {t("paywall.price")}
         </button>
 
-        <p className="muted">
-          Posle uplate bićete automatski vraćeni u aplikaciju i Premium se
-          uključuje sam — bez ikakvih kodova.
-        </p>
+        <p className="muted">{t("paywall.autoNote")}</p>
 
         <div className="paywall-code">
-          <p className="muted">Rezervna opcija — imate aktivacioni kod?</p>
+          <p className="muted">{t("paywall.codePrompt")}</p>
           <div className="va-textrow">
             <input
               placeholder="npr. SAFENEST-…"
@@ -79,14 +75,14 @@ export function Paywall({ expired, onClose, onSubscribed }: Props) {
               onKeyDown={(e) => e.key === "Enter" && tryCode()}
             />
             <button className="btn btn-outline" onClick={tryCode} disabled={!code.trim()}>
-              Aktiviraj
+              {t("paywall.activate")}
             </button>
           </div>
-          {codeError && <p className="warn">Kod nije prepoznat. Proverite unos.</p>}
+          {codeError && <p className="warn">{t("paywall.codeError")}</p>}
         </div>
 
         <button className="btn btn-ghost" onClick={onClose}>
-          {expired ? "Ne sada" : "Zatvori"}
+          {expired ? t("paywall.notNow") : t("paywall.closeBtn")}
         </button>
       </div>
     </div>

@@ -71,7 +71,7 @@ const AGE_SR: Record<string, string> = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-function buildPrompt(ageGroup: string, childName?: string): string {
+function buildPrompt(ageGroup: string, childName?: string, language = 'Serbian'): string {
   const age = AGE_SR[ageGroup] ?? ageGroup;
   const child = childName ? ` po imenu ${childName}` : '';
   return `Ti si pedijatrijski nutricionista i ekspert za bezbednost ishrane dece (SZO, AAP, ESPGHAN smernice).
@@ -100,7 +100,7 @@ OBAVEZNA PRAVILA (primeni ih strogo):
 - Ako je na slici ETIKETA, pročitaj sastav i proveri svaki sporan sastojak (zaslađivači, kofein, alergeni, procenat soli/šećera).
 - Ako se sa slike ne vidi dovoljno, reci to u summary i traži sliku etikete/sastava.
 - 14 glavnih alergena EU: gluten, rakovi, jaja, riba, kikiriki, soja, mleko, orašasti plodovi, celer, slačica, susam, sumpor-dioksid, lupina, mekušci.
-- Sve na srpskom jeziku. Podseti da za poznate alergije deteta odlučuje pedijatar.`;
+- LANGUAGE: Write ALL text values (food_name, items, allergens, choking, prep_tip, summary) in ${language}. This is mandatory. Remind that for known allergies the paediatrician decides.`;
 }
 
 async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {
@@ -152,12 +152,12 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-  const { image, ageGroup = '1-2y', childName } = body ?? {};
+  const { image, ageGroup = '1-2y', childName, language = 'Serbian' } = body ?? {};
   if (!image || typeof image !== 'string' || !image.startsWith('data:image/'))
     return json({ error: 'Missing image (data URL)' }, 400);
   if (image.length > 2_500_000) return json({ error: 'Image too large' }, 413);
 
-  const prompt = buildPrompt(String(ageGroup), childName ? String(childName).slice(0, 40) : undefined);
+  const prompt = buildPrompt(String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30));
 
   const errors: string[] = [];
   for (const provider of active) {

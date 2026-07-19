@@ -1,5 +1,6 @@
 import type { FoodAnalysis } from "../lib/food";
 import { VERDICT_META } from "../lib/food";
+import { t } from "../lib/i18n";
 
 interface Props {
   image: string;
@@ -16,14 +17,14 @@ export function FoodResult({ image, result, offlineGuidance, ageLabel, onAgain, 
     <div className="app">
       <header className="topbar">
         <button className="btn btn-ghost" onClick={onBack}>
-          ← Nazad
+          {t("back")}
         </button>
         {result && (
           <span
             className="badge"
             style={{ background: VERDICT_META[result.verdict].color }}
           >
-            {VERDICT_META[result.verdict].label}
+            {t(`food.${result.verdict}`)}
           </span>
         )}
       </header>
@@ -35,19 +36,19 @@ export function FoodResult({ image, result, offlineGuidance, ageLabel, onAgain, 
       {result ? (
         <>
           <h2>🍽️ {result.food_name}</h2>
-          <p className="muted">Procena za uzrast: {ageLabel}</p>
+          <p className="muted">{t("food.forAge")} {ageLabel}</p>
           <p className="summary">{result.summary}</p>
 
           {result.choking && (
             <div className="food-warn">
-              <strong>⚠️ Rizik gušenja</strong>
+              <strong>{t("food.choking")}</strong>
               <p>{result.choking}</p>
             </div>
           )}
 
           {result.allergens.length > 0 && (
             <div className="food-block">
-              <h3>🥜 Alergeni</h3>
+              <h3>{t("food.allergens")}</h3>
               <div className="profile-chips">
                 {result.allergens.map((a) => (
                   <span key={a} className="chip food-allergen">
@@ -60,7 +61,7 @@ export function FoodResult({ image, result, offlineGuidance, ageLabel, onAgain, 
 
           {result.items.length > 0 && (
             <div className="food-block">
-              <h3>Sastojci / namirnice</h3>
+              <h3>{t("food.items")}</h3>
               <div className="hazard-list">
                 {result.items.map((it, i) => (
                   <div key={i} className="hazard-row food-item">
@@ -80,18 +81,15 @@ export function FoodResult({ image, result, offlineGuidance, ageLabel, onAgain, 
 
           {result.prep_tip && (
             <div className="food-block food-tip">
-              <h3>✅ Kako bezbedno servirati</h3>
+              <h3>{t("food.prep")}</h3>
               <p>{result.prep_tip}</p>
             </div>
           )}
         </>
       ) : (
         <>
-          <h2>🍽️ Smernice za uzrast: {ageLabel}</h2>
-          <p className="warn">
-            AI analiza slike trenutno nije dostupna — evo ključnih pravila
-            ishrane za ovaj uzrast:
-          </p>
+          <h2>{t("food.guidelines")} {ageLabel}</h2>
+          <p className="warn">{t("food.offline")}</p>
           <div className="hazard-list">
             {(offlineGuidance ?? []).map((g, i) => (
               <div key={i} className="hazard-row food-item">
@@ -105,15 +103,15 @@ export function FoodResult({ image, result, offlineGuidance, ageLabel, onAgain, 
 
       <div className="sheet-actions">
         <button className="btn btn-primary" onClick={onAgain}>
-          📷 Skeniraj drugu hranu
+          {t("food.again")}
         </button>
         <button className="btn btn-outline" onClick={onBack}>
-          Početna
+          {t("home")}
         </button>
       </div>
 
       <footer className="disclaimer">
-        Procena je informativna — za alergije i posebna stanja odlučuje pedijatar.
+        {t("food.disclaimer")}
       </footer>
     </div>
   );

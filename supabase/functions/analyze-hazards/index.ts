@@ -87,7 +87,7 @@ const AGE_SR: Record<string, string> = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-function buildPrompt(roomType: string, ageGroup: string, childName?: string): string {
+function buildPrompt(roomType: string, ageGroup: string, childName?: string, language = 'Serbian'): string {
   const room = ROOM_SR[roomType] ?? 'prostor';
   const age = AGE_SR[ageGroup] ?? ageGroup;
   const child = childName ? ` po imenu ${childName}` : '';
@@ -116,7 +116,7 @@ Pravila:
 - "box" je normalizovan (0–1): x,y gornji levi ugao, w,h širina/visina.
 - Ozbiljnost prilagodi razvojnim sposobnostima uzrasta.
 - Uključi i opasne ZONE (ivice, stepenice, prozor/terasa bez zaštite, ograda sa razmakom šipki > 10 cm, voda).
-- Sve na srpskom jeziku.
+- LANGUAGE: Write ALL text values (label, why, stats, fix, summary) in ${language}. This is mandatory.
 
 OBAVEZNA PROVERA SITNIH DETALJA — pregledaj sliku pažljivo, deo po deo (pod, niske površine, ivice nameštaja), i prijavi ako uočiš:
 - SITNE PREDMETE na podu/niskim površinama: šrafovi, ekseri, novčići, dugmad, sitna plastika i delovi igračaka, perle, magneti, kamenčići — gušenje/gutanje (kritično do 3 g.)
@@ -199,12 +199,12 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-  const { image, roomType = 'living_room', ageGroup = '1-2y', childName } = body ?? {};
+  const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian' } = body ?? {};
   if (!image || typeof image !== 'string' || !image.startsWith('data:image/'))
     return json({ error: 'Missing image (data URL)' }, 400);
   if (image.length > 2_500_000) return json({ error: 'Image too large' }, 413);
 
-  const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined);
+  const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30));
 
   const errors: string[] = [];
   for (const provider of active) {

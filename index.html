@@ -1,17 +1,372 @@
 <!doctype html>
-<html lang="sr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f766e" />
-    <title>SafeNest AI — bezbedan prostor za vaše dete</title>
-    <meta
-      name="description"
-      content="Skenirajte prostor kamerom i AI će označiti opasnosti po decu — sa objašnjenjem, statistikom i rešenjem, prilagođeno uzrastu vašeg deteta."
-    />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>
+    // Stripe checkout povratak: ?session_id → prosledi aplikaciji
+    if (location.search.includes("session_id=")) {
+      location.replace("/app/" + location.search);
+    }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <title>SafeNest AI — Child Safety App | AI Baby Proofing &amp; Home Hazard Scanner</title>
+  <meta name="description" content="Point your camera at any room and SafeNest AI instantly marks the dangers for your child — with explanations, injury statistics and step-by-step fixes adapted to your child's age. Includes a food & drink safety scanner, voice AI assistant and 40+ languages. First 7 days free." />
+  <meta name="keywords" content="child safety app, baby proofing, childproofing app, home hazard detection, baby safety scanner, toddler safety, AI child protection, choking hazards, food safety for babies, kids safety UK" />
+  <link rel="canonical" href="https://safenessai.co.uk/" />
+  <meta name="robots" content="index,follow" />
+  <!-- Open Graph / social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://safenessai.co.uk/" />
+  <meta property="og:title" content="SafeNest AI — AI that sees danger before your child does" />
+  <meta property="og:description" content="Scan any room with your phone camera. AI marks the hazards for your child's age and shows you exactly how to fix them. 7 days free." />
+  <meta property="og:image" content="https://safenessai.co.uk/icon-512.png" />
+  <meta property="og:site_name" content="SafeNest AI" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="SafeNest AI — Child Safety Scanner" />
+  <meta name="twitter:description" content="AI-powered baby proofing: scan a room, see the dangers, fix them. First 7 days free." />
+  <meta name="twitter:image" content="https://safenessai.co.uk/icon-512.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <!-- Structured data: Organization + SoftwareApplication + FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Nicholas Family LTD",
+        "url": "https://safenessai.co.uk",
+        "logo": "https://safenessai.co.uk/icon-512.png",
+        "address": { "@type": "PostalAddress", "addressLocality": "London", "addressCountry": "GB" },
+        "email": "office@aichatbot.rs"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "SafeNest AI",
+        "operatingSystem": "iOS, Android, Web",
+        "applicationCategory": "LifestyleApplication",
+        "description": "AI child-safety scanner: point your camera at any room and AI marks the hazards for your child's age with explanations, injury statistics and fixes. Includes food & drink safety checks and a voice assistant in 40+ languages.",
+        "url": "https://safenessai.co.uk/app/",
+        "offers": {
+          "@type": "Offer",
+          "price": "7.00",
+          "priceCurrency": "EUR",
+          "description": "Monthly membership, first 7 days free"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does SafeNest AI detect dangers for children?",
+            "acceptedAnswer": { "@type": "Answer", "text": "You point your phone camera at a room (or take a photo). A fast AI model running directly on your phone detects risky objects in real time, while a cloud vision AI adds detailed explanations, real injury statistics from WHO/CDC sources and step-by-step fixes — all adapted to your child's age profile." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is SafeNest AI free?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Your first 7 days are completely free, no card required. After that, membership is €7 per month and you can cancel anytime." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can it check if food is safe for my baby?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Photograph a meal, an ingredient or a product label and SafeNest AI tells you if it is appropriate for your child's age — including allergens, choking risks (e.g. whole grapes, hot dogs), honey for babies under 12 months, and how to prepare it safely." }
+          },
+          {
+            "@type": "Question",
+            "name": "Which languages does SafeNest AI support?",
+            "acceptedAnswer": { "@type": "Answer", "text": "You choose your language on first launch — more than 40 world languages are available. Detections, warnings, education and the voice assistant then work in your language." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my data private? Is SafeNest AI GDPR compliant?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. SafeNest AI is built privacy-first and GDPR compliant: no account is required, child profiles and scan history are stored only on your device, and images are processed transiently for analysis only — never used to identify anyone and never sold." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does SafeNest AI replace adult supervision or medical advice?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. SafeNest AI is an educational aid. It does not replace active adult supervision, and it does not provide medical advice, diagnosis or treatment. For medical concerns and known allergies always consult your paediatrician; in an emergency call your local emergency number." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root{
+      --teal:#0f766e; --teal-dark:#115e59; --teal-light:#5eead4;
+      --ink:#0f172a; --muted:#64748b; --bg:#f8fafc; --card:#fff;
+      --rose:#e11d48; --orange:#f97316; --amber:#ca8a04; --blue:#3b82f6;
+      --radius:16px;
+    }
+    *{margin:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    a{color:var(--teal-dark)}
+    .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+    nav{position:sticky;top:0;z-index:50;background:rgba(248,250,252,.85);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0}
+    .nav-in{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;max-width:1080px;margin:0 auto}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;color:var(--teal-dark);text-decoration:none}
+    .logo img{width:34px;height:34px;border-radius:9px}
+    .nav-links{display:flex;gap:22px;align-items:center}
+    .nav-links a{text-decoration:none;color:var(--muted);font-weight:600;font-size:.92rem}
+    .nav-links a:hover{color:var(--teal-dark)}
+    .btn{display:inline-block;border:none;border-radius:14px;padding:13px 22px;font-size:1rem;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;transition:transform .15s ease, box-shadow .15s ease}
+    .btn:active{transform:scale(.97)}
+    .btn-primary{background:linear-gradient(135deg,#0d9488,#115e59);color:#fff;box-shadow:0 6px 20px rgba(15,118,110,.35)}
+    .btn-primary:hover{box-shadow:0 8px 28px rgba(15,118,110,.45);transform:translateY(-2px)}
+    .btn-ghost{background:#fff;color:var(--teal-dark);border:1.5px solid #99f6e4}
+    @media(max-width:720px){.nav-links a:not(.btn){display:none}}
+    .hero{position:relative;padding:84px 0 60px;overflow:hidden}
+    .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5;animation:float 9s ease-in-out infinite}
+    .blob-1{width:420px;height:420px;background:#99f6e4;top:-120px;right:-80px}
+    .blob-2{width:340px;height:340px;background:#fbcfe8;bottom:-140px;left:-100px;animation-delay:-4.5s}
+    @keyframes float{50%{transform:translateY(26px) scale(1.06)}}
+    .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:44px;align-items:center;position:relative}
+    @media(max-width:860px){.hero-grid{grid-template-columns:1fr}}
+    .hero h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.12;letter-spacing:-.02em}
+    .hero h1 em{font-style:normal;background:linear-gradient(90deg,#0d9488,#0891b2);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .hero p.lead{margin-top:18px;font-size:1.15rem;color:var(--muted);line-height:1.6;max-width:520px}
+    .hero-ctas{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
+    .hero-note{margin-top:14px;color:var(--muted);font-size:.88rem}
+    .phone{width:250px;height:510px;margin:0 auto;background:#0f172a;border-radius:38px;padding:12px;box-shadow:0 30px 80px rgba(15,23,42,.35);animation:phoneFloat 6s ease-in-out infinite;position:relative}
+    @keyframes phoneFloat{50%{transform:translateY(-14px) rotate(-1deg)}}
+    .screen{position:relative;width:100%;height:100%;border-radius:28px;overflow:hidden;background:linear-gradient(160deg,#134e4a,#0f766e 55%,#0d9488)}
+    .scanline{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#5eead4,transparent);animation:scan 3.2s ease-in-out infinite;box-shadow:0 0 18px #5eead4}
+    @keyframes scan{0%,100%{top:8%}50%{top:88%}}
+    .dot{position:absolute;width:34px;height:34px;border-radius:10px;border:2.5px solid;animation:pop 3.2s infinite}
+    .dot span{position:absolute;top:-22px;left:-2px;font-size:.55rem;font-weight:800;color:#fff;padding:2px 7px;border-radius:5px;white-space:nowrap}
+    .dot-1{top:20%;left:14%;border-color:var(--rose);animation-delay:.3s}
+    .dot-1 span{background:var(--rose)}
+    .dot-2{top:47%;right:16%;border-color:var(--orange);animation-delay:1.2s}
+    .dot-2 span{background:var(--orange)}
+    .dot-3{bottom:20%;left:22%;border-color:var(--blue);animation-delay:2.1s}
+    .dot-3 span{background:var(--blue)}
+    @keyframes pop{0%,12%{opacity:0;transform:scale(.6)}22%,80%{opacity:1;transform:scale(1)}95%,100%{opacity:0}}
+    .screen .status{position:absolute;top:14px;left:12px;right:12px;display:flex;justify-content:center}
+    .screen .status i{font-style:normal;background:rgba(15,23,42,.65);color:#fff;font-size:.6rem;font-weight:700;padding:6px 12px;border-radius:99px}
+    .trust{display:flex;flex-wrap:wrap;gap:12px 26px;justify-content:center;padding:22px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;color:var(--muted);font-weight:600;font-size:.9rem}
+    section{padding:74px 0}
+    .kicker{color:var(--teal);font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:.8rem}
+    h2{font-size:clamp(1.5rem,3.4vw,2.2rem);letter-spacing:-.015em;margin-top:8px}
+    .sub{color:var(--muted);margin-top:10px;max-width:640px;line-height:1.6}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:36px}
+    .card{background:var(--card);border-radius:var(--radius);padding:26px;box-shadow:0 2px 10px rgba(15,23,42,.06);transition:transform .2s ease, box-shadow .2s ease}
+    .card:hover{transform:translateY(-6px);box-shadow:0 14px 34px rgba(15,23,42,.12)}
+    .card .ico{font-size:1.9rem}
+    .card h3{margin:12px 0 8px;font-size:1.08rem}
+    .card p{color:var(--muted);font-size:.93rem;line-height:1.55}
+    .step-num{display:inline-flex;width:34px;height:34px;border-radius:99px;background:#ccfbf1;color:var(--teal-dark);font-weight:800;align-items:center;justify-content:center;margin-bottom:10px}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-top:36px}
+    .stat{background:linear-gradient(150deg,#134e4a,#0f766e);border-radius:var(--radius);color:#fff;padding:26px}
+    .stat b{font-size:1.7rem;display:block}
+    .stat span{opacity:.85;font-size:.88rem;line-height:1.45;display:block;margin-top:6px}
+    .src{opacity:.6;font-size:.72rem;display:block;margin-top:8px}
+    .price-card{max-width:430px;margin:36px auto 0;background:#fff;border:2px solid #99f6e4;border-radius:22px;padding:34px;text-align:center;box-shadow:0 18px 50px rgba(15,118,110,.15)}
+    .price-card .big{font-size:2.6rem;font-weight:800;color:var(--teal-dark)}
+    .price-card ul{list-style:none;margin:20px 0;text-align:left}
+    .price-card li{padding:7px 0;color:#334155}
+    .badge-free{display:inline-block;background:#f0fdf4;color:#166534;font-weight:800;border-radius:99px;padding:6px 14px;font-size:.85rem;border:1px solid #bbf7d0}
+    details{background:#fff;border-radius:14px;padding:18px 20px;margin-top:12px;box-shadow:0 1px 5px rgba(15,23,42,.06)}
+    summary{font-weight:700;cursor:pointer}
+    details p{margin-top:10px;color:var(--muted);line-height:1.6}
+    .legal{background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:22px;margin-top:26px;font-size:.9rem;color:#78350f;line-height:1.6}
+    footer{background:#0f172a;color:#94a3b8;padding:46px 0;margin-top:40px;font-size:.9rem}
+    footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr;gap:26px}
+    @media(max-width:720px){footer .cols{grid-template-columns:1fr}}
+    footer a{color:#5eead4;text-decoration:none}
+    footer h4{color:#fff;margin-bottom:10px}
+    .copyright{border-top:1px solid #1e293b;margin-top:30px;padding-top:20px;text-align:center;font-size:.8rem;line-height:1.7}
+    .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease, transform .7s ease}
+    .reveal.on{opacity:1;transform:none}
+    .modal{position:fixed;inset:0;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;z-index:99;padding:20px}
+    .modal.show{display:flex}
+    .modal-in{background:#fff;border-radius:18px;padding:26px;max-width:420px;line-height:1.6}
+    .modal-in h3{margin-bottom:10px}
+    .modal-in ol{padding-left:20px;color:#334155}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-in">
+      <a class="logo" href="/"><img src="/icon-192.png" alt="SafeNest AI logo" />SafeNest AI</a>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a class="btn btn-primary" href="/app/">Open the app</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="wrap hero-grid">
+      <div>
+        <h1>AI that sees danger <em>before your child does</em>.</h1>
+        <p class="lead">Point your phone camera at any room. SafeNest AI instantly marks the hazards for your child's age — and shows you exactly why they're dangerous and how to fix them. It even checks if food is safe for your baby.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="/app/">🎥 Start free scan</a>
+          <button class="btn btn-ghost" id="installBtn">📲 Install the app</button>
+        </div>
+        <p class="hero-note">First 7 days free · No account, no card · 40+ languages · GDPR compliant</p>
+      </div>
+      <div class="phone" aria-hidden="true">
+        <div class="screen">
+          <div class="status"><i>● LIVE — 3 hazards in frame</i></div>
+          <div class="scanline"></div>
+          <div class="dot dot-1"><span>🔪 Knife — Critical</span></div>
+          <div class="dot dot-2"><span>🔥 Hot cup — High</span></div>
+          <div class="dot dot-3"><span>⚡ Cable — Low</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="trust reveal">
+      <span>🛡️ GDPR compliant</span><span>📱 On-device AI</span><span>🌍 40+ languages</span><span>👶 Age-adapted analysis</span><span>🔒 No account needed</span>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <p class="kicker reveal">How it works</p>
+      <h2 class="reveal">Three steps to a safer home</h2>
+      <div class="cards">
+        <div class="card reveal"><span class="step-num">1</span><h3>📷 Scan</h3><p>Open the camera and slowly pan around the room — or snap a single photo. A fast AI model runs directly on your phone, and a cloud vision AI double-checks every detail, down to small objects like batteries, screws and cords.</p></div>
+        <div class="card reveal"><span class="step-num">2</span><h3>💡 Understand</h3><p>Every hazard is marked on screen with its severity. Tap any marker to see why it's dangerous for your child's exact age, real injury statistics from WHO and CDC sources, and what to do about it.</p></div>
+        <div class="card reveal"><span class="step-num">3</span><h3>✅ Fix</h3><p>Follow the step-by-step fix, mark hazards as resolved, and track your home's safety score over time. The AI learns from your feedback and gets more precise with every scan.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" style="background:#fff">
+    <div class="wrap">
+      <p class="kicker reveal">Everything a parent needs</p>
+      <h2 class="reveal">One app. Every layer of protection.</h2>
+      <div class="cards">
+        <div class="card reveal"><div class="ico">🎥</div><h3>Live scanning</h3><p>Real-time hazard detection with on-screen labels and explanations while you move through the room. Optional voice alerts speak out critical dangers.</p></div>
+        <div class="card reveal"><div class="ico">🔬</div><h3>Precise photo analysis</h3><p>Multi-layer AI zooms into every part of the photo so even small dangers — pills, button batteries, small plastic parts — don't slip through.</p></div>
+        <div class="card reveal"><div class="ico">🍼</div><h3>Food &amp; drink safety</h3><p>Photograph a meal or a product label. AI checks ingredients, allergens and choking risks for your child's age — including honey rules for babies and how to cut grapes and hot dogs safely.</p></div>
+        <div class="card reveal"><div class="ico">🎤</div><h3>Voice AI assistant</h3><p>Ask any child-safety question out loud and get a calm, practical answer — spoken back to you in your language, 24/7.</p></div>
+        <div class="card reveal"><div class="ico">🧠</div><h3>Self-learning AI</h3><p>Rate detections with 👍/👎 and the app permanently adapts its sensitivity to your home. It gets smarter every day you use it.</p></div>
+        <div class="card reveal"><div class="ico">🌍</div><h3>40+ languages</h3><p>Pick your language on first launch — detections, warnings, education and the voice assistant all follow. Built for parents everywhere.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker reveal">Why it matters</p>
+      <h2 class="reveal">Most child injuries happen at home — and they're preventable</h2>
+      <div class="stats">
+        <div class="stat reveal"><b>~44%</b><span>of non-fatal injuries in children aged 0–4 are falls — the single biggest cause of A&amp;E visits.</span><span class="src">Source: CDC</span></div>
+        <div class="stat reveal"><b>Every 30 min</b><span>a child is taken to emergency care because of a TV or furniture tip-over.</span><span class="src">Source: CPSC/CDC</span></div>
+        <div class="stat reveal"><b>5 cm</b><span>of water is enough for a small child to drown — bathrooms are a high-risk zone for under-3s.</span><span class="src">Source: WHO</span></div>
+        <div class="stat reveal"><b>2 hours</b><span>is all it takes for a swallowed button battery to cause severe internal chemical burns.</span><span class="src">Source: CDC / poison centres</span></div>
+      </div>
+      <p class="sub reveal" style="margin-top:26px">SafeNest AI exists to put a certified childproofing expert in every parent's pocket — so these numbers keep going down.</p>
+    </div>
+  </section>
+
+  <section id="pricing" style="background:#fff">
+    <div class="wrap" style="text-align:center">
+      <p class="kicker reveal">Pricing</p>
+      <h2 class="reveal">Try everything free for 7 days</h2>
+      <div class="price-card reveal">
+        <span class="badge-free">First 7 days free — no card required</span>
+        <div class="big" style="margin-top:14px">€7<span style="font-size:1rem;color:var(--muted)">/month</span></div>
+        <ul>
+          <li>✅ Unlimited live room scanning</li>
+          <li>✅ Precise multi-layer photo analysis</li>
+          <li>✅ Food &amp; drink safety scanner</li>
+          <li>✅ Voice AI assistant, 24/7</li>
+          <li>✅ Profiles for multiple children</li>
+          <li>✅ Cancel anytime</li>
+        </ul>
+        <a class="btn btn-primary" style="width:100%" href="/app/">Start your free week</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <p class="kicker reveal">FAQ</p>
+      <h2 class="reveal">Questions parents ask us</h2>
+      <details class="reveal"><summary>How does SafeNest AI detect dangers?</summary><p>A fast AI model runs directly on your phone and marks risky objects in real time, while a cloud vision AI adds detailed explanations, real injury statistics (WHO/CDC sources) and step-by-step fixes — all adapted to your child's age profile.</p></details>
+      <details class="reveal"><summary>Is it really free to try?</summary><p>Yes — your first 7 days are completely free with no card required. After that it's €7/month and you can cancel anytime.</p></details>
+      <details class="reveal"><summary>Can it check food for my baby?</summary><p>Yes. Photograph a meal, ingredient or product label and the AI tells you if it's appropriate for your child's age — allergens, choking risks, honey rules for under-12-months, and safe serving tips.</p></details>
+      <details class="reveal"><summary>Which languages are supported?</summary><p>More than 40 world languages. You choose yours on first launch, and every detection, warning and voice answer follows it.</p></details>
+      <details class="reveal"><summary>Is my data private?</summary><p>SafeNest AI is privacy-first and GDPR compliant: no account, profiles and history stay on your device, and images are processed transiently for the analysis only. See our <a href="/privacy.html">Privacy Policy</a>.</p></details>
+      <details class="reveal"><summary>Does it replace supervision or a doctor?</summary><p>No. SafeNest AI is an educational aid — it never replaces active adult supervision and it is not medical advice. For health concerns always consult your paediatrician.</p></details>
+
+      <div class="legal reveal">
+        <strong>⚕️ Important — educational purposes only.</strong> SafeNest AI provides general child-safety education and home-hazard awareness. It is <strong>not a medical device</strong> and does not provide medical advice, diagnosis or treatment. AI analysis may be incomplete or imprecise and no app can guarantee a hazard-free environment. SafeNest AI never replaces active adult supervision. For any medical concern, allergy or emergency, contact your paediatrician or local emergency services immediately. See full <a href="/terms.html">Terms of Use</a>.
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="cols">
+        <div>
+          <h4>🛡️ SafeNest AI</h4>
+          <p>AI-powered child safety for every home. Scan rooms, check food, ask questions — in your language.</p>
+          <p style="margin-top:12px">A product of <strong style="color:#fff">Nicholas Family LTD</strong><br />London, United Kingdom<br /><a href="mailto:office@aichatbot.rs">office@aichatbot.rs</a></p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <p><a href="/app/">Open the app</a><br /><a href="#how">How it works</a><br /><a href="#pricing">Pricing</a><br /><a href="#faq">FAQ</a></p>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <p><a href="/privacy.html">Privacy Policy (GDPR)</a><br /><a href="/terms.html">Terms of Use</a></p>
+        </div>
+      </div>
+      <div class="copyright">
+        © 2026 Nicholas Family LTD, London, United Kingdom. All rights reserved.<br />
+        SafeNest AI is an educational tool. It does not replace adult supervision and is not a source of medical advice.
+      </div>
+    </div>
+  </footer>
+
+  <div class="modal" id="iosModal">
+    <div class="modal-in">
+      <h3>📲 Install on iPhone / iPad</h3>
+      <ol>
+        <li>Open this site in <strong>Safari</strong></li>
+        <li>Tap the <strong>Share</strong> button (□↑)</li>
+        <li>Choose <strong>“Add to Home Screen”</strong></li>
+        <li>Tap <strong>Add</strong> — SafeNest AI appears as an app</li>
+      </ol>
+      <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="document.getElementById('iosModal').classList.remove('show')">Got it</button>
+    </div>
+  </div>
+
+  <script>
+    // Reveal-on-scroll animacije
+    const io = new IntersectionObserver((es) => {
+      es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("on"); io.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+
+    // PWA instalacija
+    let deferred = null;
+    window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; });
+    document.getElementById("installBtn").addEventListener("click", async () => {
+      if (deferred) { deferred.prompt(); deferred = null; return; }
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIOS) { document.getElementById("iosModal").classList.add("show"); }
+      else { location.href = "/app/"; }
+    });
+
+    // SW i na landing strani (instalabilnost + keš)
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  </script>
+</body>
 </html>

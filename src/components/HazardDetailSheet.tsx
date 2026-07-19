@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Hazard } from "../types";
-import { CATEGORY_LABELS, SEVERITY_META } from "../types";
+import { SEVERITY_META } from "../types";
+import { categoryLabel, severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
 
 interface Props {
@@ -25,50 +26,48 @@ export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) 
         <div className="sheet-handle" />
         <div className="sheet-header">
           <span className="badge" style={{ background: meta.color }}>
-            {meta.label}
+            {severityLabel(hazard.severity)}
           </span>
-          <span className="badge badge-cat">{CATEGORY_LABELS[hazard.category]}</span>
+          <span className="badge badge-cat">{categoryLabel(hazard.category)}</span>
         </div>
         <h2>{hazard.label}</h2>
         <p className="sheet-source">
           {hazard.sourceClass
-            ? `Lokalni AI u telefonu${
+            ? `${t("sheet.srcLocal")}${
                 hazard.confidence !== undefined
-                  ? ` · pouzdanost ${Math.round(hazard.confidence * 100)}%`
+                  ? ` · ${t("sheet.srcConf")} ${Math.round(hazard.confidence * 100)}%`
                   : ""
               }`
-            : "Cloud vision AI (Nemotron) · detaljna analiza slike"}
+            : t("sheet.srcCloud")}
         </p>
 
         <section>
-          <h3>⚠️ Zašto je opasno</h3>
+          <h3>{t("sheet.why")}</h3>
           <p>{hazard.why}</p>
         </section>
 
         <section>
-          <h3>📊 Statistika povreda</h3>
+          <h3>{t("sheet.stats")}</h3>
           <p>{hazard.stats}</p>
         </section>
 
         <section>
-          <h3>✅ Kako rešiti</h3>
+          <h3>{t("sheet.fix")}</h3>
           <p>{hazard.fix}</p>
         </section>
 
         {hazard.sourceClass && (
           <section className="feedback">
-            <h3>🧠 Da li je AI pogodio?</h3>
+            <h3>{t("sheet.fb.title")}</h3>
             {voted ? (
-              <p className="ok">
-                Hvala! Aplikacija uči iz vaše ocene i sledeći put će biti preciznija.
-              </p>
+              <p className="ok">{t("sheet.fb.thanks")}</p>
             ) : (
               <div className="feedback-row">
                 <button className="btn btn-outline" onClick={() => vote(true)}>
-                  👍 Tačno, opasnost
+                  {t("sheet.fb.yes")}
                 </button>
                 <button className="btn btn-outline" onClick={() => vote(false)}>
-                  👎 Nije opasnost
+                  {t("sheet.fb.no")}
                 </button>
               </div>
             )}
@@ -80,10 +79,10 @@ export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) 
             className={hazard.resolved ? "btn btn-outline" : "btn btn-primary"}
             onClick={() => onToggleResolved(hazard.id)}
           >
-            {hazard.resolved ? "Vrati kao nerešeno" : "Označi kao rešeno"}
+            {hazard.resolved ? t("sheet.unresolve") : t("sheet.resolve")}
           </button>
           <button className="btn btn-outline" onClick={onClose}>
-            Zatvori
+            {t("paywall.closeBtn")}
           </button>
         </div>
       </div>
