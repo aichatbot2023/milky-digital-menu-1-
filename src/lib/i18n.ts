@@ -134,13 +134,13 @@ const D: Dict = {
   },
   "btn.photo": { en: "📷 Scan a photo", sr: "📷 Skeniraj fotografiju" },
   "btn.photo.sub": {
-    en: "Detailed analysis of a single photo of the room",
-    sr: "Detaljna analiza jedne slike prostora",
+    en: "Take a photo or choose one from your gallery — detailed analysis",
+    sr: "Slikajte ili izaberite sliku iz galerije — detaljna analiza",
   },
   "btn.food": { en: "🍼 Scan food & drink", sr: "🍼 Skeniraj hranu i piće" },
   "btn.food.sub": {
-    en: "Can my child eat this? Ingredients, allergens, choking risks — by age",
-    sr: "Da li dete sme ovo da jede? Sastojci, alergeni, rizik gušenja — po uzrastu",
+    en: "Snap or upload a photo of food/label — allergens & choking risks by age",
+    sr: "Slikajte ili izaberite sliku hrane/etikete — alergeni i rizik gušenja po uzrastu",
   },
   "history.title": { en: "Previous scans", sr: "Prethodna skeniranja" },
   "history.score": { en: "score", sr: "skor" },
