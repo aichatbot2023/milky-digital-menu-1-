@@ -20,12 +20,14 @@
   <meta property="og:url" content="https://safenessai.co.uk/" />
   <meta property="og:title" content="SafeNest AI — AI that sees danger before your child does" />
   <meta property="og:description" content="Scan any room with your phone camera. AI marks the hazards for your child's age and shows you exactly how to fix them. 7 days free." />
-  <meta property="og:image" content="https://safenessai.co.uk/icon-512.png" />
+  <meta property="og:image" content="https://safenessai.co.uk/og-shield.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="655" />
   <meta property="og:site_name" content="SafeNest AI" />
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="SafeNest AI — Child Safety Scanner" />
   <meta name="twitter:description" content="AI-powered baby proofing: scan a room, see the dangers, fix them. First 7 days free." />
-  <meta name="twitter:image" content="https://safenessai.co.uk/icon-512.png" />
+  <meta name="twitter:image" content="https://safenessai.co.uk/og-shield.jpg" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -159,6 +161,7 @@
     .card h3{margin:12px 0 8px;font-size:1.08rem}
     .card p{color:var(--muted);font-size:.93rem;line-height:1.55}
     .step-num{display:inline-flex;width:34px;height:34px;border-radius:99px;background:#ccfbf1;color:var(--teal-dark);font-weight:800;align-items:center;justify-content:center;margin-bottom:10px}
+    .photo-wide{width:100%;border-radius:22px;box-shadow:0 18px 50px rgba(15,23,42,.16);margin-top:32px;display:block}
     .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:26px;margin-top:36px;align-items:start}
     .shot{background:#fff;border-radius:22px;padding:14px;box-shadow:0 14px 40px rgba(15,23,42,.14);transition:transform .25s ease}
     .shot:hover{transform:translateY(-8px) rotate(-.5deg)}
@@ -243,6 +246,7 @@
     <div class="wrap">
       <p class="kicker reveal">How it works</p>
       <h2 class="reveal">Three steps to a safer home</h2>
+      <img class="photo-wide reveal" src="/screens/family-scan.jpg" alt="Parents scanning their living room with the SafeNest AI app on a smartphone while their toddler plays safely behind them" loading="lazy" />
       <div class="cards">
         <div class="card reveal"><span class="step-num">1</span><h3>📷 Scan</h3><p>Open the camera and slowly pan around the room — or snap a single photo. A fast AI model runs directly on your phone, and a cloud vision AI double-checks every detail, down to small objects like batteries, screws and cords.</p></div>
         <div class="card reveal"><span class="step-num">2</span><h3>💡 Understand</h3><p>Every hazard is marked on screen with its severity. Tap any marker to see why it's dangerous for your child's exact age, real injury statistics from WHO and CDC sources, and what to do about it.</p></div>
@@ -280,6 +284,20 @@
         <div class="card reveal"><div class="ico">🎤</div><h3>Voice AI assistant</h3><p>Ask any child-safety question out loud and get a calm, practical answer — spoken back to you in your language, 24/7.</p></div>
         <div class="card reveal"><div class="ico">🧠</div><h3>Self-learning AI</h3><p>Rate detections with 👍/👎 and the app permanently adapts its sensitivity to your home. It gets smarter every day you use it.</p></div>
         <div class="card reveal"><div class="ico">🌍</div><h3>40+ languages</h3><p>Pick your language on first launch — detections, warnings, education and the voice assistant all follow. Built for parents everywhere.</p></div>
+      </div>
+      <div class="shots">
+        <figure class="shot reveal">
+          <img src="/screens/kitchen-scan.jpg" alt="Father scanning the kitchen with SafeNest AI while his baby sits safely in a high chair" loading="lazy" />
+          <figcaption><b>Every room, every day.</b> A quick kitchen scan before lunch — pot handles, hot surfaces and reachable objects checked in seconds.</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <img src="/screens/food-scan.jpg" alt="Parent photographing a toddler meal with grapes and vegetables to check food safety by age with SafeNest AI" loading="lazy" />
+          <figcaption><b>Is this safe to eat?</b> Snap the plate — allergens, choking risks and safe-serving tips for your child's exact age.</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <img src="/screens/nursery-night.jpg" alt="Mother checking the nursery with SafeNest AI in the evening while her baby sleeps in a safe bare cot" loading="lazy" />
+          <figcaption><b>Peace of mind, even at night.</b> A calm evening check of the nursery — bare cot, safe sleep, everything in its place.</figcaption>
+        </figure>
       </div>
     </div>
   </section>
