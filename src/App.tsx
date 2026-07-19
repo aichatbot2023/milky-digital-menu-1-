@@ -12,7 +12,9 @@ import {
   saveScan,
   updateScan,
 } from "./lib/storage";
+import { getStatus, type SubStatus } from "./lib/subscription";
 import { ChildProfiles } from "./components/ChildProfiles";
+import { Paywall } from "./components/Paywall";
 import { VoiceAssistant } from "./components/VoiceAssistant";
 import { HazardOverlay } from "./components/HazardOverlay";
 import { HazardDetailSheet } from "./components/HazardDetailSheet";
@@ -32,6 +34,19 @@ export default function App() {
   const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
   const [selectedHazardId, setSelectedHazardId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [subStatus, setSubStatus] = useState<SubStatus>(() => getStatus());
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // Kapija za skeniranje: probni period (7 dana) ili aktivna pretplata
+  const requireAccess = (): boolean => {
+    const s = getStatus();
+    setSubStatus(s);
+    if (s.state === "expired") {
+      setShowPaywall(true);
+      return false;
+    }
+    return true;
+  };
 
   useEffect(() => saveProfiles(profiles), [profiles]);
 
@@ -41,6 +56,7 @@ export default function App() {
   );
 
   const startScan = async () => {
+    if (!requireAccess()) return;
     setError(null);
     const photo = await capturePhoto();
     if (!photo) return;
@@ -283,6 +299,14 @@ export default function App() {
 
       {error && <div className="error">{error}</div>}
 
+      <button className="subbar" onClick={() => setShowPaywall(true)}>
+        {subStatus.state === "subscribed"
+          ? "⭐ Premium aktivan — hvala vam!"
+          : subStatus.state === "trial"
+            ? `🎁 Besplatni period: još ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? "dan" : "dana"} · Pretplata 7 €/mes.`
+            : "⚠️ Besplatni period je istekao — pretplatite se za 7 €/mes."}
+      </button>
+
       <ChildProfiles
         profiles={profiles}
         selectedId={selectedChildId}
@@ -305,7 +329,12 @@ export default function App() {
         </div>
       </div>
 
-      <button className="btn btn-primary btn-scan" onClick={() => setView("live")}>
+      <button
+        className="btn btn-primary btn-scan"
+        onClick={() => {
+          if (requireAccess()) setView("live");
+        }}
+      >
         🎥 Uživo skeniranje
         <span className="btn-sub">AI označava i objašnjava opasnosti u realnom vremenu</span>
       </button>
@@ -338,6 +367,17 @@ export default function App() {
         <br />
         verzija {__APP_VERSION__}
       </footer>
+
+      {showPaywall && (
+        <Paywall
+          expired={subStatus.state === "expired"}
+          onClose={() => setShowPaywall(false)}
+          onSubscribed={() => {
+            setSubStatus(getStatus());
+            setShowPaywall(false);
+          }}
+        />
+      )}
     </div>
   );
 }

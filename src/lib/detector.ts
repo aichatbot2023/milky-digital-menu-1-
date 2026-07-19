@@ -34,10 +34,13 @@ const DEFAULT_MIN = 0.35;
 const CLASS_MIN: Record<string, number> = {
   // Sitni/opasni — maksimalna osetljivost (roditelj radije da vidi višak)
   knife: 0.22, scissors: 0.22, fork: 0.25, spoon: 0.3, remote: 0.25,
-  "cell phone": 0.28, bottle: 0.28, "wine glass": 0.25, cup: 0.3,
+  "cell phone": 0.28, bottle: 0.28,
   "sports ball": 0.25, tie: 0.25, "hair drier": 0.25, clock: 0.3,
   "teddy bear": 0.3, handbag: 0.3, backpack: 0.3, umbrella: 0.3,
   "hot dog": 0.3, apple: 0.32, orange: 0.32, carrot: 0.32,
+  // Klase koje model ČESTO POGREŠNO vidi na dečjoj opremi — vrlo strog prag:
+  // bebeća kolica ume da nazove "kofer", bebeću flašicu "čašom/šoljom"
+  suitcase: 0.62, "wine glass": 0.5, cup: 0.5, vase: 0.5,
   // Krupni objekti — stroži prag (model ih često "vidi" pogrešno)
   chair: 0.5, couch: 0.5, bed: 0.5, "dining table": 0.5, tv: 0.45,
   refrigerator: 0.5, oven: 0.45, sink: 0.45, toilet: 0.45, book: 0.45,

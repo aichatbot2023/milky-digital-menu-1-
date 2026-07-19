@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
 import { SEVERITY_META } from "../types";
 import { analyzeImage } from "../lib/analyze";
-import { detectLocal, modelError, preloadDetector, retryDetector } from "../lib/detector";
+import { boxIou, detectLocal, modelError, preloadDetector, retryDetector } from "../lib/detector";
 import { primeTts, speak, stopSpeaking } from "../lib/voice";
 import { HazardDetailSheet } from "./HazardDetailSheet";
 
@@ -189,10 +189,16 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
     };
   }, [captureFrame, roomType, ageGroup, childName]);
 
-  // Unija: lokalni (živi) + cloud (bogati) markeri
-  const hazards: Hazard[] = [...localHazards, ...(cloudResult?.hazards ?? [])].sort(
-    (a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity],
-  );
+  // Unija: cloud (Nemotron — tačniji u IDENTIFIKACIJI: zna šta su kolica,
+  // flašica...) ima prednost; lokalni marker se skriva ako se preklapa sa
+  // cloud nalazom, da pogrešan lokalni naziv ne pregazi tačan cloud naziv.
+  const cloudHz = cloudResult?.hazards ?? [];
+  const hazards: Hazard[] = [
+    ...cloudHz,
+    ...localHazards.filter((lh) =>
+      cloudHz.every((ch) => boxIou(lh.box, ch.box) < 0.4),
+    ),
+  ].sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
   const count = hazards.length;
   const topHazard = hazards[0] ?? null;
 

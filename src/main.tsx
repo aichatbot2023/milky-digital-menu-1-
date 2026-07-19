@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+// Font je SPAKOVAN u aplikaciju (bez spoljnih zahteva; SW ga kešira offline)
+import "@fontsource-variable/nunito";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

@@ -112,6 +112,7 @@ Vrati ISKLJUČIVO validan JSON (bez markdown ograda) ovog oblika:
 
 Pravila:
 - Prijavi SAMO ono što se zaista vidi na slici.
+- IDENTIFIKUJ TAČNO, posebno dečju opremu: bebeća kolica su KOLICA (ne kofer), bebeća flašica je FLAŠICA (ne čaša), hranilica je HRANILICA (ne stolica), nosiljka/autosedište, ogradica za igru. Ako je predmet dečja oprema, oceni rizik te opreme (npr. nezakočena kolica, flašica sa vrelim mlekom), a bezopasnu opremu NE prijavljuj.
 - "box" je normalizovan (0–1): x,y gornji levi ugao, w,h širina/visina.
 - Ozbiljnost prilagodi razvojnim sposobnostima uzrasta.
 - Uključi i opasne ZONE (ivice, stepenice, prozor/terasa bez zaštite, ograda sa razmakom šipki > 10 cm, voda).

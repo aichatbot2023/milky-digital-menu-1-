@@ -382,9 +382,12 @@ export function mapDetectionsToHazards(
     const count = perLabel.get(d.label) ?? 0;
     if (count >= 3) continue;
     perLabel.set(d.label, count + 1);
+    // Nesiguran nalaz se JASNO obeležava — ne tvrdimo ono što model nagađa
+    // (npr. bebeća flašica ≠ čaša); roditelj ocenom 👎 uči aplikaciju.
+    const uncertain = d.score < 0.55;
     hazards.push({
       id: `local-${hazards.length}-${d.label.replace(/\s/g, "_")}`,
-      label: rule.labelSr,
+      label: uncertain ? `Moguće: ${rule.labelSr}` : rule.labelSr,
       category: rule.category,
       severity,
       box: d.box,
