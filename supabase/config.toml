@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.safenest-chat]
 verify_jwt = false
+
+[functions.analyze-food]
+verify_jwt = false

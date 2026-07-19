@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChildProfile, RoomType, ScanRecord } from "./types";
-import { ROOM_LABELS } from "./types";
+import { AGE_LABELS, ROOM_LABELS } from "./types";
+import { analyzeFood, offlineFoodGuidance, type FoodAnalysis } from "./lib/food";
 import { analyzeImage, downscaleImage } from "./lib/analyze";
 import { boxIou, detectLocal } from "./lib/detector";
 import { capturePhoto } from "./lib/camera";
@@ -14,6 +15,7 @@ import {
 } from "./lib/storage";
 import { getStatus, type SubStatus } from "./lib/subscription";
 import { ChildProfiles } from "./components/ChildProfiles";
+import { FoodResult } from "./components/FoodResult";
 import { Paywall } from "./components/Paywall";
 import { VoiceAssistant } from "./components/VoiceAssistant";
 import { HazardOverlay } from "./components/HazardOverlay";
@@ -21,7 +23,7 @@ import { HazardDetailSheet } from "./components/HazardDetailSheet";
 import { LiveScan } from "./components/LiveScan";
 import { ScanHistory } from "./components/ScanHistory";
 
-type View = "home" | "scanning" | "result" | "live";
+type View = "home" | "scanning" | "result" | "live" | "food-scanning" | "food-result";
 
 export default function App() {
   const [view, setView] = useState<View>("home");
@@ -36,6 +38,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<SubStatus>(() => getStatus());
   const [showPaywall, setShowPaywall] = useState(false);
+  const [foodImage, setFoodImage] = useState<string | null>(null);
+  const [foodResult, setFoodResult] = useState<FoodAnalysis | null>(null);
+  const [foodOffline, setFoodOffline] = useState<string[] | null>(null);
 
   // Kapija za skeniranje: probni period (7 dana) ili aktivna pretplata
   const requireAccess = (): boolean => {
@@ -138,6 +143,38 @@ export default function App() {
     }
   };
 
+  // Sken hrane/pića: fotografija → AI procena po uzrastu (alergeni, gušenje…)
+  const startFoodScan = async () => {
+    if (!requireAccess()) return;
+    setError(null);
+    const photo = await capturePhoto();
+    if (!photo) return;
+    setView("food-scanning");
+    const age = selectedChild?.age ?? "1-2y";
+    try {
+      const imageDataUrl = await downscaleImage(photo);
+      setFoodImage(imageDataUrl);
+      try {
+        setFoodResult(
+          await analyzeFood({
+            imageDataUrl,
+            ageGroup: age,
+            childName: selectedChild?.name,
+          }),
+        );
+        setFoodOffline(null);
+      } catch {
+        // Cloud nedostupan → lokalne smernice po uzrastu (ekran nikad prazan)
+        setFoodResult(null);
+        setFoodOffline(offlineFoodGuidance(age));
+      }
+      setView("food-result");
+    } catch (e: any) {
+      setError(e?.message ?? "Analiza hrane nije uspela. Pokušajte ponovo.");
+      setView("home");
+    }
+  };
+
   const toggleResolved = (hazardId: string) => {
     if (!currentScan) return;
     const next: ScanRecord = {
@@ -180,6 +217,32 @@ export default function App() {
           setSelectedHazardId(null);
           setView("result");
         }}
+      />
+    );
+  }
+
+  if (view === "food-scanning") {
+    return (
+      <div className="app center">
+        <div className="spinner" />
+        <h2>AI proverava hranu…</h2>
+        <p className="muted">
+          Sastojci, alergeni i rizik gušenja za uzrast{" "}
+          {AGE_LABELS[selectedChild?.age ?? "1-2y"]}.
+        </p>
+      </div>
+    );
+  }
+
+  if (view === "food-result" && foodImage) {
+    return (
+      <FoodResult
+        image={foodImage}
+        result={foodResult}
+        offlineGuidance={foodOffline}
+        ageLabel={AGE_LABELS[selectedChild?.age ?? "1-2y"]}
+        onAgain={startFoodScan}
+        onBack={() => setView("home")}
       />
     );
   }
@@ -341,6 +404,12 @@ export default function App() {
       <button className="btn btn-outline btn-scan" onClick={startScan}>
         📷 Skeniraj fotografiju
         <span className="btn-sub">Detaljna analiza jedne slike prostora</span>
+      </button>
+      <button className="btn btn-outline btn-scan btn-food" onClick={startFoodScan}>
+        🍼 Skeniraj hranu i piće
+        <span className="btn-sub">
+          Da li dete sme ovo da jede? Sastojci, alergeni, rizik gušenja — po uzrastu
+        </span>
       </button>
 
       <VoiceAssistant

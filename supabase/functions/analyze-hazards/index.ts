@@ -129,7 +129,16 @@ OBAVEZNA PROVERA SITNIH DETALJA — pregledaj sliku pažljivo, deo po deo (pod, 
 - VRUĆE: šolje/šerpe blizu ivice, ručke okrenute ka spolja, peglu, grejalice
 - STAKLO i keramiku na dohvat; oštre ivice nameštaja u visini glave deteta
 - NESTABILNO: TV/komode/police bez zidnog ankera, stolice uz prozor, merdevine
-Ako je slika mutna ili predmet sitan pa nisi siguran — prijavi ga sa severity "low" i u "why" napiši da je potrebna ručna provera, umesto da ga izostaviš.`;
+Ako je slika mutna ili predmet sitan pa nisi siguran — prijavi ga sa severity "low" i u "why" napiši da je potrebna ručna provera, umesto da ga izostaviš.
+
+DEČJA OPREMA — prepoznaj je TAČNO po imenu i proceni njen specifičan rizik:
+- KOLICA ZA BEBE: nezakočena kočnica, kolica na nagibu/uz stepenice, teška torba okačena na ručku (prevrtanje unazad), kolica uz šporet/grejalicu
+- FLAŠICE ZA BEBE: staklena flašica na ivici površine, flašica ostavljena na suncu ili uz izvor toplote (pregrejano mleko), flašica u krevecu kod bebe koja spava
+- DUDA/CUCLA: duda na traci/lančiću/kanapu (davljenje!), duda na podu (higijena), vidljivo napukla ili stara duda (otkidanje dela — gušenje)
+- PELENE / STO ZA PREVIJANJE: podloga za previjanje na visini bez ograde, kreme/puderi/vlažne maramice u dometu deteta
+- IGRAČKE: sitni delovi i igračke starije dece u dometu bebe, baloni (i pukli), igračke sa baterijama sa labavim poklopcem, plišane igračke u krevecu bebe do 12 meseci
+- TORBA (dečja ili roditeljska): sadržaj u dometu — lekovi, sitnice, upaljači
+- PROZORI — UVEK PROVERI I PRIJAVI: otvoren ili odškrinut prozor u prostoriji, kvaka prozora u visini deteta, stolica/kauč/krevet/komoda UZ prozor (dete se popne i dohvati), prozor bez sigurnosne bravice. Padovi kroz prozor su među najtežim povredama male dece — ovo prijavi čak i sa umerenom sigurnošću.`;
 }
 
 async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {

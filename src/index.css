@@ -487,6 +487,37 @@ body {
   gap: 8px;
 }
 
+/* Sken hrane i pića */
+.btn-food { border-color: #d97706; color: #b45309; }
+.food-warn {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: #991b1b;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.food-block { display: flex; flex-direction: column; gap: 8px; }
+.food-block h3 { font-size: 0.98rem; }
+.food-allergen { border-color: #fbbf24; background: #fffbeb; color: #92400e; font-weight: 700; }
+.food-item { cursor: default; align-items: flex-start; }
+.food-dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+.food-item-body { display: flex; flex-direction: column; gap: 2px; }
+.food-tip {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
 /* Glasovni asistent */
 .va-fab { margin-top: 4px; }
 .va-panel {
