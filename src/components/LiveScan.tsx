@@ -22,6 +22,9 @@ const LOCAL_INTERVAL_MS = 1200;
 const CLOUD_INTERVAL_MS = 10000;
 const CLOUD_EDGE = 1024;
 const SPEAK_GAP_MS = 4000;
+// Kratkoročna memorija detekcija: kvadranti se dubinski skeniraju naizmenično,
+// pa nalaz ostaje na ekranu dok rotacija ne stigne ponovo do njega (bez treperenja)
+const MEMORY_TTL_MS = 5500;
 
 const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 } as const;
 
@@ -36,6 +39,8 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const spokenRef = useRef<Set<string>>(new Set());
   const lastSpokeRef = useRef(0);
   const soundRef = useRef(false);
+  const tickRef = useRef(0);
+  const memoryRef = useRef<Map<string, { h: Hazard; ts: number }>>(new Map());
 
   const [localHazards, setLocalHazards] = useState<Hazard[]>([]);
   const [cloudResult, setCloudResult] = useState<AnalysisResult | null>(null);
@@ -114,15 +119,31 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
       if (!video || video.videoWidth === 0) return;
       localBusy.current = true;
       try {
+        // Ceo kadar + jedan "zumirani" kvadrant (rotira se → precizna
+        // pokrivenost cele slike na svakih ~5 sekundi, hvata i sitne predmete)
         const hazards = await detectLocal(
           video,
           video.videoWidth,
           video.videoHeight,
           ageGroup,
+          { quadrant: tickRef.current++ % 4 },
         );
         setModelReady(true);
         setModelFail(null);
-        if (!pausedRef.current) setLocalHazards(hazards);
+        // Upis u kratkoročnu memoriju (stabilan prikaz bez treperenja)
+        const now = Date.now();
+        for (const h of hazards) {
+          const cx = h.box.x + h.box.w / 2;
+          const cy = h.box.y + h.box.h / 2;
+          const key = `${h.sourceClass ?? h.label}@${Math.round(cx * 6)},${Math.round(cy * 6)}`;
+          memoryRef.current.set(key, { h: { ...h, id: key }, ts: now });
+        }
+        for (const [k, v] of memoryRef.current) {
+          if (now - v.ts > MEMORY_TTL_MS) memoryRef.current.delete(k);
+        }
+        if (!pausedRef.current) {
+          setLocalHazards([...memoryRef.current.values()].map((v) => v.h));
+        }
       } catch (e: any) {
         // Učitavanje modela palo — prikaži razlog umesto večnog "Učitavam…"
         if (modelError) setModelFail(modelError);
@@ -292,6 +313,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
           >
             <span className="live-tag" style={{ background: meta.color }}>
               {i + 1} · {h.label} — {meta.label}
+              {h.confidence !== undefined && ` · ${Math.round(h.confidence * 100)}%`}
             </span>
           </button>
         );

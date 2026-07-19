@@ -430,6 +430,25 @@ body {
 .feedback-row { display: flex; gap: 10px; }
 .feedback-row .btn { flex: 1; font-size: 0.9rem; }
 
+/* Analitika rezultata */
+.stats-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat-chip {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.stat-chip[data-sev="critical"] { color: #dc2626; }
+.stat-chip[data-sev="high"] { color: #ea580c; }
+.stat-chip[data-sev="medium"] { color: #ca8a04; }
+.stat-chip[data-sev="low"] { color: #2563eb; }
+.stat-total { color: var(--text); }
+.stat-done { color: #16a34a; }
+
+.sheet-source { color: var(--muted); font-size: 0.8rem; margin-top: -8px; }
+
 /* Glasovni asistent */
 .va-fab { margin-top: 4px; }
 .va-panel {

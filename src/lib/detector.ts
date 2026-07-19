@@ -3,9 +3,16 @@
  * Model je SPAKOVAN U APLIKACIJU (public/model/) i služi se sa istog domena
  * kao i sajt — NEMA spoljnih preuzimanja u runtime-u, nema šta da padne.
  * WebGL ubrzanje na telefonu, bez API poziva — besplatno i neograničeno.
+ *
+ * PRECIZNOST: SSD model interno smanjuje ulaz na 300×300 px, pa sitni
+ * predmeti "nestanu". Zato radimo VIŠESLOJNU (pločastu) detekciju po uzoru
+ * na SAHI tehniku: pored celog kadra, model gleda i UVELIČANE delove slike
+ * (pločice), a rezultati se spajaju NMS algoritmom (uklanjanje duplikata
+ * po preklapanju). Sitan predmet koji je na celom kadru 4 piksela, na
+ * pločici je 12+ — i model ga vidi.
  */
-import type { AgeGroup, Hazard } from "../types";
-import { mapDetectionsToHazards } from "./hazardKnowledge";
+import type { AgeGroup, Hazard, HazardBox } from "../types";
+import { mapDetectionsToHazards, type Detection } from "./hazardKnowledge";
 import { thresholdAdjustment } from "./learning";
 
 type Source = HTMLVideoElement | HTMLImageElement | HTMLCanvasElement;
@@ -36,11 +43,35 @@ const CLASS_MIN: Record<string, number> = {
   refrigerator: 0.5, oven: 0.45, sink: 0.45, toilet: 0.45, book: 0.45,
 };
 // Ispod ove normalizovane površine box je šum senzora, ne objekat
-const MIN_AREA = 0.0008;
+const MIN_AREA = 0.0004;
+// NMS: dve detekcije iste klase sa ovolikim preklapanjem su isti objekat
+const NMS_IOU = 0.45;
 
 function effectiveThreshold(cocoClass: string): number {
   const base = CLASS_MIN[cocoClass] ?? DEFAULT_MIN;
   return Math.max(0.15, Math.min(0.9, base + thresholdAdjustment(cocoClass)));
+}
+
+/** Presek-kroz-uniju dva normalizovana boxa (0 = bez dodira, 1 = identični). */
+export function boxIou(a: HazardBox, b: HazardBox): number {
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.w, b.x + b.w);
+  const y2 = Math.min(a.y + a.h, b.y + b.h);
+  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  if (inter === 0) return 0;
+  return inter / (a.w * a.h + b.w * b.h - inter);
+}
+
+/** NMS: ukloni duplikate iste klase (isti objekat viđen na više pločica). */
+function nms(dets: Detection[]): Detection[] {
+  const sorted = [...dets].sort((a, b) => b.score - a.score);
+  const kept: Detection[] = [];
+  for (const d of sorted) {
+    if (kept.some((k) => k.label === d.label && boxIou(k.box, d.box) > NMS_IOU)) continue;
+    kept.push(d);
+  }
+  return kept;
 }
 
 let modelPromise: Promise<CocoModel> | null = null;
@@ -91,6 +122,77 @@ export function retryDetector() {
   preloadDetector();
 }
 
+interface Region {
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+}
+
+/** grid×grid pločice sa preklapanjem (da objekat na šavu ne bude presečen). */
+function gridRegions(w: number, h: number, grid: number, overlap: number): Region[] {
+  const regions: Region[] = [];
+  const tw = w / grid;
+  const th = h / grid;
+  const ox = tw * overlap;
+  const oy = th * overlap;
+  for (let gy = 0; gy < grid; gy++) {
+    for (let gx = 0; gx < grid; gx++) {
+      const sx = Math.max(0, gx * tw - ox);
+      const sy = Math.max(0, gy * th - oy);
+      regions.push({
+        sx,
+        sy,
+        sw: Math.min(w - sx, tw + 2 * ox),
+        sh: Math.min(h - sy, th + 2 * oy),
+      });
+    }
+  }
+  return regions;
+}
+
+/** Centralna pločica — tu je najčešće ono na šta je roditelj usmerio kameru. */
+function centerRegion(w: number, h: number): Region {
+  return { sx: w * 0.25, sy: h * 0.25, sw: w * 0.5, sh: h * 0.5 };
+}
+
+async function detectRegion(
+  model: CocoModel,
+  source: Source,
+  srcW: number,
+  srcH: number,
+  r: Region,
+): Promise<Detection[]> {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(r.sw);
+  canvas.height = Math.round(r.sh);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return [];
+  ctx.drawImage(source, r.sx, r.sy, r.sw, r.sh, 0, 0, canvas.width, canvas.height);
+  const preds = await model.detect(canvas, MAX_BOXES, RAW_THRESHOLD);
+  return preds.map((p) => ({
+    label: p.class,
+    score: p.score,
+    box: {
+      x: (r.sx + p.bbox[0]) / srcW,
+      y: (r.sy + p.bbox[1]) / srcH,
+      w: p.bbox[2] / srcW,
+      h: p.bbox[3] / srcH,
+    },
+  }));
+}
+
+export interface DetectOptions {
+  /**
+   * "photo" — puna precizna analiza: ceo kadar + 2×2 pločice + centar
+   * (6 prolaza modela; sitni predmeti se vide jer su pločice "zumirane").
+   */
+  detail?: "photo";
+  /** Live mod: pored celog kadra, dubinski skeniraj i JEDAN kvadrant
+   * (rotira se svaki otkucaj → cela slika precizno pokrivena za ~5s). */
+  quadrant?: number;
+}
+
 /**
  * Detektuje objekte na izvoru (video / slika / canvas) i mapira ih u opasnosti
  * po uzrastu. srcW/srcH su stvarne dimenzije sadržaja (za normalizaciju).
@@ -100,21 +202,43 @@ export async function detectLocal(
   srcW: number,
   srcH: number,
   ageGroup: AgeGroup,
+  opts: DetectOptions = {},
 ): Promise<Hazard[]> {
   const model = await getModel();
-  const preds = await model.detect(source, MAX_BOXES, RAW_THRESHOLD);
-  const detections = preds
-    .filter((p) => p.score >= effectiveThreshold(p.class))
-    .map((p) => ({
-      label: p.class,
-      score: p.score,
-      box: {
-        x: p.bbox[0] / srcW,
-        y: p.bbox[1] / srcH,
-        w: p.bbox[2] / srcW,
-        h: p.bbox[3] / srcH,
-      },
-    }))
-    .filter((d) => d.box.w * d.box.h >= MIN_AREA);
+
+  // 1) Ceo kadar — direktno na izvoru (najbrže, hvata krupne objekte)
+  const fullPreds = await model.detect(source, MAX_BOXES, RAW_THRESHOLD);
+  const all: Detection[] = fullPreds.map((p) => ({
+    label: p.class,
+    score: p.score,
+    box: {
+      x: p.bbox[0] / srcW,
+      y: p.bbox[1] / srcH,
+      w: p.bbox[2] / srcW,
+      h: p.bbox[3] / srcH,
+    },
+  }));
+
+  // 2) Zumirane pločice — hvataju SITNE predmete
+  const regions: Region[] = [];
+  if (opts.detail === "photo") {
+    regions.push(...gridRegions(srcW, srcH, 2, 0.15), centerRegion(srcW, srcH));
+  } else if (opts.quadrant !== undefined) {
+    regions.push(gridRegions(srcW, srcH, 2, 0.12)[opts.quadrant % 4]);
+  }
+  for (const r of regions) {
+    try {
+      all.push(...(await detectRegion(model, source, srcW, srcH, r)));
+    } catch {
+      /* jedna pločica pala (memorija/canvas) — ostale i ceo kadar važe */
+    }
+  }
+
+  // 3) Filtar po klasi (osetljivost + samoučenje) → šum → NMS spajanje
+  const detections = nms(
+    all
+      .filter((d) => d.score >= effectiveThreshold(d.label))
+      .filter((d) => d.box.w * d.box.h >= MIN_AREA),
+  );
   return mapDetectionsToHazards(detections, ageGroup);
 }

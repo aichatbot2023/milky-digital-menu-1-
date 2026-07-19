@@ -41,6 +41,8 @@ export interface Hazard {
   resolved?: boolean;
   /** COCO klasa lokalnog detektora — osnova za samoučenje (feedback). */
   sourceClass?: string;
+  /** Pouzdanost lokalne detekcije 0–1 (cloud nalazi je nemaju). */
+  confidence?: number;
 }
 
 export interface AnalysisResult {

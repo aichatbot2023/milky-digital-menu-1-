@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChildProfile, RoomType, ScanRecord } from "./types";
 import { ROOM_LABELS } from "./types";
 import { analyzeImage, downscaleImage } from "./lib/analyze";
+import { boxIou, detectLocal } from "./lib/detector";
 import { capturePhoto } from "./lib/camera";
 import {
   deleteScan,
@@ -48,25 +49,19 @@ export default function App() {
       const imageDataUrl = await downscaleImage(photo);
       const age = selectedChild?.age ?? "1-2y";
 
-      // LOKALNO-PRVO: detekcija u browseru radi uvek (model je u aplikaciji);
-      // cloud analiza se pokušava paralelno i koristi se ako uspe (bogatija).
+      // DVOSTRUKA PRECIZNA ANALIZA, paralelno:
+      //  - lokalni model: pločasta multi-scale detekcija (ceo kadar + zumirane
+      //    pločice) — hvata i sitne predmete koje jedan prolaz ne vidi
+      //  - cloud vision AI: bogata analiza (zašto/statistika/rešenje/zone)
+      // Rezultati se SPAJAJU (dedup po preklapanju), ne bira se samo jedan.
       const localPromise = (async () => {
-        const { detectLocal } = await import("./lib/detector");
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
           const el = new Image();
           el.onload = () => resolve(el);
           el.onerror = () => reject(new Error("Slika ne može da se učita"));
           el.src = imageDataUrl;
         });
-        const hazards = await detectLocal(img, img.width, img.height, age);
-        return {
-          hazards,
-          safety_score: Math.max(20, 90 - hazards.length * 12),
-          summary:
-            hazards.length > 0
-              ? "Lokalna AI detekcija: prepoznati su rizični objekti za izabrani uzrast. Dodirnite marker za objašnjenje i rešenje."
-              : "Lokalna AI detekcija nije uočila rizične objekte na slici. Proverite i zone koje model ne vidi (utičnice, ivice, kablovi).",
-        };
+        return detectLocal(img, img.width, img.height, age, { detail: "photo" });
       })();
       const cloudPromise = analyzeImage({
         imageDataUrl,
@@ -75,11 +70,38 @@ export default function App() {
         childName: selectedChild?.name,
       });
 
+      const [cloudS, localS] = await Promise.allSettled([cloudPromise, localPromise]);
+      const localHazards = localS.status === "fulfilled" ? localS.value : [];
+
       let result;
-      try {
-        result = await cloudPromise;
-      } catch {
-        result = await localPromise; // cloud pao → lokalni rezultat
+      if (cloudS.status === "fulfilled") {
+        // Spoji: cloud nalazi + lokalni koji NISU isti objekat (IoU < 0.4)
+        const cloud = cloudS.value;
+        const extras = localHazards
+          .filter((lh) => cloud.hazards.every((ch) => boxIou(lh.box, ch.box) < 0.4))
+          .map((lh, i) => ({ ...lh, id: `merge-${i}-${lh.id}` }));
+        result = {
+          ...cloud,
+          hazards: [...cloud.hazards, ...extras],
+          summary:
+            extras.length > 0
+              ? `${cloud.summary} Lokalni AI je precizno uočio još ${extras.length} ${extras.length === 1 ? "objekat" : "objekta/objekata"}.`
+              : cloud.summary,
+        };
+      } else if (localS.status === "fulfilled") {
+        result = {
+          hazards: localHazards,
+          safety_score: Math.max(20, 90 - localHazards.length * 12),
+          summary:
+            localHazards.length > 0
+              ? "Precizna lokalna AI analiza (višeslojno skeniranje slike): prepoznati su rizični objekti za izabrani uzrast. Dodirnite marker za objašnjenje i rešenje."
+              : "Precizna lokalna AI analiza nije uočila rizične objekte. Proverite i zone koje model ne vidi (utičnice, ivice, kablovi).",
+        };
+      } else {
+        throw new Error(
+          (cloudS as PromiseRejectedResult).reason?.message ??
+            "Analiza nije uspela. Pokušajte ponovo.",
+        );
       }
       const scan: ScanRecord = {
         id: `scan-${Date.now()}`,
@@ -152,8 +174,9 @@ export default function App() {
         <div className="spinner" />
         <h2>AI analizira prostor…</h2>
         <p className="muted">
-          Tražimo opasnosti za{" "}
-          {selectedChild ? `${selectedChild.name}` : "dete"} — ovo traje 10–30 sekundi.
+          Višeslojna precizna analiza (lokalni AI + cloud) — tražimo i sitne
+          predmete opasne za {selectedChild ? `${selectedChild.name}` : "dete"}.
+          Ovo traje 10–30 sekundi.
         </p>
       </div>
     );
@@ -180,6 +203,31 @@ export default function App() {
         />
 
         <p className="summary">{summary}</p>
+
+        {hazards.length > 0 && (
+          <div className="stats-row">
+            {(["critical", "high", "medium", "low"] as const).map((s) => {
+              const n = hazards.filter((h) => h.severity === s).length;
+              if (n === 0) return null;
+              return (
+                <span key={s} className="stat-chip" data-sev={s}>
+                  {s === "critical"
+                    ? "Kritično"
+                    : s === "high"
+                      ? "Visoko"
+                      : s === "medium"
+                        ? "Srednje"
+                        : "Nisko"}{" "}
+                  {n}
+                </span>
+              );
+            })}
+            <span className="stat-chip stat-total">Ukupno {hazards.length}</span>
+            <span className="stat-chip stat-done">
+              Rešeno {hazards.filter((h) => h.resolved).length}
+            </span>
+          </div>
+        )}
 
         <div className="hazard-list">
           {hazards.length === 0 && (

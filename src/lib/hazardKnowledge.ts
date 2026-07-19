@@ -5,7 +5,7 @@
  */
 import type { AgeGroup, Hazard, HazardCategory, Severity } from "../types";
 
-interface Detection {
+export interface Detection {
   label: string;
   score: number;
   box: { x: number; y: number; w: number; h: number };
@@ -372,16 +372,16 @@ export function mapDetectionsToHazards(
   ageGroup: AgeGroup,
 ): Hazard[] {
   const hazards: Hazard[] = [];
-  const seenLabels = new Set<string>();
+  const perLabel = new Map<string, number>();
   for (const d of detections) {
     const rule = RULES[d.label];
     if (!rule) continue;
     const severity = rule.severity[ageGroup];
     if (!severity) continue; // nije rizik za ovaj uzrast
-    // Jedan tip objekta prijavi najviše 2 puta da overlay ne bude pretrpan
-    const count = [...seenLabels].filter((l) => l === d.label).length;
-    if (count >= 2) continue;
-    seenLabels.add(d.label);
+    // Jedan tip objekta prijavi najviše 3 puta da overlay ne bude pretrpan
+    const count = perLabel.get(d.label) ?? 0;
+    if (count >= 3) continue;
+    perLabel.set(d.label, count + 1);
     hazards.push({
       id: `local-${hazards.length}-${d.label.replace(/\s/g, "_")}`,
       label: rule.labelSr,
@@ -393,6 +393,7 @@ export function mapDetectionsToHazards(
       fix: rule.fix,
       resolved: false,
       sourceClass: d.label,
+      confidence: d.score,
     });
   }
   // Kritične prve

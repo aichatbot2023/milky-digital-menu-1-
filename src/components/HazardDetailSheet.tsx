@@ -30,6 +30,15 @@ export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) 
           <span className="badge badge-cat">{CATEGORY_LABELS[hazard.category]}</span>
         </div>
         <h2>{hazard.label}</h2>
+        <p className="sheet-source">
+          {hazard.sourceClass
+            ? `Lokalni AI u telefonu${
+                hazard.confidence !== undefined
+                  ? ` · pouzdanost ${Math.round(hazard.confidence * 100)}%`
+                  : ""
+              }`
+            : "Cloud vision AI (Nemotron) · detaljna analiza slike"}
+        </p>
 
         <section>
           <h3>⚠️ Zašto je opasno</h3>
