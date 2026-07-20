@@ -13,7 +13,7 @@ import {
   saveScan,
   updateScan,
 } from "./lib/storage";
-import { getStatus, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
+import { captureRef, getStatus, trackSignupOnce, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { Onboarding, onboardingSeen } from "./components/Onboarding";
@@ -68,6 +68,8 @@ export default function App() {
   // uplate kod Stripe-a → Premium se aktivira automatski
   const [payMsg, setPayMsg] = useState<string | null>(null);
   useEffect(() => {
+    captureRef();
+    trackSignupOnce();
     const sid = new URLSearchParams(window.location.search).get("session_id");
     if (!sid) return;
     window.history.replaceState(null, "", window.location.pathname);

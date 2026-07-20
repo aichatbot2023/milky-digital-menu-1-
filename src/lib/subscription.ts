@@ -87,6 +87,73 @@ export async function verifyCheckoutSession(sessionId: string): Promise<boolean>
   }
 }
 
+// ---------- REFERRAL / PARTNERSKI SISTEM ----------
+const REF_KEY = "safenest.ref";
+const SIGNUP_KEY = "safenest.signupTracked";
+const PARTNERS_URL =
+  (import.meta.env.VITE_PARTNERS_FUNCTION_URL as string | undefined) ??
+  "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/verify-subscription".replace(
+    "verify-subscription",
+    "partners",
+  );
+
+/** Sačuvaj ?ref=KOD iz URL-a (poziva se pri učitavanju aplikacije). */
+export function captureRef() {
+  try {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref && /^[A-Za-z0-9_-]{2,40}$/.test(ref)) {
+      localStorage.setItem(REF_KEY, ref);
+      track("visit", ref);
+    }
+  } catch {
+    /* ignoriši */
+  }
+}
+
+export function getRef(): string | null {
+  try {
+    return localStorage.getItem(REF_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Fire-and-forget događaj ka partners funkciji. */
+export function track(type: "visit" | "signup" | "sale", ref?: string | null) {
+  try {
+    fetch(PARTNERS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${ANON}`,
+        "apikey": ANON,
+      },
+      body: JSON.stringify({ action: "track", type, ref: ref ?? getRef() }),
+    }).catch(() => {});
+  } catch {
+    /* ignoriši */
+  }
+}
+
+/** Registruj novog korisnika (jednom po uređaju) — mini CRM brojač. */
+export function trackSignupOnce() {
+  try {
+    if (localStorage.getItem(SIGNUP_KEY) === "1") return;
+    localStorage.setItem(SIGNUP_KEY, "1");
+    track("signup");
+  } catch {
+    /* ignoriši */
+  }
+}
+
+/** Checkout URL sa atribucijom partnera (client_reference_id → Stripe). */
+export function checkoutUrl(): string {
+  const ref = getRef();
+  if (!CHECKOUT_URL) return CHECKOUT_URL;
+  const sep = CHECKOUT_URL.includes("?") ? "&" : "?";
+  return `${CHECKOUT_URL}${sep}client_reference_id=${encodeURIComponent(ref ?? "direct")}`;
+}
+
 /** Unos aktivacionog koda posle uplate. */
 export function redeemCode(code: string): boolean {
   const ok = PROMO_CODES.includes(code.trim().toUpperCase());

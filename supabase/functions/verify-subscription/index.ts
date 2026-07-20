@@ -13,6 +13,8 @@
  * Vraća: { active: boolean, subscription?: string }
  */
 
+import postgres from 'npm:postgres';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -47,6 +49,30 @@ Deno.serve(async (req) => {
   const active =
     s.status === 'complete' &&
     (s.payment_status === 'paid' || s.payment_status === 'no_payment_required');
+
+  // Prodaja se pripisuje partneru (client_reference_id sa Stripe linka) —
+  // server-side, ne može da se falsifikuje iz browsera
+  if (active) {
+    try {
+      const dbUrl = Deno.env.get('SUPABASE_DB_URL');
+      if (dbUrl) {
+        const sqldb = postgres(dbUrl, { max: 1, prepare: false });
+        await sqldb`CREATE TABLE IF NOT EXISTS sn_events (
+          id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+          type text NOT NULL, ref_code text, meta jsonb,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )`;
+        const ref = typeof s.client_reference_id === 'string'
+          ? s.client_reference_id.slice(0, 40).replace(/[^A-Za-z0-9_-]/g, '')
+          : null;
+        await sqldb`INSERT INTO sn_events (type, ref_code, meta)
+          VALUES ('sale', ${ref}, ${sqldb.json({ session: sessionId })})`;
+        await sqldb.end();
+      }
+    } catch (e) {
+      console.error('sale tracking failed', e);
+    }
+  }
 
   return json({
     active,

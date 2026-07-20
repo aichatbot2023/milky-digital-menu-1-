@@ -34,19 +34,37 @@ const DEFAULT_MIN = 0.35;
 const CLASS_MIN: Record<string, number> = {
   // Sitni/opasni — maksimalna osetljivost (roditelj radije da vidi višak)
   knife: 0.22, scissors: 0.22, fork: 0.25, spoon: 0.3, remote: 0.25,
-  "cell phone": 0.28, bottle: 0.28,
-  "sports ball": 0.25, tie: 0.25, "hair drier": 0.25, clock: 0.3,
+  "cell phone": 0.28, bottle: 0.28, tie: 0.25, "hair drier": 0.25,
   "teddy bear": 0.3, handbag: 0.3, backpack: 0.3, umbrella: 0.3,
   "hot dog": 0.3, apple: 0.32, orange: 0.32, carrot: 0.32,
   // Klase koje model ČESTO POGREŠNO vidi na dečjoj opremi — vrlo strog prag:
   // bebeća kolica ume da nazove "kofer", bebeću flašicu "čašom/šoljom"
   suitcase: 0.62, "wine glass": 0.5, cup: 0.5, vase: 0.5,
+  // Klase koje model brka sa PLAFONJERAMA/lampama/detektorima — vrlo strogo
+  frisbee: 0.65, kite: 0.6, "sports ball": 0.45, clock: 0.5,
   // Krupni objekti — stroži prag (model ih često "vidi" pogrešno)
   chair: 0.5, couch: 0.5, bed: 0.5, "dining table": 0.5, tv: 0.45,
   refrigerator: 0.5, oven: 0.45, sink: 0.45, toilet: 0.45, book: 0.45,
 };
 // Ispod ove normalizovane površine box je šum senzora, ne objekat
 const MIN_AREA = 0.0004;
+
+// ANTI-GENERALIZACIJA PO POLOŽAJU: predmeti koji žive na podu/stolu ne mogu
+// biti u gornjem delu kadra — tamo su plafonjere, lusteri i detektori dima.
+// Sprečava gluposti tipa "frizbi na plafonu".
+const CEILING_Y = 0.2;
+const GROUND_CLASSES = new Set([
+  "sports ball", "frisbee", "cup", "bowl", "bottle", "wine glass", "vase",
+  "apple", "orange", "carrot", "hot dog", "donut", "cake", "pizza", "remote",
+  "book", "clock", "teddy bear", "hair drier", "toothbrush", "banana",
+  "spoon", "fork", "knife", "scissors", "mouse", "keyboard", "cell phone",
+]);
+
+function plausiblePosition(label: string, box: { y: number; h: number }): boolean {
+  if (!GROUND_CLASSES.has(label)) return true;
+  const centerY = box.y + box.h / 2;
+  return centerY > CEILING_Y; // centar u zoni plafona → nemoguće, odbaci
+}
 // NMS: dve detekcije iste klase sa ovolikim preklapanjem su isti objekat
 const NMS_IOU = 0.45;
 
@@ -241,7 +259,8 @@ export async function detectLocal(
   const detections = nms(
     all
       .filter((d) => d.score >= effectiveThreshold(d.label))
-      .filter((d) => d.box.w * d.box.h >= MIN_AREA),
+      .filter((d) => d.box.w * d.box.h >= MIN_AREA)
+      .filter((d) => plausiblePosition(d.label, d.box)),
   );
   return mapDetectionsToHazards(detections, ageGroup);
 }

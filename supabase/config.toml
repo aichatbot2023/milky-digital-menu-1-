@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.transcribe]
 verify_jwt = false
+
+[functions.partners]
+verify_jwt = false

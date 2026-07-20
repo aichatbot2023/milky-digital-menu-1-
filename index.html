@@ -7,6 +7,22 @@
     if (location.search.includes("session_id=")) {
       location.replace("/app/" + location.search);
     }
+    // Referral: ?ref=KOD → zapamti partnera + zabeleži posetu
+    try {
+      var _ref = new URLSearchParams(location.search).get("ref");
+      if (_ref && /^[A-Za-z0-9_-]{2,40}$/.test(_ref)) {
+        localStorage.setItem("safenest.ref", _ref);
+        fetch("https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/partners", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8",
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8"
+          },
+          body: JSON.stringify({ action: "track", type: "visit", ref: _ref })
+        }).catch(function () {});
+      }
+    } catch (e) {}
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f766e" />
@@ -209,6 +225,7 @@
         <a href="#features">Features</a>
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
+        <a href="#partners">Partners</a>
         <a class="btn btn-primary" href="/app/">Open the app</a>
       </div>
     </div>
@@ -368,6 +385,18 @@
       <div class="legal reveal">
         <strong>⚕️ Important — educational purposes only.</strong> SafeNest AI provides general child-safety education and home-hazard awareness. It is <strong>not a medical device</strong> and does not provide medical advice, diagnosis or treatment. AI analysis may be incomplete or imprecise and no app can guarantee a hazard-free environment. SafeNest AI never replaces active adult supervision. For any medical concern, allergy or emergency, contact your paediatrician or local emergency services immediately. See full <a href="/terms.html">Terms of Use</a>.
       </div>
+    </div>
+  </section>
+
+  <section id="partners" style="background:#fff">
+    <div class="wrap" style="text-align:center">
+      <p class="kicker reveal">Partner programme</p>
+      <h2 class="reveal">Influencers &amp; mums — earn with SafeNest AI 💚</h2>
+      <p class="sub reveal" style="margin:14px auto 0;max-width:560px">Do your followers trust you on parenting? Get your personal referral link, share it, and earn a commission for every subscriber who joins through you. We track everything transparently — you see your results, we handle the tech.</p>
+      <div class="hero-ctas reveal" style="justify-content:center;margin-top:26px">
+        <a class="btn btn-primary" href="mailto:office@aichatbot.rs?subject=SafeNest%20AI%20Partner%20Programme&body=Hi!%20I'd%20like%20a%20referral%20link.%20My%20name%2Fbrand%3A%20___%20%2C%20my%20audience%3A%20___">🤝 Become a partner</a>
+      </div>
+      <p class="hero-note reveal">Free to join · Personal tracking link · Perfect for parenting creators</p>
     </div>
   </section>
 

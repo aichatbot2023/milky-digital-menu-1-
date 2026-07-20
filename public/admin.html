@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SafeNest AI — Admin</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" type="image/png" href="/icon-192.png" />
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f8fafc;color:#0f172a;margin:0;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:30px 16px}
+h1{letter-spacing:-.02em;color:#115e59}
+h2{font-size:1.1rem;margin-top:30px}
+.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(15,23,42,.08);margin-top:14px}
+input{padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:1rem;width:100%;box-sizing:border-box}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row input{flex:1;min-width:140px}
+button{background:#0f766e;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:1rem;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.92rem}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #e2e8f0}
+th{color:#64748b;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.tot{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
+.tot div{background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:12px;text-align:center}
+.tot b{font-size:1.5rem;color:#115e59;display:block}
+.tot span{color:#64748b;font-size:.8rem}
+.err{color:#b91c1c;margin-top:10px}
+.ok{color:#166534;margin-top:10px}
+code{background:#f1f5f9;padding:2px 7px;border-radius:6px;font-size:.85rem}
+.muted{color:#64748b;font-size:.85rem}
+</style>
+</head>
+<body><div class="wrap">
+<h1>🛡️ SafeNest AI — Admin panel</h1>
+<p class="muted">Referral partneri, prodaje i registrovani korisnici. Pristup samo uz admin ključ (ADMIN_KEY secret u Supabase).</p>
+
+<div class="card">
+  <div class="row">
+    <input id="key" type="password" placeholder="Admin ključ" />
+    <button onclick="loadStats()">Prijavi se / Osveži</button>
+  </div>
+  <p class="err" id="err"></p>
+</div>
+
+<div id="panel" style="display:none">
+  <h2>📊 CRM — ukupno</h2>
+  <div class="tot" id="totals"></div>
+
+  <h2>🤝 Partneri / influenseri</h2>
+  <div class="card">
+    <div class="row">
+      <input id="pcode" placeholder="Kod (npr. MAMA-ANA)" />
+      <input id="pname" placeholder="Ime partnera / brenda" />
+      <button onclick="createPartner()">+ Dodaj partnera</button>
+    </div>
+    <p class="ok" id="created"></p>
+  </div>
+  <div class="card">
+    <table id="ptable">
+      <thead><tr><th>Partner</th><th>Kod / link</th><th>Posete</th><th>Registracije</th><th>Prodaje</th><th>Prihod</th><th>Konverzija</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">Prihod = prodaje × 7 €. „(direktno)" = korisnici bez referral koda. Link partnera: <code>https://safenessai.co.uk/?ref=KOD</code></p>
+  </div>
+</div>
+
+<script>
+const URL_FN = "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/partners";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
+const PRICE = 7;
+
+async function call(body) {
+  const res = await fetch(URL_FN, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ANON, "apikey": ANON },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ("Greška " + res.status));
+  return data;
+}
+
+function getKey() {
+  const k = document.getElementById("key").value.trim() || sessionStorage.getItem("snkey") || "";
+  if (k) sessionStorage.setItem("snkey", k);
+  return k;
+}
+
+async function loadStats() {
+  document.getElementById("err").textContent = "";
+  try {
+    const data = await call({ action: "stats", admin_key: getKey() });
+    render(data);
+    document.getElementById("panel").style.display = "block";
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+    document.getElementById("panel").style.display = "none";
+  }
+}
+
+async function createPartner() {
+  document.getElementById("created").textContent = "";
+  try {
+    const code = document.getElementById("pcode").value.trim();
+    const name = document.getElementById("pname").value.trim();
+    const r = await call({ action: "create", admin_key: getKey(), code, name });
+    document.getElementById("created").textContent = "✓ Partner dodat. Link: " + r.link;
+    document.getElementById("pcode").value = ""; document.getElementById("pname").value = "";
+    loadStats();
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+}
+
+function render(data) {
+  const by = {};
+  for (const r of data.rows) {
+    by[r.code] = by[r.code] || { visit: 0, signup: 0, sale: 0 };
+    by[r.code][r.type] = r.n;
+  }
+  const tot = { visit: 0, signup: 0, sale: 0 };
+  for (const t of data.totals) tot[t.type] = t.n;
+  document.getElementById("totals").innerHTML =
+    `<div><b>${tot.signup}</b><span>registrovanih korisnika</span></div>` +
+    `<div><b>${tot.sale}</b><span>prodaja (pretplate)</span></div>` +
+    `<div><b>${tot.sale * PRICE} €</b><span>mesečni prihod</span></div>` +
+    `<div><b>${tot.visit}</b><span>referral poseta</span></div>`;
+  const names = {};
+  for (const p of data.partners) names[p.code] = p.name;
+  const codes = new Set([...Object.keys(by), ...Object.keys(names)]);
+  const tbody = document.querySelector("#ptable tbody");
+  tbody.innerHTML = "";
+  for (const code of codes) {
+    const s = by[code] || { visit: 0, signup: 0, sale: 0 };
+    const conv = s.visit > 0 ? ((s.sale / s.visit) * 100).toFixed(1) + "%" : "—";
+    const link = code === "(direktno)" ? "—" : `<code>?ref=${code}</code>`;
+    tbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${names[code] ?? "<i>nepoznat</i>"}</td><td>${link}</td><td>${s.visit}</td><td>${s.signup}</td><td><b>${s.sale}</b></td><td>${s.sale * PRICE} €</td><td>${conv}</td></tr>`);
+  }
+}
+
+if (sessionStorage.getItem("snkey")) { document.getElementById("key").value = sessionStorage.getItem("snkey"); loadStats(); }
+</script>
+</div></body></html>

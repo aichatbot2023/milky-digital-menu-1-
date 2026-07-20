@@ -3,6 +3,7 @@ import {
   CHECKOUT_URL,
   CONTACT_EMAIL,
   PRICE_LABEL,
+  checkoutUrl,
   redeemCode,
 } from "../lib/subscription";
 import { t } from "../lib/i18n";
@@ -21,8 +22,8 @@ export function Paywall({ expired, onClose, onSubscribed }: Props) {
   const subscribe = () => {
     if (CHECKOUT_URL) {
       // Isti tab: posle uplate Stripe vraća korisnika na sajt sa
-      // ?session_id=... i Premium se aktivira automatski
-      window.location.href = CHECKOUT_URL;
+      // ?session_id=...; client_reference_id nosi partnera (referral)
+      window.location.href = checkoutUrl();
     } else {
       window.location.href = `mailto:${CONTACT_EMAIL}?subject=SafeNest%20AI%20pretplata&body=Zdravo,%20želim%20da%20se%20pretplatim%20na%20SafeNest%20AI%20(${encodeURIComponent(PRICE_LABEL)}).`;
     }

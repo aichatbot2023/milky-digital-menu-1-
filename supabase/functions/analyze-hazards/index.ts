@@ -96,7 +96,9 @@ function buildPrompt(roomType: string, ageGroup: string, childName?: string, lan
   const room = ROOM_SR[roomType] ?? 'prostor';
   const age = AGE_SR[ageGroup] ?? ageGroup;
   const child = childName ? ` po imenu ${childName}` : '';
-  return `Ti si sertifikovani ekspert za bezbednost dece (childproofing) sa znanjem pedijatrijske epidemiologije povreda (SZO, CDC, EU Child Safety Alliance).
+  return `OUTPUT LANGUAGE: ${language}. Every human-readable value you produce (label, why, stats, fix, summary) MUST be written entirely in ${language}. NEVER mix languages in a single response. If any source knowledge is in another language, translate it to ${language}.
+
+Ti si sertifikovani ekspert za bezbednost dece (childproofing) sa znanjem pedijatrijske epidemiologije povreda (SZO, CDC, EU Child Safety Alliance).
 
 Analiziraj fotografiju prostora tipa "${room}" i identifikuj SVE vizuelno uočljive opasnosti za dete${child} uzrasta ${age}.
 
@@ -152,6 +154,13 @@ VISINSKE RAZLIKE I PROSTORNA ANALIZA — proceni dubinu i visine na slici:
 - LANAC PENJANJA: kombinacije predmeta koje formiraju "merdevine" (hoklica → stolica → sto → polica/prozor) prijavi kao JEDNU opasnost sa objašnjenjem lanca
 - ŠAHTOVI, podrumska vrata, rupe u dvorištu, nepokrivena okna
 - Za svaku prijavljenu visinsku opasnost u "why" navedi približnu procenjenu visinu (npr. "ograda ~90 cm — ispod bezbednih 110 cm")
+
+ANTI-GENERALIZACIJA — identitet predmeta proveri KONTEKSTOM pre prijave:
+- Objekat NA PLAFONU je plafonjera/luster/detektor dima/ventilator — NIKAD lopta, disk, frizbi ili igračka
+- Objekat NA ZIDU je sat/slika/termostat/prekidač — proveri pre nego što ga proglasiš opasnim predmetom
+- Okrugao predmet: razlikuj plafonjeru / sat / tanjir / loptu po POLOŽAJU i OKRUŽENJU
+- Ako identitet nije jasan iz konteksta, NE izmišljaj egzotičan predmet — opiši ga generički ("okrugao predmet na polici") ili ga izostavi ako nije opasan
+- Bolje je izostaviti bezopasnu plafonjeru nego prijaviti "leteći disk" — pogrešna identifikacija ruši poverenje roditelja
 
 ŽIVOTINJE — prepoznaj i proceni:
 - PAS/MAČKA: životinja u istoj prostoriji sa bebom bez odrasle osobe između; pas uz hranu/igračku (čuvanje resursa); korpa/ležaljka uz krevetac

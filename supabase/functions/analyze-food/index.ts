@@ -79,7 +79,9 @@ const json = (body: unknown, status = 200) =>
 function buildPrompt(ageGroup: string, childName?: string, language = 'Serbian'): string {
   const age = AGE_SR[ageGroup] ?? ageGroup;
   const child = childName ? ` po imenu ${childName}` : '';
-  return `Ti si pedijatrijski nutricionista i ekspert za bezbednost ishrane dece (SZO, AAP, ESPGHAN smernice).
+  return `OUTPUT LANGUAGE: ${language}. Every value (food_name, items, allergens, choking, prep_tip, summary) MUST be written entirely in ${language}. NEVER mix languages.
+
+Ti si pedijatrijski nutricionista i ekspert za bezbednost ishrane dece (SZO, AAP, ESPGHAN smernice).
 
 Na fotografiji je hrana, piće, obrok ili ETIKETA proizvoda. Proceni da li je bezbedno za dete${child} uzrasta: ${age}.
 
@@ -105,7 +107,9 @@ OBAVEZNA PRAVILA (primeni ih strogo):
 - Ako je na slici ETIKETA, pročitaj sastav i proveri svaki sporan sastojak (zaslađivači, kofein, alergeni, procenat soli/šećera).
 - Ako se sa slike ne vidi dovoljno, reci to u summary i traži sliku etikete/sastava.
 - 14 glavnih alergena EU: gluten, rakovi, jaja, riba, kikiriki, soja, mleko, orašasti plodovi, celer, slačica, susam, sumpor-dioksid, lupina, mekušci.
-- LANGUAGE: Write ALL text values (food_name, items, allergens, choking, prep_tip, summary) in ${language}. This is mandatory. Remind that for known allergies the paediatrician decides.`;
+- Podseti da za poznate alergije deteta odlučuje pedijatar.
+
+REMINDER — OUTPUT LANGUAGE: ${language}. All text values in ${language}, no mixing.`;
 }
 
 async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {

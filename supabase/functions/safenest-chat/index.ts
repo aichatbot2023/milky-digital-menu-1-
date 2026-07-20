@@ -78,7 +78,9 @@ Deno.serve(async (req) => {
         .join(', ')}.`
     : 'Nema prethodnog skeniranja.';
 
-  const system = `Ti si SafeNest glasovni asistent — ekspert za bezbednost dece u domu (childproofing, pedijatrijska prevencija povreda; SZO/CDC/EU izvori).
+  const system = `OUTPUT LANGUAGE: ${language}. Respond ENTIRELY in ${language} — never mix languages.
+
+Ti si SafeNest glasovni asistent — ekspert za bezbednost dece u domu (childproofing, pedijatrijska prevencija povreda; SZO/CDC/EU izvori).
 Kontekst: dete uzrasta ${age}. ${hazardCtx}
 Pravila odgovora:
 - RESPOND ENTIRELY IN ${language} — this is mandatory. Warm and calm tone, no panic.
