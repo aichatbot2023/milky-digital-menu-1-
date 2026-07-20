@@ -12,10 +12,10 @@ const SUB_KEY = "safenest.subscribed";
 export const TRIAL_DAYS = 7;
 export const PRICE_LABEL = "7 € mesečno";
 
-/** Stripe Payment Link — 7 €/mes, prvih 7 dana besplatno. */
+/** Stripe Payment Link (Nicholas Family LTD nalog) — 7 €/mes, prvih 7 dana besplatno. */
 export const CHECKOUT_URL =
   (import.meta.env.VITE_CHECKOUT_URL as string | undefined) ??
-  "https://buy.stripe.com/dRmfZg7ae6AIeEU8zY7AI0f";
+  "https://buy.stripe.com/4gM14neas5j61HP9g5fEk00";
 export const CONTACT_EMAIL = "office@aichatbot.rs";
 
 const VERIFY_URL =
