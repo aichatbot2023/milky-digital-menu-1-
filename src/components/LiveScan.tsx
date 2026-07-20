@@ -34,6 +34,8 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const streamRef = useRef<MediaStream | null>(null);
   const localBusy = useRef(false);
   const cloudBusy = useRef(false);
+  const cloudFails = useRef(0);
+  const cloudSkip = useRef(0);
   const pausedRef = useRef(false);
   // Sesija: sve jedinstvene opasnosti viđene tokom skeniranja (za izveštaj)
   const sessionRef = useRef<Map<string, Hazard>>(new Map());
@@ -159,6 +161,12 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   useEffect(() => {
     const tick = async () => {
       if (cloudBusy.current || pausedRef.current) return;
+      // Backoff: posle neuspeha preskoči par otkucaja da ne gušimo besplatne
+      // provajdere (rate limit) — pa pokušaj ponovo automatski
+      if (cloudSkip.current > 0) {
+        cloudSkip.current -= 1;
+        return;
+      }
       const frame = captureFrame(CLOUD_EDGE);
       if (!frame) return;
       cloudBusy.current = true;
@@ -169,13 +177,17 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
           ageGroup,
           childName,
         });
+        cloudFails.current = 0;
         if (!pausedRef.current) {
           setCloudResult(res);
           setCloudError(null);
         }
-      } catch (e: any) {
-        // Cloud pad NIJE fatalan — lokalna detekcija nastavlja da radi
-        setCloudError(e?.message ?? "Cloud analiza trenutno nedostupna");
+      } catch {
+        // Cloud pad NIJE fatalan — lokalna detekcija nastavlja; korisniku
+        // se prikazuje smirena poruka, a pokušaji se proredе automatski
+        cloudFails.current += 1;
+        cloudSkip.current = Math.min(4, cloudFails.current);
+        setCloudError("retry");
       } finally {
         cloudBusy.current = false;
       }
@@ -364,9 +376,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
       </div>
 
       {cloudError && !cameraError && (
-        <div className="live-cloudnote">
-          {t("live.cloudnote")} {cloudError}
-        </div>
+        <div className="live-cloudnote">{t("live.cloudnote")}</div>
       )}
 
       {/* ŽIVO objašnjenje najozbiljnije opasnosti u kadru */}

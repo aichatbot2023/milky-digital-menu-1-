@@ -21,6 +21,8 @@ interface Provider {
   url: string;
   models: string[];
   extraHeaders?: Record<string, string>;
+  /** Dodatna polja u telu zahteva (npr. isključenje reasoning-a). */
+  extraBody?: Record<string, unknown>;
 }
 
 const PROVIDERS: Provider[] = [
@@ -29,13 +31,16 @@ const PROVIDERS: Provider[] = [
     key: Deno.env.get('NVIDIA_NIM_API_KEY'),
     url: 'https://integrate.api.nvidia.com/v1/chat/completions',
     models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
+    // KLJUČNO ZA BRZINU: bez ovoga reasoning model "razmišlja" 40-60s po
+    // slici, pa klijent odustane. Sa isključenim razmišljanjem: par sekundi.
+    extraBody: { chat_template_kwargs: { enable_thinking: false } },
   },
   {
     name: 'openrouter',
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
     models: (Deno.env.get('FREE_MODELS') ??
-      'nvidia/nemotron-3-nano-30b-a3b:free,qwen/qwen-2.5-vl-7b-instruct:free,google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free'
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,nvidia/nemotron-nano-12b-v2-vl:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free'
     ).split(',').map((m) => m.trim()).filter(Boolean),
     extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
   },
@@ -106,12 +111,15 @@ OBAVEZNA PRAVILA (primeni ih strogo):
 async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {
   const res = await fetch(p.url, {
     method: 'POST',
+    // Timeout po provajderu: zaglavljeni provajder ne sme da pojede ceo zahtev
+    signal: AbortSignal.timeout(30000),
     headers: {
       'Authorization': `Bearer ${p.key}`,
       'Content-Type': 'application/json',
       ...(p.extraHeaders ?? {}),
     },
     body: JSON.stringify({
+      ...(p.extraBody ?? {}),
       model,
       max_tokens: 3000,
       messages: [{
@@ -138,6 +146,7 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
   if (!['safe', 'caution', 'unsafe'].includes(parsed.verdict)) parsed.verdict = 'caution';
   parsed.items = Array.isArray(parsed.items) ? parsed.items : [];
   parsed.allergens = Array.isArray(parsed.allergens) ? parsed.allergens : [];
+  parsed._v = 2;
   parsed._provider = p.name;
   parsed._model = model;
   return parsed;

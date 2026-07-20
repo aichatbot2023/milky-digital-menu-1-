@@ -19,6 +19,7 @@ interface Provider {
   url: string;
   models: string[];
   extraHeaders?: Record<string, string>;
+  extraBody?: Record<string, unknown>;
 }
 
 const PROVIDERS: Provider[] = [
@@ -26,14 +27,16 @@ const PROVIDERS: Provider[] = [
     name: 'openrouter',
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-30b-a3b:free', 'meta-llama/llama-3.3-70b-instruct:free'],
+    models: ['nvidia/nemotron-3-nano-30b-a3b:free', 'nvidia/nemotron-3-super-120b-a12b:free', 'google/gemma-4-31b-it:free'],
     extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
   },
   {
     name: 'nvidia',
     key: Deno.env.get('NVIDIA_NIM_API_KEY'),
     url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning', 'meta/llama-3.3-70b-instruct'],
+    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
+    // Bez reasoning-a: glasovni odgovor mora da stigne za par sekundi
+    extraBody: { chat_template_kwargs: { enable_thinking: false } },
   },
   {
     name: 'groq',
@@ -90,12 +93,14 @@ Pravila odgovora:
       try {
         const res = await fetch(p.url, {
           method: 'POST',
+          signal: AbortSignal.timeout(25000),
           headers: {
             'Authorization': `Bearer ${p.key}`,
             'Content-Type': 'application/json',
             ...(p.extraHeaders ?? {}),
           },
           body: JSON.stringify({
+            ...(p.extraBody ?? {}),
             model,
             max_tokens: 400,
             messages: [

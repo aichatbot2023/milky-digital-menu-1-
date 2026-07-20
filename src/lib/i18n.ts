@@ -246,7 +246,10 @@ const D: Dict = {
   "live.finish": { en: "✓ Finish scan", sr: "✓ Završi sken" },
   "live.resume": { en: "▶ Resume scanning", sr: "▶ Nastavi skeniranje" },
   "live.tapMore": { en: "Tap for the fix and statistics →", sr: "Dodirnite za rešenje i statistiku →" },
-  "live.cloudnote": { en: "On-device detection active · cloud analysis:", sr: "Lokalna detekcija aktivna · cloud analiza:" },
+  "live.cloudnote": {
+    en: "🛡️ On-device AI active · deep AI explanations are on their way…",
+    sr: "🛡️ Lokalni AI aktivan · dubinska AI objašnjenja samo što nisu stigla…",
+  },
   "live.soundOn": { en: "Voice alerts on.", sr: "Glasovna upozorenja uključena." },
   "live.alert": { en: "Attention:", sr: "Pažnja:" },
   "live.risk": { en: "risk", sr: "rizik" },

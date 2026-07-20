@@ -44,7 +44,7 @@ export async function analyzeFood(params: {
   childName?: string;
 }): Promise<FoodAnalysis> {
   const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), 25000);
+  const timer = setTimeout(() => abort.abort(), 35000);
   try {
     const res = await fetch(FOOD_URL, {
       method: "POST",

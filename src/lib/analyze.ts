@@ -24,7 +24,7 @@ const DEFAULT_OMNI_URL =
 const OMNI_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
 
-const CLOUD_TIMEOUT_MS = 15000;
+const CLOUD_TIMEOUT_MS = 35000;
 
 export async function analyzeImage(params: AnalyzeParams): Promise<AnalysisResult> {
   const abort = new AbortController();
