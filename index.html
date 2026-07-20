@@ -457,5 +457,24 @@
     // SW i na landing strani (instalabilnost + keš)
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   </script>
+
+  <!-- AiChatBot.rs widget — podrška posetiocima na sajtu -->
+  <script type="text/javascript">
+  (function(d, t) {
+    var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+    v.onload = function() {
+      if (window.AIChatBot && typeof window.AIChatBot.init === 'function') {
+        window.AIChatBot.init({
+          botId: "2f4a8b39-bb67-4a67-a020-f0c129fed1cd",
+          position: "bottom-right"
+        });
+      }
+    };
+    v.src = "https://www.aichatbot.rs/widget-loader.js";
+    v.type = "text/javascript";
+    v.async = true;
+    s.parentNode.insertBefore(v, s);
+  })(document, 'script');
+  </script>
 </body>
 </html>
