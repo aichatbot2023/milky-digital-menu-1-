@@ -47,7 +47,7 @@ const PROVIDERS: Provider[] = [
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
     models: (Deno.env.get('FREE_MODELS') ??
-      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,nvidia/nemotron-nano-12b-v2-vl:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free'
+      'nvidia/nemotron-nano-12b-v2-vl:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free'
     ).split(',').map((m) => m.trim()).filter(Boolean),
     extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
   },
@@ -71,108 +71,113 @@ const PROVIDERS: Provider[] = [
   },
 ];
 
-const ROOM_SR: Record<string, string> = {
-  living_room: 'dnevna soba',
-  kitchen: 'kuhinja',
-  bathroom: 'kupatilo',
-  bedroom: 'spavaća soba',
-  restaurant_table: 'restoranski sto',
-  outdoor: 'dvorište ili terasa',
+// Prompt je NAMERNO ceo na engleskom: slabiji fallback modeli odgovaraju na
+// jeziku samog prompta i ignorišu direktivu. Engleski prompt + "OUTPUT
+// LANGUAGE: X" daje pouzdan izlaz na bilo kom od 42 jezika aplikacije.
+const ROOM_EN: Record<string, string> = {
+  living_room: 'living room',
+  kitchen: 'kitchen',
+  bathroom: 'bathroom',
+  bedroom: 'bedroom / nursery',
+  restaurant_table: 'restaurant table',
+  outdoor: 'yard or terrace',
 };
 
-const AGE_SR: Record<string, string> = {
-  '0-6m': '0–6 meseci (beba koja leži/prevrne se, sve stavlja u usta)',
-  '6-12m': '6–12 meseci (puzi, pridržava se, dohvata sa niskih površina)',
-  '1-2y': '1–2 godine (hoda, otvara fioke i vrata, penje se na nizak nameštaj)',
-  '2-4y': '2–4 godine (trči, penje se na sto i prozorske daske, okreće kvake)',
-  '4-7y': '4–7 godina (koristi makaze i uređaje, imitira odrasle)',
-  '7y+': '7+ godina (samostalno; rizici: struja, hemikalije, visina)',
+const AGE_EN: Record<string, string> = {
+  '0-6m': '0–6 months (lies down / rolls over, puts everything in the mouth)',
+  '6-12m': '6–12 months (crawls, pulls to stand, grabs from low surfaces)',
+  '1-2y': '1–2 years (walks, opens drawers and doors, climbs low furniture)',
+  '2-4y': '2–4 years (runs, climbs tables and window sills, turns door handles)',
+  '4-7y': '4–7 years (uses scissors and devices, imitates adults)',
+  '7y+': '7+ years (independent; risks: electricity, chemicals, heights)',
 };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 function buildPrompt(roomType: string, ageGroup: string, childName?: string, language = 'Serbian'): string {
-  const room = ROOM_SR[roomType] ?? 'prostor';
-  const age = AGE_SR[ageGroup] ?? ageGroup;
-  const child = childName ? ` po imenu ${childName}` : '';
-  return `OUTPUT LANGUAGE: ${language}. Every human-readable value you produce (label, why, stats, fix, summary) MUST be written entirely in ${language}. NEVER mix languages in a single response. If any source knowledge is in another language, translate it to ${language}.
+  const room = ROOM_EN[roomType] ?? 'room';
+  const age = AGE_EN[ageGroup] ?? ageGroup;
+  const child = childName ? ` named ${childName}` : '';
+  return `OUTPUT LANGUAGE: ${language}. Every human-readable value you produce (label, why, stats, fix, summary) MUST be written entirely in ${language}. NEVER mix languages in a single response. If any source knowledge is in another language, translate it into ${language}.
 
-Ti si sertifikovani ekspert za bezbednost dece (childproofing) sa znanjem pedijatrijske epidemiologije povreda (SZO, CDC, EU Child Safety Alliance).
+You are a certified child-safety (childproofing) expert with knowledge of pediatric injury epidemiology (WHO, CDC, EU Child Safety Alliance).
 
-Analiziraj fotografiju prostora tipa "${room}" i identifikuj SVE vizuelno uočljive opasnosti za dete${child} uzrasta ${age}.
+Analyze this photo of a "${room}" and identify ALL visually observable hazards for a child${child} aged ${age}.
 
-Vrati ISKLJUČIVO validan JSON (bez markdown ograda) ovog oblika:
+Return ONLY valid JSON (no markdown fences) of this exact shape:
 {
   "hazards": [{
-    "label": "kratak naziv objekta/zone",
+    "label": "short name of the object/zone, in ${language}",
     "category": "fall|choking|poisoning|burn|electric|cutting|drowning|crush|strangulation|other",
     "severity": "critical|high|medium|low",
     "box": {"x": 0.1, "y": 0.2, "w": 0.15, "h": 0.1},
-    "why": "2-3 rečenice zašto je opasno baš za ovaj uzrast",
-    "stats": "stvarna statistika povreda sa izvorom (SZO/CDC/EU); nikad izmišljeni brojevi",
-    "fix": "konkretan korak izvodljiv odmah"
+    "why": "2-3 sentences in ${language} explaining why it is dangerous for this exact age",
+    "stats": "real injury statistics with source (WHO/CDC/EU), written in ${language}; never invented numbers",
+    "fix": "one concrete step doable right now, in ${language}"
   }],
   "safety_score": 0-100,
-  "summary": "2 rečenice, smiren i ohrabrujući ton"
+  "summary": "2 sentences in ${language}, calm and encouraging tone"
 }
 
-Pravila:
-- Prijavi SAMO ono što se zaista vidi na slici.
-- IDENTIFIKUJ TAČNO, posebno dečju opremu: bebeća kolica su KOLICA (ne kofer), bebeća flašica je FLAŠICA (ne čaša), hranilica je HRANILICA (ne stolica), nosiljka/autosedište, ogradica za igru. Ako je predmet dečja oprema, oceni rizik te opreme (npr. nezakočena kolica, flašica sa vrelim mlekom), a bezopasnu opremu NE prijavljuj.
-- "box" je normalizovan (0–1): x,y gornji levi ugao, w,h širina/visina.
-- Ozbiljnost prilagodi razvojnim sposobnostima uzrasta.
-- Uključi i opasne ZONE (ivice, stepenice, prozor/terasa bez zaštite, ograda sa razmakom šipki > 10 cm, voda).
-- LANGUAGE: Write ALL text values (label, why, stats, fix, summary) in ${language}. This is mandatory.
+Rules:
+- Report ONLY what is actually visible in the photo.
+- IDENTIFY PRECISELY, especially baby gear: a baby stroller is a STROLLER (not a suitcase), a baby bottle is a BOTTLE (not a glass), a high chair is a HIGH CHAIR (not a chair), carrier/car seat, playpen. If an item is baby gear, assess the risk of that gear (e.g. unbraked stroller, bottle with hot milk), and do NOT report harmless gear.
+- "box" is normalized (0–1): x,y top-left corner, w,h width/height.
+- Adjust severity to the developmental abilities of the age.
+- Also include dangerous ZONES (edges, stairs, unprotected window/balcony, railing with bar gaps > 10 cm, water).
+- LANGUAGE: write ALL text values (label, why, stats, fix, summary) in ${language}. This is mandatory.
 
-OBAVEZNA PROVERA SITNIH DETALJA — pregledaj sliku pažljivo, deo po deo (pod, niske površine, ivice nameštaja), i prijavi ako uočiš:
-- SITNE PREDMETE na podu/niskim površinama: šrafovi, ekseri, novčići, dugmad, sitna plastika i delovi igračaka, perle, magneti, kamenčići — gušenje/gutanje (kritično do 3 g.)
-- BATERIJE (posebno dugmaste) i uređaje sa lako otvorivim poklopcem baterija — hemijske opekotine jednjaka
-- OLOVKE, hemijske, makazice, viljuške, čačkalice, štapiće — ubodne povrede oka/nepca
-- KABLOVE i GAJTANE: punjači u utičnici, gajtani roletni/zavesa, produžni kablovi — davljenje/struja
-- UTIČNICE bez zaštitnih poklopaca u visini deteta
-- LEKOVE, vitamine, kozmetiku, sredstva za čišćenje, kese (plastične!) — trovanje/gušenje
-- KESE, baloni (i pukli), folije — gušenje prekrivanjem disajnih puteva
-- VRUĆE: šolje/šerpe blizu ivice, ručke okrenute ka spolja, peglu, grejalice
-- STAKLO i keramiku na dohvat; oštre ivice nameštaja u visini glave deteta
-- NESTABILNO: TV/komode/police bez zidnog ankera, stolice uz prozor, merdevine
-Ako je slika mutna ili predmet sitan pa nisi siguran — prijavi ga sa severity "low" i u "why" napiši da je potrebna ručna provera, umesto da ga izostaviš.
+MANDATORY SMALL-DETAIL SWEEP — inspect the photo carefully, section by section (floor, low surfaces, furniture edges), and report if you spot:
+- SMALL OBJECTS on the floor/low surfaces: screws, nails, coins, buttons, small plastic pieces and toy parts, beads, magnets, pebbles — choking/swallowing (critical up to age 3)
+- BATTERIES (especially button cells) and devices with easily opened battery covers — chemical esophageal burns
+- PENS, pencils, small scissors, forks, toothpicks, sticks — puncture injuries to the eye/palate
+- CABLES and CORDS: chargers plugged in, blind/curtain cords, extension cords — strangulation/electricity
+- OUTLETS without safety covers at child height
+- MEDICINES, vitamins, cosmetics, cleaning products, (plastic!) bags — poisoning/suffocation
+- BAGS, balloons (also popped), foils — airway-covering suffocation
+- HOT: cups/pots near the edge, handles turned outward, iron, heaters
+- GLASS and ceramics within reach; sharp furniture edges at child head height
+- UNSTABLE: TV/dressers/shelves without wall anchors, chairs next to windows, ladders
+If the photo is blurry or an object is tiny and you are unsure — report it with severity "low" and say in "why" that a manual check is needed, instead of omitting it.
 
-DEČJA OPREMA — prepoznaj je TAČNO po imenu i proceni njen specifičan rizik:
-- KOLICA ZA BEBE: nezakočena kočnica, kolica na nagibu/uz stepenice, teška torba okačena na ručku (prevrtanje unazad), kolica uz šporet/grejalicu
-- FLAŠICE ZA BEBE: staklena flašica na ivici površine, flašica ostavljena na suncu ili uz izvor toplote (pregrejano mleko), flašica u krevecu kod bebe koja spava
-- DUDA/CUCLA: duda na traci/lančiću/kanapu (davljenje!), duda na podu (higijena), vidljivo napukla ili stara duda (otkidanje dela — gušenje)
-- PELENE / STO ZA PREVIJANJE: podloga za previjanje na visini bez ograde, kreme/puderi/vlažne maramice u dometu deteta
-- IGRAČKE: sitni delovi i igračke starije dece u dometu bebe, baloni (i pukli), igračke sa baterijama sa labavim poklopcem, plišane igračke u krevecu bebe do 12 meseci
-- TORBA (dečja ili roditeljska): sadržaj u dometu — lekovi, sitnice, upaljači
-- PROZORI — UVEK PROVERI I PRIJAVI: otvoren ili odškrinut prozor u prostoriji, kvaka prozora u visini deteta, stolica/kauč/krevet/komoda UZ prozor (dete se popne i dohvati), prozor bez sigurnosne bravice. Padovi kroz prozor su među najtežim povredama male dece — ovo prijavi čak i sa umerenom sigurnošću.
+BABY GEAR — recognize it PRECISELY by name and assess its specific risk:
+- STROLLER: unlocked brake, stroller on a slope/near stairs, heavy bag hung on the handle (tips backward), stroller next to a stove/heater
+- BABY BOTTLES: glass bottle at the edge of a surface, bottle left in the sun or near heat (overheated milk), bottle in the crib with a sleeping baby
+- PACIFIER: pacifier on a strap/chain/cord (strangulation!), pacifier on the floor (hygiene), visibly cracked or old pacifier (piece breaks off — choking)
+- DIAPERS / CHANGING TABLE: changing pad at height with no rail, creams/powders/wet wipes within the child's reach
+- TOYS: small parts and older siblings' toys within a baby's reach, balloons (also popped), battery toys with loose covers, plush toys in the crib of a baby under 12 months
+- BAG (child's or parent's): contents within reach — medicines, small items, lighters
+- WINDOWS — ALWAYS CHECK AND REPORT: an open or ajar window in the room, window handle at child height, chair/sofa/bed/dresser NEXT TO a window (child climbs and reaches), window without a safety lock. Falls through windows are among the most severe injuries of small children — report this even with moderate confidence.
 
-VISINSKE RAZLIKE I PROSTORNA ANALIZA — proceni dubinu i visine na slici:
-- STEPENICE i stepenik/denivelacija poda: prijavi ako nema sigurnosne kapije (gore I dole); i jedan jedini stepenik je rizik za dete koje prohodava
-- BALKON/TERASA/GALERIJA: proceni visinu ograde (bezbedno ≥ 110 cm), razmak šipki (≤ 10 cm), i da li ograda ima HORIZONTALNE prečke ili nameštaj uz nju (dete se penje kao uz merdevine)
-- PROCENI VISINU PADA za svaku povišenu površinu na kojoj dete može da se nađe (krevet, sto, radna površina, prozorska daska, krevet na sprat): pad > 60 cm za bebu i > 1 m za malo dete podigni na high/critical
-- LANAC PENJANJA: kombinacije predmeta koje formiraju "merdevine" (hoklica → stolica → sto → polica/prozor) prijavi kao JEDNU opasnost sa objašnjenjem lanca
-- ŠAHTOVI, podrumska vrata, rupe u dvorištu, nepokrivena okna
-- Za svaku prijavljenu visinsku opasnost u "why" navedi približnu procenjenu visinu (npr. "ograda ~90 cm — ispod bezbednih 110 cm")
+HEIGHT DIFFERENCES AND SPATIAL ANALYSIS — estimate depth and heights in the photo:
+- STAIRS and single steps/floor level changes: report if there is no safety gate (top AND bottom); even a single step is a risk for a child learning to walk
+- BALCONY/TERRACE/GALLERY: estimate railing height (safe ≥ 110 cm), bar gaps (≤ 10 cm), and whether the railing has HORIZONTAL bars or furniture next to it (child climbs it like a ladder)
+- ESTIMATE FALL HEIGHT for every raised surface a child can get onto (bed, table, countertop, window sill, bunk bed): falls > 60 cm for a baby and > 1 m for a toddler raise to high/critical
+- CLIMBING CHAIN: combinations of objects forming a "ladder" (step stool → chair → table → shelf/window) report as ONE hazard explaining the chain
+- MANHOLES, basement doors, holes in the yard, uncovered shafts
+- For every reported height hazard include an approximate estimated height in "why" (e.g. "railing ~90 cm — below the safe 110 cm")
 
-ANTI-GENERALIZACIJA — identitet predmeta proveri KONTEKSTOM pre prijave:
-- Objekat NA PLAFONU je plafonjera/luster/detektor dima/ventilator — NIKAD lopta, disk, frizbi ili igračka
-- Objekat NA ZIDU je sat/slika/termostat/prekidač — proveri pre nego što ga proglasiš opasnim predmetom
-- Okrugao predmet: razlikuj plafonjeru / sat / tanjir / loptu po POLOŽAJU i OKRUŽENJU
-- Ako identitet nije jasan iz konteksta, NE izmišljaj egzotičan predmet — opiši ga generički ("okrugao predmet na polici") ili ga izostavi ako nije opasan
-- Bolje je izostaviti bezopasnu plafonjeru nego prijaviti "leteći disk" — pogrešna identifikacija ruši poverenje roditelja
+ANTI-GENERALIZATION — verify an object's identity by CONTEXT before reporting:
+- An object ON THE CEILING is a ceiling light/chandelier/smoke detector/fan — NEVER a ball, disc, frisbee or toy
+- An object ON THE WALL is a clock/picture/thermostat/switch — verify before declaring it a dangerous object
+- Round object: distinguish ceiling light / clock / plate / ball by POSITION and SURROUNDINGS
+- If identity is unclear from context, do NOT invent an exotic object — describe it generically ("round object on a shelf") or omit it if it is not dangerous
+- Better to omit a harmless ceiling light than to report a "flying disc" — a wrong identification destroys parents' trust
 
-ŽIVOTINJE — prepoznaj i proceni:
-- PAS/MAČKA: životinja u istoj prostoriji sa bebom bez odrasle osobe između; pas uz hranu/igračku (čuvanje resursa); korpa/ležaljka uz krevetac
-- ZDELE sa hranom i vodom ljubimaca: granule su rizik gušenja, voda za bebu koja puzi
-- KUTIJA ZA PESAK (mačji toalet): dohvatljiva detetu — rizik infekcije (toksoplazmoza)
-- AKVARIJUM/TERARIJUM: staklo + voda + grejač/struja + mogućnost prevrtanja; poklopac terarijuma nezaključan
-- KAVEZI (ptice, glodari): prsti kroz rešetke — ujedi; vrata kaveza nezaključana
-- POVODCI, lančevi i užad životinja: davljenje
-- DVORIŠTE: seoske životinje (konj/krava — udarac, nagaz), ograda između deteta i životinja, gnezda osa/stršljenova, tragovi glodara`;
+ANIMALS — recognize and assess:
+- DOG/CAT: animal in the same room as a baby with no adult in between; dog next to food/a toy (resource guarding); pet bed next to the crib
+- pet FOOD AND WATER BOWLS: kibble is a choking risk, water for a crawling baby
+- LITTER BOX: reachable by the child — infection risk (toxoplasmosis)
+- AQUARIUM/TERRARIUM: glass + water + heater/electricity + tipping risk; unlocked terrarium lid
+- CAGES (birds, rodents): fingers through bars — bites; unlocked cage doors
+- LEASHES, chains and animal ropes: strangulation
+- YARD: farm animals (horse/cow — kick, trampling), fence between child and animals, wasp/hornet nests, rodent traces
+
+FINAL LANGUAGE CHECK: before answering, re-read every label, why, stats, fix and summary — each one must be 100% in ${language}. If any value is in another language, translate it before returning the JSON.`;
 }
 
-async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {
+async function callVision(p: Provider, model: string, image: string, prompt: string, language = 'Serbian'): Promise<any> {
   const res = await fetch(p.url, {
     method: 'POST',
     // Timeout po provajderu: zaglavljeni provajder ne sme da pojede ceo zahtev
@@ -184,15 +189,25 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
     },
     body: JSON.stringify({
       ...(p.extraBody ?? {}),
+      // OpenRouter reasoning modeli: bez razmišljanja (brzina)
+      ...(p.name === 'openrouter' && model.includes('reasoning')
+        ? { reasoning: { enabled: false } }
+        : {}),
       model,
       max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: image } },
-        ],
-      }],
+      messages: [
+        {
+          role: 'system',
+          content: `You are a child-safety vision expert. CRITICAL: write EVERY human-readable output value strictly in ${language}. Never use any other language, never mix languages, regardless of the prompt's language.`,
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: image } },
+          ],
+        },
+      ],
     }),
   });
   if (!res.ok) throw new Error(`${p.name}/${model}: upstream ${res.status}`);
@@ -219,7 +234,7 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
     },
   }));
   parsed.safety_score = Math.max(0, Math.min(100, Number(parsed.safety_score) || 0));
-  parsed._v = 2;
+  parsed._v = 3;
   parsed._provider = p.name;
   parsed._model = model;
   return parsed;
@@ -245,7 +260,7 @@ Deno.serve(async (req) => {
   for (const provider of active) {
     for (const model of provider.models) {
       try {
-        return json(await callVision(provider, model, image, prompt));
+        return json(await callVision(provider, model, image, prompt, String(language).slice(0, 30)));
       } catch (e: any) {
         errors.push(e?.message ?? String(e));
       }

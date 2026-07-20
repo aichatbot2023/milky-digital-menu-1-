@@ -40,7 +40,7 @@ const PROVIDERS: Provider[] = [
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
     models: (Deno.env.get('FREE_MODELS') ??
-      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,nvidia/nemotron-nano-12b-v2-vl:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free'
+      'nvidia/nemotron-nano-12b-v2-vl:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free'
     ).split(',').map((m) => m.trim()).filter(Boolean),
     extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
   },
@@ -64,55 +64,58 @@ const PROVIDERS: Provider[] = [
   },
 ];
 
-const AGE_SR: Record<string, string> = {
-  '0-6m': '0–6 meseci (isključivo mleko — dojenje ili formula; čvrsta hrana se još ne uvodi)',
-  '6-12m': '6–12 meseci (uvođenje čvrste hrane; BEZ meda, soli, šećera i kravljeg mleka kao glavnog napitka)',
-  '1-2y': '1–2 godine (jede raznovrsno, ali gušenje je i dalje veliki rizik)',
-  '2-4y': '2–4 godine (gušenje i dalje rizik — grožđe, viršle, kokice, orasi u komadu)',
-  '4-7y': '4–7 godina (oprez sa celim orašastim plodovima i tvrdim bombonama)',
-  '7y+': '7+ godina (bez energetskih pića i kofeina; umeren šećer i so)',
+// Prompt je NAMERNO ceo na engleskom: slabiji fallback modeli odgovaraju na
+// jeziku samog prompta i ignorišu direktivu. Engleski prompt + "OUTPUT
+// LANGUAGE: X" daje pouzdan izlaz na bilo kom od 42 jezika aplikacije.
+const AGE_EN: Record<string, string> = {
+  '0-6m': '0–6 months (milk only — breastfeeding or formula; solids not yet introduced)',
+  '6-12m': '6–12 months (introducing solids; NO honey, salt, sugar, or cow milk as the main drink)',
+  '1-2y': '1–2 years (eats a varied diet, but choking is still a major risk)',
+  '2-4y': '2–4 years (choking still a risk — whole grapes, hot dog rounds, popcorn, whole nuts)',
+  '4-7y': '4–7 years (caution with whole nuts and hard candies)',
+  '7y+': '7+ years (no energy drinks or caffeine; moderate sugar and salt)',
 };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 function buildPrompt(ageGroup: string, childName?: string, language = 'Serbian'): string {
-  const age = AGE_SR[ageGroup] ?? ageGroup;
-  const child = childName ? ` po imenu ${childName}` : '';
-  return `OUTPUT LANGUAGE: ${language}. Every value (food_name, items, allergens, choking, prep_tip, summary) MUST be written entirely in ${language}. NEVER mix languages.
+  const age = AGE_EN[ageGroup] ?? ageGroup;
+  const child = childName ? ` named ${childName}` : '';
+  return `OUTPUT LANGUAGE: ${language}. Every value (food_name, items, allergens, choking, prep_tip, summary) MUST be written entirely in ${language}. NEVER mix languages. If any source knowledge is in another language, translate it into ${language}.
 
-Ti si pedijatrijski nutricionista i ekspert za bezbednost ishrane dece (SZO, AAP, ESPGHAN smernice).
+You are a pediatric nutritionist and child food-safety expert (WHO, AAP, ESPGHAN guidelines).
 
-Na fotografiji je hrana, piće, obrok ili ETIKETA proizvoda. Proceni da li je bezbedno za dete${child} uzrasta: ${age}.
+The photo shows food, a drink, a meal, or a product LABEL. Assess whether it is safe for a child${child} aged: ${age}.
 
-Vrati ISKLJUČIVO validan JSON (bez markdown ograda):
+Return ONLY valid JSON (no markdown fences):
 {
-  "food_name": "šta je na slici (kratko)",
+  "food_name": "what is in the photo (short), in ${language}",
   "verdict": "safe|caution|unsafe",
-  "items": [{"name": "sastojak/namirnica", "status": "safe|caution|unsafe", "why": "1-2 rečenice zašto, za OVAJ uzrast"}],
-  "allergens": ["mleko", "jaja", "kikiriki", "..."],
-  "choking": "opis rizika gušenja i kako ga ukloniti, ili null ako ga nema",
-  "prep_tip": "kako bezbedno pripremiti/iseći/servirati za ovaj uzrast",
-  "summary": "2 rečenice, smiren ton, jasna preporuka"
+  "items": [{"name": "ingredient/food item in ${language}", "status": "safe|caution|unsafe", "why": "1-2 sentences in ${language} why, for THIS age"}],
+  "allergens": ["allergen names in ${language}"],
+  "choking": "description in ${language} of the choking risk and how to remove it, or null if none",
+  "prep_tip": "how to safely prepare/cut/serve for this age, in ${language}",
+  "summary": "2 sentences in ${language}, calm tone, clear recommendation"
 }
 
-OBAVEZNA PRAVILA (primeni ih strogo):
-- MED: strogo zabranjen do 12 meseci (botulizam) — verdict "unsafe" ako je dete mlađe.
-- GUŠENJE do 4 godine: celo grožđe, viršle u kolutovima, kokice, tvrde bombone, celi orašasti plodovi, žvake, komadi tvrdog sirovog voća/povrća — uvek navedi kako iseći (grožđe i viršle PO DUŽINI na četvrtine).
-- Kravlje mleko kao glavni napitak tek posle 12 meseci; punomasno 1–2 godine.
-- BEZ dodate soli i šećera do 12 meseci; minimalno do 2 godine.
-- Kofein i energetska pića: zabranjeni za svu decu.
-- Alkohol i nepasterizovani proizvodi (sir, mleko, sokovi): zabranjeni.
-- Cela jaja/riba/kikiriki: dozvoljeni od 6m kao pažljivo uvođenje alergena (jedan po jedan, pratiti reakciju) — označi kao "caution" sa objašnjenjem, ne "unsafe".
-- Ako je na slici ETIKETA, pročitaj sastav i proveri svaki sporan sastojak (zaslađivači, kofein, alergeni, procenat soli/šećera).
-- Ako se sa slike ne vidi dovoljno, reci to u summary i traži sliku etikete/sastava.
-- 14 glavnih alergena EU: gluten, rakovi, jaja, riba, kikiriki, soja, mleko, orašasti plodovi, celer, slačica, susam, sumpor-dioksid, lupina, mekušci.
-- Podseti da za poznate alergije deteta odlučuje pedijatar.
+MANDATORY RULES (apply strictly):
+- HONEY: strictly forbidden under 12 months (botulism) — verdict "unsafe" if the child is younger.
+- CHOKING up to age 4: whole grapes, hot dog rounds, popcorn, hard candies, whole nuts, chewing gum, chunks of hard raw fruit/vegetables — always state how to cut (grapes and hot dogs LENGTHWISE into quarters).
+- Cow milk as the main drink only after 12 months; full-fat from 1–2 years.
+- NO added salt and sugar under 12 months; minimal until age 2.
+- Caffeine and energy drinks: forbidden for all children.
+- Alcohol and unpasteurized products (cheese, milk, juices): forbidden.
+- Whole eggs/fish/peanut: allowed from 6 months as careful allergen introduction (one at a time, watch for reactions) — mark as "caution" with an explanation, not "unsafe".
+- If the photo shows a LABEL, read the ingredient list and check every questionable ingredient (sweeteners, caffeine, allergens, salt/sugar percentage).
+- If the photo does not show enough, say so in the summary and ask for a photo of the label/ingredients.
+- The 14 main EU allergens: gluten, crustaceans, eggs, fish, peanuts, soy, milk, tree nuts, celery, mustard, sesame, sulphur dioxide, lupin, molluscs.
+- Remind that for a child's known allergies the pediatrician decides.
 
-REMINDER — OUTPUT LANGUAGE: ${language}. All text values in ${language}, no mixing.`;
+FINAL LANGUAGE CHECK: before answering, re-read every text value — each one must be 100% in ${language}. If any value is in another language, translate it before returning the JSON.`;
 }
 
-async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {
+async function callVision(p: Provider, model: string, image: string, prompt: string, language = 'Serbian'): Promise<any> {
   const res = await fetch(p.url, {
     method: 'POST',
     // Timeout po provajderu: zaglavljeni provajder ne sme da pojede ceo zahtev
@@ -124,15 +127,25 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
     },
     body: JSON.stringify({
       ...(p.extraBody ?? {}),
+      // OpenRouter reasoning modeli: bez razmišljanja (brzina)
+      ...(p.name === 'openrouter' && model.includes('reasoning')
+        ? { reasoning: { enabled: false } }
+        : {}),
       model,
       max_tokens: 3000,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: image } },
-        ],
-      }],
+      messages: [
+        {
+          role: 'system',
+          content: `You are a child-safety vision expert. CRITICAL: write EVERY human-readable output value strictly in ${language}. Never use any other language, never mix languages, regardless of the prompt's language.`,
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: image } },
+          ],
+        },
+      ],
     }),
   });
   if (!res.ok) throw new Error(`${p.name}/${model}: upstream ${res.status}`);
@@ -150,7 +163,7 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
   if (!['safe', 'caution', 'unsafe'].includes(parsed.verdict)) parsed.verdict = 'caution';
   parsed.items = Array.isArray(parsed.items) ? parsed.items : [];
   parsed.allergens = Array.isArray(parsed.allergens) ? parsed.allergens : [];
-  parsed._v = 2;
+  parsed._v = 3;
   parsed._provider = p.name;
   parsed._model = model;
   return parsed;
@@ -176,7 +189,7 @@ Deno.serve(async (req) => {
   for (const provider of active) {
     for (const model of provider.models) {
       try {
-        return json(await callVision(provider, model, image, prompt));
+        return json(await callVision(provider, model, image, prompt, String(language).slice(0, 30)));
       } catch (e: any) {
         errors.push(e?.message ?? String(e));
       }

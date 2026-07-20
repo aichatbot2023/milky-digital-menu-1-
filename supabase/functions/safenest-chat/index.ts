@@ -22,14 +22,10 @@ interface Provider {
   extraBody?: Record<string, unknown>;
 }
 
+// Redosled po KVALITETU JEZIKA: mali :free modeli (nano-30b) pišu loš
+// srpski/nemački, pa idu poslednji. NVIDIA NIM Nemotron je primaran (dobar
+// višejezični izlaz, brz za tekst), zatim veći free modeli.
 const PROVIDERS: Provider[] = [
-  {
-    name: 'openrouter',
-    key: Deno.env.get('OPENROUTER_API_KEY'),
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-30b-a3b:free', 'nvidia/nemotron-3-super-120b-a12b:free', 'google/gemma-4-31b-it:free'],
-    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
-  },
   {
     name: 'nvidia',
     key: Deno.env.get('NVIDIA_NIM_API_KEY'),
@@ -37,6 +33,13 @@ const PROVIDERS: Provider[] = [
     models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
     // Bez reasoning-a: glasovni odgovor mora da stigne za par sekundi
     extraBody: { chat_template_kwargs: { enable_thinking: false } },
+  },
+  {
+    name: 'openrouter',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: ['nvidia/nemotron-3-super-120b-a12b:free', 'google/gemma-4-31b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'],
+    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
   },
   {
     name: 'groq',
@@ -52,9 +55,11 @@ const PROVIDERS: Provider[] = [
   },
 ];
 
-const AGE_SR: Record<string, string> = {
-  '0-6m': '0–6 meseci', '6-12m': '6–12 meseci (puzanje)', '1-2y': '1–2 godine (prohodavanje)',
-  '2-4y': '2–4 godine (penjanje)', '4-7y': '4–7 godina', '7y+': '7+ godina',
+// Prompt je ceo na engleskom: slabiji modeli odgovaraju na jeziku prompta,
+// pa engleski prompt + "OUTPUT LANGUAGE: X" daje pouzdan izlaz na 42 jezika.
+const AGE_EN: Record<string, string> = {
+  '0-6m': '0–6 months', '6-12m': '6–12 months (crawling)', '1-2y': '1–2 years (learning to walk)',
+  '2-4y': '2–4 years (climbing)', '4-7y': '4–7 years', '7y+': '7+ years',
 };
 
 const json = (body: unknown, status = 200) =>
@@ -69,25 +74,25 @@ Deno.serve(async (req) => {
   const question = String(body?.question ?? '').slice(0, 500).trim();
   if (!question) return json({ error: 'Missing question' }, 400);
 
-  const age = AGE_SR[body?.ageGroup] ?? body?.ageGroup ?? 'malo dete';
+  const age = AGE_EN[body?.ageGroup] ?? body?.ageGroup ?? 'a small child';
   const language = String(body?.language ?? 'Serbian').slice(0, 30);
   const hazardCtx = Array.isArray(body?.hazards) && body.hazards.length > 0
-    ? `Na poslednjem skeniranju prostora uočeno je: ${body.hazards
+    ? `The last room scan detected: ${body.hazards
         .slice(0, 12)
         .map((h: any) => `${h.label} (${h.severity})`)
         .join(', ')}.`
-    : 'Nema prethodnog skeniranja.';
+    : 'No previous scan.';
 
-  const system = `OUTPUT LANGUAGE: ${language}. Respond ENTIRELY in ${language} — never mix languages.
+  const system = `OUTPUT LANGUAGE: ${language}. Respond ENTIRELY in ${language} — never mix languages. If any source knowledge is in another language, translate it into ${language}.
 
-Ti si SafeNest glasovni asistent — ekspert za bezbednost dece u domu (childproofing, pedijatrijska prevencija povreda; SZO/CDC/EU izvori).
-Kontekst: dete uzrasta ${age}. ${hazardCtx}
-Pravila odgovora:
+You are the SafeNest voice assistant — an expert in child safety at home (childproofing, pediatric injury prevention; WHO/CDC/EU sources).
+Context: child aged ${age}. ${hazardCtx}
+Answer rules:
 - RESPOND ENTIRELY IN ${language} — this is mandatory. Warm and calm tone, no panic.
-- KRATKO: 2-4 rečenice, jer se odgovor izgovara naglas.
-- Uvek daj konkretan, odmah izvodljiv savet.
-- Statistike samo stvarne, sa izvorom; nikad izmišljene brojeve.
-- Podseti (samo kad je relevantno) da aplikacija ne zamenjuje nadzor odrasle osobe.`;
+- SHORT: 2-4 sentences, because the answer is spoken aloud (TTS).
+- Always give one concrete, immediately actionable tip.
+- Only real statistics with a source; never invented numbers.
+- Remind (only when relevant) that the app does not replace adult supervision.`;
 
   const errors: string[] = [];
   for (const p of PROVIDERS.filter((x) => x.key)) {
@@ -103,6 +108,9 @@ Pravila odgovora:
           },
           body: JSON.stringify({
             ...(p.extraBody ?? {}),
+            ...(p.name === 'openrouter' && model.includes('nemotron')
+              ? { reasoning: { enabled: false } }
+              : {}),
             model,
             max_tokens: 400,
             messages: [
