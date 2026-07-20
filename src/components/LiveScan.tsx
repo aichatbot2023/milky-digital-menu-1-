@@ -205,6 +205,14 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   useEffect(() => {
     for (const h of hazards) {
       const prev = sessionRef.current.get(h.label);
+      if (!prev && (h.severity === "critical" || h.severity === "high")) {
+        // Vibracija na novu ozbiljnu opasnost (Android; iOS ignoriše)
+        try {
+          (navigator as any).vibrate?.(h.severity === "critical" ? [140, 60, 140] : 90);
+        } catch {
+          /* ignoriši */
+        }
+      }
       if (!prev || SEV_ORDER[h.severity] < SEV_ORDER[prev.severity]) {
         sessionRef.current.set(h.label, h);
       }

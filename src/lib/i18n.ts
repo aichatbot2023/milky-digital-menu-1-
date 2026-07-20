@@ -330,6 +330,54 @@ const D: Dict = {
     sr: "Precizna lokalna AI analiza nije uočila rizične objekte. Proverite i zone koje model ne vidi (utičnice, ivice, kablovi).",
   },
   "scan.failed": { en: "Analysis failed. Please try again.", sr: "Analiza nije uspela. Pokušajte ponovo." },
+  // Onboarding
+  "onb.1t": { en: "Scan any room", sr: "Skenirajte bilo koji prostor" },
+  "onb.1d": {
+    en: "Point the camera and pan slowly — AI marks dangerous objects live on screen. Or analyse a photo from your gallery.",
+    sr: "Uperite kameru i polako pomerajte — AI uživo označava opasne predmete na ekranu. Ili analizirajte sliku iz galerije.",
+  },
+  "onb.2t": { en: "Understand the colours", sr: "Razumejte boje" },
+  "onb.2d": {
+    en: "Red = critical, orange = high, yellow = medium, blue = low. Tap any marker for why it's dangerous, real statistics and the fix.",
+    sr: "Crveno = kritično, narandžasto = visoko, žuto = srednje, plavo = nisko. Dodirnite marker za objašnjenje, statistiku i rešenje.",
+  },
+  "onb.3t": { en: "Add your child", sr: "Dodajte svoje dete" },
+  "onb.3d": {
+    en: "The AI adapts every analysis to your child's age — what's safe for a 5-year-old can be critical for a baby. Food checks too!",
+    sr: "AI prilagođava svaku analizu uzrastu deteta — što je bezbedno za petogodišnjaka, za bebu može biti kritično. Važi i za hranu!",
+  },
+  "onb.next": { en: "Next", sr: "Dalje" },
+  "onb.skip": { en: "Skip", sr: "Preskoči" },
+  "onb.start": { en: "Start protecting 🛡️", sr: "Počni zaštitu 🛡️" },
+  // Check-lista
+  "check.btn": { en: "🧾 Safety checklist", sr: "🧾 Bezbednosna check-lista" },
+  "check.btn.sub": {
+    en: "What the camera can't see — boiler, outlets, cords, chemicals",
+    sr: "Ono što kamera ne vidi — bojler, utičnice, gajtani, hemikalije",
+  },
+  "check.title": { en: "🧾 Safety checklist", sr: "🧾 Bezbednosna check-lista" },
+  "check.sub": {
+    en: "Expert checks the camera can't make. Tick them off — progress is saved on your device.",
+    sr: "Ekspertske provere koje kamera ne može da uradi. Čekirajte ih — napredak se čuva na uređaju.",
+  },
+  "check.done": { en: "done", sr: "završeno" },
+  // Prva pomoć
+  "fa.btn": { en: "🚑 First aid", sr: "🚑 Prva pomoć" },
+  "fa.btn.sub": {
+    en: "Choking, burns, poisoning — step-by-step, works offline",
+    sr: "Gušenje, opekotine, trovanje — korak po korak, radi i bez interneta",
+  },
+  "fa.title": { en: "🚑 First aid for children", sr: "🚑 Prva pomoć za decu" },
+  "fa.warning": {
+    en: "In a serious emergency FIRST call your emergency number (112 / 999 / 911 — in Serbia 194). These steps are educational and do not replace professional help or a first-aid course.",
+    sr: "U ozbiljnoj situaciji PRVO pozovite hitnu pomoć (194, iz EU 112). Ovi koraci su edukativni i ne zamenjuju profesionalnu pomoć ni kurs prve pomoći.",
+  },
+  // Deljenje i podsetnik
+  "share.btn": { en: "📤 Share report", sr: "📤 Podeli izveštaj" },
+  "share.copied": { en: "Report copied — paste it anywhere.", sr: "Izveštaj kopiran — nalepite ga bilo gde." },
+  "share.title": { en: "SafeNest AI safety report", sr: "SafeNest AI izveštaj o bezbednosti" },
+  "nudge.pre": { en: "🔄 It's been", sr: "🔄 Prošlo je" },
+  "nudge.days": { en: "days since your last scan — rooms change, kids grow. Time for a fresh scan!", sr: "dana od poslednjeg skena — prostor se menja, deca rastu. Vreme je za novi sken!" },
 };
 
 export function t(key: string): string {

@@ -608,3 +608,44 @@ body {
 /* Jezik — vidljiv čip u vrhu početnog ekrana */
 .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .lang-chip { flex-shrink: 0; font-weight: 700; color: var(--primary-dark); border-color: #99f6e4; background: #f0fdfa; }
+
+/* Onboarding */
+.onb { text-align: center; justify-content: center; }
+.onb-icon { font-size: 4rem; }
+.onb-desc { max-width: 380px; line-height: 1.6; font-size: 1rem; }
+.onb-colors { display: flex; gap: 10px; }
+.onb-colors span { width: 34px; height: 34px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.onb-dots { display: flex; gap: 8px; }
+.onb-dot { width: 8px; height: 8px; border-radius: 999px; background: #cbd5e1; }
+.onb-dot-on { background: var(--primary); width: 22px; }
+.onb-actions { display: flex; gap: 12px; }
+
+/* Check-lista */
+.check-progress { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+.check-progress-fill { height: 100%; background: linear-gradient(90deg, #0d9488, #115e59); border-radius: 999px; transition: width .3s ease; }
+.check-item { align-items: flex-start; }
+.check-item.check-done .check-text { text-decoration: line-through; color: var(--muted); }
+.check-box {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 8px;
+  border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: .85rem;
+}
+.check-box-on { background: var(--primary); border-color: var(--primary); }
+.check-text { text-align: start; line-height: 1.45; }
+
+/* Prva pomoć */
+.fa-topic { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.fa-head { width: 100%; box-shadow: none; }
+.fa-icon { font-size: 1.3rem; }
+.fa-arrow { color: var(--muted); font-size: .8rem; }
+.fa-steps { padding: 0 16px 16px 36px; display: flex; flex-direction: column; gap: 10px; color: #334155; line-height: 1.5; }
+
+/* Alati na početnoj + nudge + deljenje */
+.tool-row { display: flex; flex-direction: column; gap: 12px; }
+.btn-tool { display: flex; flex-direction: column; gap: 4px; align-items: center; padding: 14px; }
+.btn-fa { border-color: #fda4af; color: #be123c; }
+.nudge {
+  background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;
+  border-radius: var(--radius); padding: 12px 14px; font-size: .9rem; font-weight: 600;
+}
+.share-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

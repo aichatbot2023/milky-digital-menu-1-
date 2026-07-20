@@ -16,6 +16,9 @@ import {
 import { getStatus, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
+import { Onboarding, onboardingSeen } from "./components/Onboarding";
+import { ChecklistView } from "./components/ChecklistView";
+import { FirstAid } from "./components/FirstAid";
 import { ChildProfiles } from "./components/ChildProfiles";
 import { FoodResult } from "./components/FoodResult";
 import { Paywall } from "./components/Paywall";
@@ -25,11 +28,13 @@ import { HazardDetailSheet } from "./components/HazardDetailSheet";
 import { LiveScan } from "./components/LiveScan";
 import { ScanHistory } from "./components/ScanHistory";
 
-type View = "home" | "scanning" | "result" | "live" | "food-scanning" | "food-result";
+type View = "home" | "scanning" | "result" | "live" | "food-scanning" | "food-result" | "checklist" | "firstaid";
 
 export default function App() {
   const [view, setView] = useState<View>("home");
   const [langReady, setLangReady] = useState(() => langChosen());
+  const [onboarded, setOnboarded] = useState(() => onboardingSeen());
+  const [shareMsg, setShareMsg] = useState(false);
   useEffect(() => applyDir(), [langReady]);
   const [profiles, setProfiles] = useState<ChildProfile[]>(() => loadProfiles());
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
@@ -199,6 +204,32 @@ export default function App() {
     }
   };
 
+  // Podeli izveštaj (Web Share; rezerva: kopiranje u clipboard)
+  const shareReport = async () => {
+    if (!currentScan) return;
+    const { hazards, safety_score } = currentScan.result;
+    const top = hazards
+      .slice(0, 5)
+      .map((h, i) => `${i + 1}. ${h.label} — ${h.fix}`)
+      .join("\n");
+    const text = `🛡️ ${t("share.title")}\n${roomLabel(currentScan.roomType)} · ${t("safety")}: ${safety_score}/100\n\n${top}\n\nhttps://safenessai.co.uk`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: t("share.title"), text });
+        return;
+      }
+    } catch {
+      return; // korisnik odustao od deljenja
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareMsg(true);
+      setTimeout(() => setShareMsg(false), 4000);
+    } catch {
+      /* ignoriši */
+    }
+  };
+
   const toggleResolved = (hazardId: string) => {
     if (!currentScan) return;
     const next: ScanRecord = {
@@ -220,6 +251,18 @@ export default function App() {
 
   if (!langReady) {
     return <LanguagePicker onDone={() => setLangReady(true)} />;
+  }
+
+  if (!onboarded) {
+    return <Onboarding onDone={() => setOnboarded(true)} />;
+  }
+
+  if (view === "checklist") {
+    return <ChecklistView initialRoom={roomType} onBack={() => setView("home")} />;
+  }
+
+  if (view === "firstaid") {
+    return <FirstAid onBack={() => setView("home")} />;
   }
 
   if (view === "live") {
@@ -327,6 +370,13 @@ export default function App() {
           </div>
         )}
 
+        <div className="share-row">
+          <button className="btn btn-outline" onClick={shareReport}>
+            {t("share.btn")}
+          </button>
+          {shareMsg && <span className="ok">{t("share.copied")}</span>}
+        </div>
+
         <div className="hazard-list">
           {hazards.length === 0 && (
             <p className="ok">{t("result.none")}</p>
@@ -381,6 +431,14 @@ export default function App() {
 
       {error && <div className="error">{error}</div>}
       {payMsg && <div className="paymsg">{payMsg}</div>}
+      {scans[0] &&
+        Math.floor((Date.now() - new Date(scans[0].createdAt).getTime()) / 86400000) >= 7 && (
+          <div className="nudge">
+            {t("nudge.pre")}{" "}
+            {Math.floor((Date.now() - new Date(scans[0].createdAt).getTime()) / 86400000)}{" "}
+            {t("nudge.days")}
+          </div>
+        )}
 
       <button className="subbar" onClick={() => setShowPaywall(true)}>
         {subStatus.state === "subscribed"
@@ -429,6 +487,17 @@ export default function App() {
         {t("btn.food")}
         <span className="btn-sub">{t("btn.food.sub")}</span>
       </button>
+
+      <div className="tool-row">
+        <button className="btn btn-outline btn-tool" onClick={() => setView("checklist")}>
+          {t("check.btn")}
+          <span className="btn-sub">{t("check.btn.sub")}</span>
+        </button>
+        <button className="btn btn-outline btn-tool btn-fa" onClick={() => setView("firstaid")}>
+          {t("fa.btn")}
+          <span className="btn-sub">{t("fa.btn.sub")}</span>
+        </button>
+      </div>
 
       <VoiceAssistant
         roomType={roomType}
