@@ -176,6 +176,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
           roomType,
           ageGroup,
           childName,
+          live: true,
         });
         cloudFails.current = 0;
         if (!pausedRef.current) {

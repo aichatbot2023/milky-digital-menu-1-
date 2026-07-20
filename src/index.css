@@ -142,10 +142,14 @@ body {
 .hazard-box {
   position: absolute;
   background: transparent;
-  border: 2.5px solid;
+  border: 3px solid;
   border-radius: 8px;
   cursor: pointer;
   padding: 0;
+  /* Tamni oreol oko okvira: vidljiv i na svetloj i na tamnoj pozadini */
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35);
 }
 .hazard-box.selected { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8); }
 .hazard-box.resolved { opacity: 0.45; }
@@ -361,18 +365,21 @@ body {
 /* Oznaka na svakom live boxu: broj + naziv + ozbiljnost */
 .live-tag {
   position: absolute;
-  top: -26px;
-  left: -2px;
+  top: -34px;
+  left: -3px;
   color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
   white-space: nowrap;
-  max-width: 70vw;
+  max-width: 78vw;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
 }
 
 /* Živa traka sa objašnjenjem najozbiljnije opasnosti u kadru */
@@ -403,9 +410,9 @@ body {
   border-radius: 999px;
 }
 .live-strip-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.live-strip-body strong { font-size: 0.95rem; }
+.live-strip-body strong { font-size: 1.08rem; }
 .live-strip-why {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   color: #e2e8f0;
   line-height: 1.35;
   display: -webkit-box;

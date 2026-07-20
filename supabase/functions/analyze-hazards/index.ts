@@ -46,8 +46,9 @@ const PROVIDERS: Provider[] = [
     name: 'openrouter',
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
+    // Gemma modeli pre omni:free — omni nano piše loš srpski/nemački
     models: (Deno.env.get('FREE_MODELS') ??
-      'nvidia/nemotron-nano-12b-v2-vl:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free'
+      'nvidia/nemotron-nano-12b-v2-vl:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
     ).split(',').map((m) => m.trim()).filter(Boolean),
     extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
   },
@@ -95,11 +96,27 @@ const AGE_EN: Record<string, string> = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-function buildPrompt(roomType: string, ageGroup: string, childName?: string, language = 'Serbian'): string {
+function buildPrompt(roomType: string, ageGroup: string, childName?: string, language = 'Serbian', live = false): string {
   const room = ROOM_EN[roomType] ?? 'room';
   const age = AGE_EN[ageGroup] ?? ageGroup;
   const child = childName ? ` named ${childName}` : '';
+  // Živi video: kadar je često mutan/delimičan, pa slabiji modeli izmišljaju
+  // predmete. U live režimu tražimo SAMO potpuno sigurne nalaze.
+  const liveRules = live
+    ? `
+
+LIVE CAMERA MODE — THIS IS A SINGLE FRAME FROM A LIVE VIDEO FEED (may be blurry or partial):
+- Report AT MOST 4 hazards — only the most serious ones you are ABSOLUTELY CERTAIN about.
+- NEVER guess. If you cannot confidently name an object, DO NOT report it at all.
+- An empty "hazards" array is a perfectly good answer when nothing hazardous is clearly visible.
+- Do NOT use the "unsure → severity low" rule here: in live mode uncertain objects are OMITTED, not reported.
+- Do NOT report the person holding the camera, their body, clothes, or furniture that is merely present (sofa, wall art, radiator) unless it poses a concrete, visible risk.`
+    : '';
   return `OUTPUT LANGUAGE: ${language}. Every human-readable value you produce (label, why, stats, fix, summary) MUST be written entirely in ${language}. NEVER mix languages in a single response. If any source knowledge is in another language, translate it into ${language}.
+
+VOCABULARY: use natural, correct, everyday words that a native ${language} speaker would use. NEVER invent words, never transliterate from other languages, never use made-up terms. If you do not know the exact word for an object in ${language}, use a simple common description instead.
+
+CERTAINTY: report ONLY objects you can clearly see and confidently identify. NEVER invent objects, hazards, or details that are not visibly present in the photo. A shorter, accurate list is always better than a longer, invented one.${liveRules}
 
 You are a certified child-safety (childproofing) expert with knowledge of pediatric injury epidemiology (WHO, CDC, EU Child Safety Alliance).
 
@@ -249,12 +266,12 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-  const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian' } = body ?? {};
+  const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian', live = false } = body ?? {};
   if (!image || typeof image !== 'string' || !image.startsWith('data:image/'))
     return json({ error: 'Missing image (data URL)' }, 400);
   if (image.length > 2_500_000) return json({ error: 'Image too large' }, 413);
 
-  const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30));
+  const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30), live === true);
 
   const errors: string[] = [];
   for (const provider of active) {

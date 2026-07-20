@@ -39,8 +39,9 @@ const PROVIDERS: Provider[] = [
     name: 'openrouter',
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
+    // Gemma modeli pre omni:free — omni nano piše loš srpski/nemački
     models: (Deno.env.get('FREE_MODELS') ??
-      'nvidia/nemotron-nano-12b-v2-vl:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free'
+      'nvidia/nemotron-nano-12b-v2-vl:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
     ).split(',').map((m) => m.trim()).filter(Boolean),
     extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
   },
@@ -83,6 +84,8 @@ function buildPrompt(ageGroup: string, childName?: string, language = 'Serbian')
   const age = AGE_EN[ageGroup] ?? ageGroup;
   const child = childName ? ` named ${childName}` : '';
   return `OUTPUT LANGUAGE: ${language}. Every value (food_name, items, allergens, choking, prep_tip, summary) MUST be written entirely in ${language}. NEVER mix languages. If any source knowledge is in another language, translate it into ${language}.
+
+VOCABULARY: use natural, correct, everyday words that a native ${language} speaker would use. NEVER invent words or transliterate from other languages. Report ONLY what you can clearly see and confidently identify — never invent foods or ingredients.
 
 You are a pediatric nutritionist and child food-safety expert (WHO, AAP, ESPGHAN guidelines).
 

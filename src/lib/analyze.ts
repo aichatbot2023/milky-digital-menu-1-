@@ -6,6 +6,8 @@ interface AnalyzeParams {
   roomType: RoomType;
   ageGroup: AgeGroup;
   childName?: string;
+  /** Kadar iz živog videa: server tada traži samo 100% sigurne nalaze. */
+  live?: boolean;
 }
 
 // Skida "data:image/jpeg;base64," prefiks i vraća [mediaType, base64]
@@ -76,6 +78,7 @@ async function doAnalyze(
         ageGroup: params.ageGroup,
         childName: params.childName,
         language: languageEnglishName(),
+        live: params.live === true,
       }),
     });
   }
