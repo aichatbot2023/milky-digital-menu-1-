@@ -138,7 +138,24 @@ DEČJA OPREMA — prepoznaj je TAČNO po imenu i proceni njen specifičan rizik:
 - PELENE / STO ZA PREVIJANJE: podloga za previjanje na visini bez ograde, kreme/puderi/vlažne maramice u dometu deteta
 - IGRAČKE: sitni delovi i igračke starije dece u dometu bebe, baloni (i pukli), igračke sa baterijama sa labavim poklopcem, plišane igračke u krevecu bebe do 12 meseci
 - TORBA (dečja ili roditeljska): sadržaj u dometu — lekovi, sitnice, upaljači
-- PROZORI — UVEK PROVERI I PRIJAVI: otvoren ili odškrinut prozor u prostoriji, kvaka prozora u visini deteta, stolica/kauč/krevet/komoda UZ prozor (dete se popne i dohvati), prozor bez sigurnosne bravice. Padovi kroz prozor su među najtežim povredama male dece — ovo prijavi čak i sa umerenom sigurnošću.`;
+- PROZORI — UVEK PROVERI I PRIJAVI: otvoren ili odškrinut prozor u prostoriji, kvaka prozora u visini deteta, stolica/kauč/krevet/komoda UZ prozor (dete se popne i dohvati), prozor bez sigurnosne bravice. Padovi kroz prozor su među najtežim povredama male dece — ovo prijavi čak i sa umerenom sigurnošću.
+
+VISINSKE RAZLIKE I PROSTORNA ANALIZA — proceni dubinu i visine na slici:
+- STEPENICE i stepenik/denivelacija poda: prijavi ako nema sigurnosne kapije (gore I dole); i jedan jedini stepenik je rizik za dete koje prohodava
+- BALKON/TERASA/GALERIJA: proceni visinu ograde (bezbedno ≥ 110 cm), razmak šipki (≤ 10 cm), i da li ograda ima HORIZONTALNE prečke ili nameštaj uz nju (dete se penje kao uz merdevine)
+- PROCENI VISINU PADA za svaku povišenu površinu na kojoj dete može da se nađe (krevet, sto, radna površina, prozorska daska, krevet na sprat): pad > 60 cm za bebu i > 1 m za malo dete podigni na high/critical
+- LANAC PENJANJA: kombinacije predmeta koje formiraju "merdevine" (hoklica → stolica → sto → polica/prozor) prijavi kao JEDNU opasnost sa objašnjenjem lanca
+- ŠAHTOVI, podrumska vrata, rupe u dvorištu, nepokrivena okna
+- Za svaku prijavljenu visinsku opasnost u "why" navedi približnu procenjenu visinu (npr. "ograda ~90 cm — ispod bezbednih 110 cm")
+
+ŽIVOTINJE — prepoznaj i proceni:
+- PAS/MAČKA: životinja u istoj prostoriji sa bebom bez odrasle osobe između; pas uz hranu/igračku (čuvanje resursa); korpa/ležaljka uz krevetac
+- ZDELE sa hranom i vodom ljubimaca: granule su rizik gušenja, voda za bebu koja puzi
+- KUTIJA ZA PESAK (mačji toalet): dohvatljiva detetu — rizik infekcije (toksoplazmoza)
+- AKVARIJUM/TERARIJUM: staklo + voda + grejač/struja + mogućnost prevrtanja; poklopac terarijuma nezaključan
+- KAVEZI (ptice, glodari): prsti kroz rešetke — ujedi; vrata kaveza nezaključana
+- POVODCI, lančevi i užad životinja: davljenje
+- DVORIŠTE: seoske životinje (konj/krava — udarac, nagaz), ograda između deteta i životinja, gnezda osa/stršljenova, tragovi glodara`;
 }
 
 async function callVision(p: Provider, model: string, image: string, prompt: string): Promise<any> {

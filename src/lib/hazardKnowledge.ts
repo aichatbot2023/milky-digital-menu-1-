@@ -366,6 +366,194 @@ const RULES: Record<string, HazardRule> = {
     stats: "Prignječenja prstiju mehanizmima bicikla česta su kod male dece (EU Child Safety Alliance).",
     fix: "Parkirajte bicikl na nožicu ili držač, dalje od prostora za igru.",
   },
+  // ---- ŽIVOTINJE ----
+  bird: {
+    labelSr: "Ptica",
+    category: "other",
+    severity: sev(["0-6m", "6-12m", "1-2y"], "low"),
+    why: "Ptica van kaveza može kljucnuti radoznalo dete; perje i izmet su rizik higijene za bebe koje sve diraju pa stavljaju ruke u usta.",
+    stats: "Kućne ptice mogu prenositi bakterije (psitakoza, salmonela) — rizik je najveći za odojčad (CDC).",
+    fix: "Kavez van domašaja; dete ne dira pticu ni kavez bez nadzora, ruke se peru posle kontakta.",
+  },
+  horse: {
+    labelSr: "Konj",
+    category: "other",
+    severity: sev(["0-6m", "6-12m", "1-2y", "2-4y", "4-7y"], "high"),
+    why: "Konj se plaši naglih pokreta — udarac kopitom ili nagaz su ozbiljna opasnost. Dete nikad ne prilazi konju s leđa.",
+    stats: "Povrede od kopitara kod dece su najčešće udarci kopitom u glavu — među najtežim povredama na selu (CDC ruralne statistike).",
+    fix: "Detetu prilaz samo uz odraslu osobu, spreda, nikad iza konja; ograda između deteta i životinje.",
+  },
+  sheep: {
+    labelSr: "Ovca/jagnje",
+    category: "other",
+    severity: sev(["6-12m", "1-2y", "2-4y"], "medium"),
+    why: "I pitome životinje guraju i obaraju malo dete; izmet je rizik infekcije (E. coli) za decu koja sve diraju.",
+    stats: "E. coli infekcije kod male dece često potiču sa farmi i iz mini zooloških vrtova (CDC).",
+    fix: "Kontakt samo uz nadzor; obavezno pranje ruku odmah posle dodirivanja životinja.",
+  },
+  cow: {
+    labelSr: "Krava/tele",
+    category: "crush",
+    severity: sev(["6-12m", "1-2y", "2-4y", "4-7y"], "high"),
+    why: "Krupna životinja može nagaziti ili prignječiti dete i nenamerno — dete nikad ne ulazi u obor samo.",
+    stats: "Nagazi i prignječenja krupnom stokom su vodeće povrede dece na seoskim imanjima (ruralna epidemiologija, CDC).",
+    fix: "Čvrsta ograda između deteta i stoke; u obor samo sa odraslom osobom.",
+  },
+  // ---- VOZILA I ULICA ----
+  car: {
+    labelSr: "Automobil (dvorište/prilaz)",
+    category: "crush",
+    severity: sev(["6-12m", "1-2y", "2-4y"], "high"),
+    why: "Malo dete iza ili ispod vozila vozač NE VIDI — kretanje unazad na prilazu je jedan od najtragičnijih scenarija.",
+    stats: "Prelasci vozilom preko deteta pri kretanju unazad (backover) najčešće se dešavaju u sopstvenom dvorištu, deci 1–3 godine (NHTSA/CDC).",
+    fix: "Dete nikad samo na prilazu; pre pokretanja vozila obavezno obići oko auta; držati ključeve van domašaja.",
+  },
+  truck: {
+    labelSr: "Kamion/kombi",
+    category: "crush",
+    severity: sev(["6-12m", "1-2y", "2-4y"], "high"),
+    why: "Velika vozila imaju još veće mrtve uglove od automobila — dete pored njih je nevidljivo vozaču.",
+    stats: "Mrtvi ugao velikih vozila je vodeći faktor stradanja male dece u dvorištima i na prilazima (NHTSA).",
+    fix: "Fizički odvojiti prostor za igru od prilaza vozila (ograda/kapija).",
+  },
+  motorcycle: {
+    labelSr: "Motocikl",
+    category: "burn",
+    severity: sev(["1-2y", "2-4y", "4-7y"], "medium"),
+    why: "Auspuh ostaje vreo dugo posle vožnje (kontaktna opekotina), a parkiran motocikl se lako prevrne na dete koje se pridržava.",
+    stats: "Opekotine od auspuha su klasična dečja povreda — koža deteta strada za manje od 1 sekunde na 65°C (SZO).",
+    fix: "Parkirajte motocikl van domašaja dece; sačekajte da se auspuh ohladi.",
+  },
+  boat: {
+    labelSr: "Čamac/oprema za vodu",
+    category: "drowning",
+    severity: sev(["1-2y", "2-4y", "4-7y"], "medium"),
+    why: "Čamac znači blizinu vode — najveći pojedinačni rizik za malu decu na otvorenom; oprema i konopci su rizik zaplitanja.",
+    stats: "Davljenje je vodeći uzrok smrti od nesreća kod dece 1–4 godine u mnogim zemljama (SZO).",
+    fix: "Dete uz vodu UVEK na dohvat ruke odrasle osobe; prsluk za sve aktivnosti na vodi.",
+  },
+  "traffic light": {
+    labelSr: "Blizina ulice!",
+    category: "other",
+    severity: sev(["1-2y", "2-4y", "4-7y"], "high"),
+    why: "Saobraćajna signalizacija u kadru znači da je prostor za igru blizu ulice — malo dete može istrčati za loptom u sekundi.",
+    stats: "Istrčavanje na kolovoz je najčešći scenario stradanja dece pešaka 2–6 godina (SZO).",
+    fix: "Fizička barijera (ograda, živica) između prostora za igru i ulice; dete uvek za ruku pored saobraćaja.",
+  },
+  "stop sign": {
+    labelSr: "Blizina ulice!",
+    category: "other",
+    severity: sev(["1-2y", "2-4y", "4-7y"], "high"),
+    why: "Saobraćajni znak u kadru ukazuje da je kolovoz odmah tu — prostor nije bezbedan za igru bez nadzora.",
+    stats: "Istrčavanje na kolovoz je najčešći scenario stradanja dece pešaka 2–6 godina (SZO).",
+    fix: "Igra samo iza fizičke barijere; naučite dete pravilu 'stani na ivičnjaku'.",
+  },
+  "fire hydrant": {
+    labelSr: "Blizina ulice",
+    category: "other",
+    severity: sev(["1-2y", "2-4y"], "medium"),
+    why: "Hidrant znači trotoar i ulicu u neposrednoj blizini prostora gde je dete.",
+    stats: "Deca pešaci najčešće stradaju u sopstvenoj ulici, blizu kuće (SZO).",
+    fix: "Držite dete za ruku; igra samo u ograđenom delu.",
+  },
+  // ---- SPORT I OPREMA ----
+  skis: {
+    labelSr: "Skije/štapovi",
+    category: "cutting",
+    severity: sev(["1-2y", "2-4y"], "low"),
+    why: "Oštre ivice skija i šiljci štapova oslonjenih o zid — padaju kad ih dete povuče.",
+    stats: "Povrede opremom oslonjenom o zid tipične su za hodnike i garaže (EU Child Safety Alliance).",
+    fix: "Skije i štapove u držač ili polegnute, van prolaza.",
+  },
+  snowboard: {
+    labelSr: "Snowboard",
+    category: "crush",
+    severity: sev(["1-2y", "2-4y"], "low"),
+    why: "Teška daska oslonjena o zid pada na dete koje se pridržava.",
+    stats: "Prevrtanje teških predmeta na decu koja prohodavaju je čest mehanizam povrede glave (CDC).",
+    fix: "Položite dasku ili je okačite na zid.",
+  },
+  surfboard: {
+    labelSr: "Daska (surf/SUP)",
+    category: "crush",
+    severity: sev(["1-2y", "2-4y"], "low"),
+    why: "Velika daska oslonjena o zid lako se prevrne na dete.",
+    stats: "Prevrtanje teških predmeta na decu koja prohodavaju je čest mehanizam povrede glave (CDC).",
+    fix: "Položite dasku ili je fiksirajte na nosač.",
+  },
+  "tennis racket": {
+    labelSr: "Reket",
+    category: "crush",
+    severity: sev(["1-2y", "2-4y"], "low"),
+    why: "Zamah starijeg deteta reketom pogađa mlađe u glavu; žice mogu zakačiti prste.",
+    stats: "Povrede sportskim rekvizitima u kući najčešće pogađaju mlađu braću i sestre (CPSC).",
+    fix: "Rekete u orman posle igre; mlađe dete dalje od prostora zamaha.",
+  },
+  frisbee: {
+    labelSr: "Frizbi/leteći disk",
+    category: "other",
+    severity: sev(["6-12m", "1-2y"], "low"),
+    why: "Tvrdi disk u letu može pogoditi bebu u glavu; malo dete grize ivicu diska.",
+    stats: "Povrede letećim igračkama najčešće pogađaju najmlađe posmatrače igre (CPSC).",
+    fix: "Beba dalje od putanje igre; meki penasti diskovi za porodičnu igru.",
+  },
+  kite: {
+    labelSr: "Zmaj (kanap!)",
+    category: "strangulation",
+    severity: sev(["0-6m", "6-12m", "1-2y", "2-4y"], "medium"),
+    why: "Dugačak kanap zmaja je rizik davljenja i posekotina od zatezanja; dete se zapliće trčeći.",
+    stats: "Kanapi i trake duži od 20 cm su dokumentovan rizik davljenja male dece (CPSC).",
+    fix: "Kanap namotan i sklonjen odmah posle igre; dete ne trči sa kanapom oko ruke/vrata.",
+  },
+  // ---- KABLOVI, VRUĆA HRANA, SITNICE ----
+  keyboard: {
+    labelSr: "Tastatura (kabl)",
+    category: "electric",
+    severity: sev(["6-12m", "1-2y"], "low"),
+    why: "Kabl tastature visi sa stola — povlačenjem pada i tastatura i sve oko nje; tasteri koji se otkače su sitni delovi.",
+    stats: "Povlačenje kablova sa površina je tipičan mehanizam povreda dece koje prohodavaju (CDC).",
+    fix: "Kablove vezati i skloniti od ivice; bežična oprema je bezbednija opcija.",
+  },
+  mouse: {
+    labelSr: "Miš (kabl)",
+    category: "strangulation",
+    severity: sev(["6-12m", "1-2y"], "low"),
+    why: "Kabl miša je idealne dužine za omotavanje oko dečjeg vrata ili ruke.",
+    stats: "Kablovi dužine 20+ cm nose rizik davljenja za odojčad (CPSC).",
+    fix: "Kabl sklonite sa ivice stola ili pređite na bežični miš.",
+  },
+  toothbrush: {
+    labelSr: "Četkica za zube",
+    category: "cutting",
+    severity: sev(["1-2y", "2-4y"], "medium"),
+    why: "Dete koje hoda ili trči sa četkicom u ustima pri padu može teško povrediti nepce i ždrelo.",
+    stats: "Povrede usne duplje predmetima u ustima pri padu tipične su za uzrast 1–3 godine (AAP).",
+    fix: "Zubi se peru SAMO u mestu, uz nadzor; nikad hodanje sa četkicom u ustima.",
+  },
+  pizza: {
+    labelSr: "Vruća hrana",
+    category: "burn",
+    severity: sev(["6-12m", "1-2y", "2-4y"], "medium"),
+    why: "Vruć sir i pleh — rastegljiv vreo sir lepi se za nepce i izaziva opekotine; pleh na ivici stola dete povlači.",
+    stats: "Opekotine vrelom hranom su među najčešćim opekotinama male dece (SZO).",
+    fix: "Ohladite parče pre serviranja detetu; pleh na sredinu stola.",
+  },
+  donut: {
+    labelSr: "Slatkiši",
+    category: "choking",
+    severity: sev(["6-12m", "1-2y"], "low"),
+    why: "Veliki zalogaji testa mogu zapušiti disajni put deteta koje uči da žvaće; šećer nije za decu do 2 godine.",
+    stats: "AAP preporučuje bez dodatog šećera do 2. godine; gušenje hranom je najčešće do 3. godine.",
+    fix: "Mali komadi, dete jede sedeći; slatkiše odložite za kasniji uzrast.",
+  },
+  cake: {
+    labelSr: "Torta/kolači",
+    category: "choking",
+    severity: sev(["6-12m", "1-2y"], "low"),
+    why: "Komadi sa orasima, suvim grožđem ili tvrdim dekoracijama su rizik gušenja; sveće i upaljač uz tortu su rizik opekotina.",
+    stats: "Orašasti plodovi i tvrde dekoracije su u vrhu liste uzroka gušenja dece do 4 godine (AAP).",
+    fix: "Proverite sastav pre davanja detetu; sveće i upaljač odmah sklonite.",
+  },
 };
 
 /** Engleski tekstovi pravila — koriste se za sve jezike osim sr/hr/bs. */
@@ -413,6 +601,29 @@ const RULES_EN: Record<string, RuleEn> = {
   "baseball bat": { label: "Bat / stick", why: "Heavy sports gear leaning on a wall falls when pulled; an older child's swing hits a younger one.", stats: "Home sports-equipment injuries most often affect younger siblings (CPSC).", fix: "Store sports gear in a cupboard or rack, not leaning against the wall." },
   skateboard: { label: "Skateboard", why: "A child stepping on a skateboard indoors falls backwards onto a hard floor — the classic head-injury mechanism.", stats: "Wheeled falls (skateboard, scooter) without a helmet commonly cause child head injuries (CDC).", fix: "Keep the skateboard/scooter out of play areas; always a helmet outdoors." },
   bicycle: { label: "Bicycle", why: "A bike leaning on a wall falls on a child who pulls it; chain and sprockets pinch fingers.", stats: "Finger injuries from bike mechanisms are common in young children (EU Child Safety Alliance).", fix: "Park the bike on a stand or holder, away from play areas." },
+  bird: { label: "Bird", why: "A bird out of its cage can peck a curious child; feathers and droppings are a hygiene risk for babies who mouth their hands.", stats: "Pet birds can carry bacteria (psittacosis, salmonella) — infants are most at risk (CDC).", fix: "Cage out of reach; no touching the bird or cage unsupervised; wash hands after contact." },
+  horse: { label: "Horse", why: "Horses startle at sudden moves — a kick or trample is a serious danger. A child must never approach from behind.", stats: "Hoofed-animal injuries in children are most often head kicks — among the most severe rural injuries (CDC).", fix: "Approach only with an adult, from the front, never from behind; keep a fence between child and animal." },
+  sheep: { label: "Sheep / lamb", why: "Even tame animals knock small children over; droppings carry infection risk (E. coli) for children who touch everything.", stats: "E. coli infections in young children often trace back to farms and petting zoos (CDC).", fix: "Contact only supervised; wash hands immediately after touching animals." },
+  cow: { label: "Cow / calf", why: "A large animal can trample or crush a child unintentionally — children never enter the pen alone.", stats: "Trampling and crushing by livestock are leading child injuries on farms (CDC rural data).", fix: "Solid fence between child and livestock; enter pens only with an adult." },
+  car: { label: "Car (driveway)", why: "A driver CANNOT see a small child behind or under a vehicle — reversing on the driveway is one of the most tragic scenarios.", stats: "Backover incidents happen most often in the family's own driveway, to children aged 1–3 (NHTSA/CDC).", fix: "Never leave a child alone on the driveway; walk around the car before moving it; keep keys out of reach." },
+  truck: { label: "Truck / van", why: "Large vehicles have even bigger blind spots — a child next to them is invisible to the driver.", stats: "Large-vehicle blind spots are a leading factor in driveway child fatalities (NHTSA).", fix: "Physically separate the play area from vehicle access (fence/gate)." },
+  motorcycle: { label: "Motorcycle", why: "The exhaust stays hot long after riding (contact burn), and a parked bike tips easily onto a child pulling on it.", stats: "Exhaust-pipe burns are a classic child injury — skin burns in under 1 second at 65°C (WHO).", fix: "Park the motorcycle out of children's reach; let the exhaust cool." },
+  boat: { label: "Boat / water gear", why: "A boat means water nearby — the single biggest outdoor risk for young children; gear and ropes are entanglement risks.", stats: "Drowning is the leading cause of accidental death for children 1–4 in many countries (WHO).", fix: "Near water, keep the child within arm's reach at all times; life jacket for every water activity." },
+  "traffic light": { label: "Street nearby!", why: "Traffic signals in view mean the play area is close to a road — a toddler can dart after a ball in a second.", stats: "Darting into the road is the most common scenario for child pedestrian injuries aged 2–6 (WHO).", fix: "A physical barrier (fence, hedge) between play area and road; always hold hands near traffic." },
+  "stop sign": { label: "Street nearby!", why: "A road sign in view means the roadway is right there — not a safe unsupervised play area.", stats: "Darting into the road is the most common child pedestrian injury scenario aged 2–6 (WHO).", fix: "Play only behind a physical barrier; teach the 'stop at the kerb' rule." },
+  "fire hydrant": { label: "Street nearby", why: "A hydrant means a pavement and road immediately next to where the child is.", stats: "Child pedestrians are most often injured on their own street, close to home (WHO).", fix: "Hold the child's hand; play only in the fenced area." },
+  skis: { label: "Skis / poles", why: "Sharp ski edges and pole tips leaning on a wall — they fall when a child pulls them.", stats: "Injuries from wall-leaning equipment are typical in hallways and garages (EU Child Safety Alliance).", fix: "Store skis and poles in a rack or laid down, out of walkways." },
+  snowboard: { label: "Snowboard", why: "A heavy board leaning on a wall falls on a child pulling up on it.", stats: "Heavy objects tipping onto toddlers are a common head-injury mechanism (CDC).", fix: "Lay the board down or hang it on the wall." },
+  surfboard: { label: "Board (surf/SUP)", why: "A large board leaning on a wall tips easily onto a child.", stats: "Heavy objects tipping onto toddlers are a common head-injury mechanism (CDC).", fix: "Lay the board down or fix it on a mount." },
+  "tennis racket": { label: "Racket", why: "An older child's swing hits a younger one in the head; strings can trap fingers.", stats: "Home sports-equipment injuries most often affect younger siblings (CPSC).", fix: "Rackets in the cupboard after play; keep toddlers out of swing range." },
+  frisbee: { label: "Frisbee / flying disc", why: "A hard disc in flight can hit a baby in the head; toddlers chew disc edges.", stats: "Flying-toy injuries most often hit the youngest bystanders (CPSC).", fix: "Keep the baby away from the flight path; use soft foam discs for family play." },
+  kite: { label: "Kite (string!)", why: "A long kite string is a strangulation and cut risk under tension; children trip and tangle while running.", stats: "Cords and strings over 20 cm are a documented strangulation risk for young children (CPSC).", fix: "Wind up and store the string right after play; never run with string around a hand or neck." },
+  keyboard: { label: "Keyboard (cable)", why: "A keyboard cable hanging off the desk — one pull brings it and everything around it down; loose keycaps are small parts.", stats: "Pulling cables off surfaces is a typical toddler injury mechanism (CDC).", fix: "Tie and tuck cables away from the edge; wireless gear is safer." },
+  mouse: { label: "Mouse (cable)", why: "A mouse cable is the perfect length to wrap around a child's neck or arm.", stats: "Cables over 20 cm carry a strangulation risk for infants (CPSC).", fix: "Keep the cable off the desk edge or switch to wireless." },
+  toothbrush: { label: "Toothbrush", why: "A child walking or running with a toothbrush in their mouth can severely injure the palate in a fall.", stats: "Mouth injuries from objects held while falling are typical for ages 1–3 (AAP).", fix: "Brush teeth ONLY standing still, supervised; never walk with a brush in the mouth." },
+  pizza: { label: "Hot food", why: "Hot stretchy cheese sticks to the palate and burns; a tray at the table edge gets pulled down.", stats: "Hot-food burns are among the most common burns in young children (WHO).", fix: "Cool the slice before serving; tray in the middle of the table." },
+  donut: { label: "Sweets", why: "Big doughy bites can block the airway of a child learning to chew; no added sugar before age 2.", stats: "AAP recommends no added sugar before age 2; food choking peaks under 3.", fix: "Small pieces, eaten seated; save sweets for a later age." },
+  cake: { label: "Cake / pastries", why: "Pieces with nuts, raisins or hard decorations are a choking risk; candles and a lighter nearby are a burn risk.", stats: "Nuts and hard decorations top the choking list for children under 4 (AAP).", fix: "Check ingredients before serving; remove candles and lighter immediately." },
 };
 
 export function mapDetectionsToHazards(
@@ -451,6 +662,65 @@ export function mapDetectionsToHazards(
       confidence: d.score,
     });
   }
+  // PROSTORNI SKILL — "lanac penjanja": stolica uz površinu za penjanje
+  // nije dve odvojene stvari nego merdevine ka šporetu/stolu/TV-u.
+  // Radi geometrijski, iz položaja boxova, potpuno lokalno i besplatno.
+  const CLIMB_TARGETS: Record<string, { sr: string; en: string; severity: Severity }> = {
+    oven: { sr: "šporeta", en: "the stove", severity: "critical" },
+    tv: { sr: "televizora", en: "the TV", severity: "high" },
+    "dining table": { sr: "stola", en: "the table", severity: "high" },
+    sink: { sr: "sudopere", en: "the sink", severity: "high" },
+    refrigerator: { sr: "frižidera", en: "the fridge", severity: "medium" },
+  };
+  const climbAges: AgeGroup[] = ["1-2y", "2-4y", "4-7y"];
+  if (climbAges.includes(ageGroup)) {
+    const near = (a: Detection["box"], b: Detection["box"]) => {
+      const pad = 0.06; // ~6% kadra tolerancije — "odmah pored"
+      return (
+        a.x - pad < b.x + b.w &&
+        b.x - pad < a.x + a.w &&
+        a.y - pad < b.y + b.h &&
+        b.y - pad < a.y + a.h
+      );
+    };
+    const chairs = detections.filter((d) => d.label === "chair");
+    const combosSeen = new Set<string>();
+    outer: for (const chair of chairs) {
+      for (const d of detections) {
+        const tgt = CLIMB_TARGETS[d.label];
+        if (!tgt || combosSeen.has(d.label) || !near(chair.box, d.box)) continue;
+        combosSeen.add(d.label);
+        const sr = isSr();
+        const x1 = Math.min(chair.box.x, d.box.x);
+        const y1 = Math.min(chair.box.y, d.box.y);
+        const x2 = Math.max(chair.box.x + chair.box.w, d.box.x + d.box.w);
+        const y2 = Math.max(chair.box.y + chair.box.h, d.box.y + d.box.h);
+        hazards.push({
+          id: `combo-${d.label.replace(/\s/g, "_")}`,
+          label: sr
+            ? `⚠ Lanac penjanja: stolica uz ${tgt.sr}`
+            : `⚠ Climbing chain: chair by ${tgt.en}`,
+          category: "fall",
+          severity: tgt.severity,
+          box: { x: x1, y: y1, w: Math.min(1, x2 - x1), h: Math.min(1, y2 - y1) },
+          why: sr
+            ? "Stolica odmah uz ovu površinu je gotova merdevina — dete se za par sekundi popne do visine, vreline ili predmeta koje inače ne doseže."
+            : "A chair right next to this surface is a ready-made ladder — in seconds a child climbs to heights, heat or objects normally out of reach.",
+          stats: sr
+            ? "Padovi sa nameštaja na koji su se deca popela čine veliki deo povreda glave uzrasta 1–4 godine (CDC)."
+            : "Falls from furniture children climbed onto account for a large share of head injuries at ages 1–4 (CDC).",
+          fix: sr
+            ? "Odmaknite stolicu — pravilo: stolice i hoklice se nikad ne ostavljaju uz šporet, radnu površinu, prozor ili TV."
+            : "Move the chair away — rule: chairs and stools are never left by the stove, counter, window or TV.",
+          resolved: false,
+          sourceClass: "chair",
+          confidence: undefined,
+        });
+        if (combosSeen.size >= 2) break outer;
+      }
+    }
+  }
+
   // Kritične prve
   const order: Severity[] = ["critical", "high", "medium", "low"];
   return hazards.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
