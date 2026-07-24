@@ -143,13 +143,15 @@ body {
   position: absolute;
   background: transparent;
   border: 3px solid;
-  border-radius: 8px;
+  border-radius: 14px;
   cursor: pointer;
   padding: 0;
-  /* Tamni oreol oko okvira: vidljiv i na svetloj i na tamnoj pozadini */
+  /* Banner stil: tanak beli rub + mek "glow" u boji ozbiljnosti —
+     vidljiv i na svetloj i na tamnoj pozadini */
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+    0 0 0 1.5px rgba(255, 255, 255, 0.75),
+    0 0 18px 3px var(--sev-glow, rgba(15, 118, 110, 0.4)),
+    inset 0 0 12px 0 var(--sev-glow, rgba(15, 118, 110, 0.25));
 }
 .hazard-box.selected { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8); }
 .hazard-box.resolved { opacity: 0.45; }
@@ -304,8 +306,9 @@ body {
   gap: 10px;
 }
 .live-status {
-  background: rgba(15, 23, 42, 0.7);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  font-weight: 700;
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 0.9rem;
@@ -313,12 +316,13 @@ body {
   align-items: center;
   gap: 8px;
   backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.2);
 }
 .live-dot {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: #34d399;
+  background: #10b981;
   animation: pulse 1s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -363,23 +367,45 @@ body {
 .btn-finish { box-shadow: 0 4px 14px rgba(15, 118, 110, 0.5); }
 
 /* Oznaka na svakom live boxu: broj + naziv + ozbiljnost */
+/* Banner stil: bela pločica sa tamnim tekstom, brojčana značka i
+   ozbiljnost u boji — kao lista nalaza na landing baneru */
 .live-tag {
   position: absolute;
-  top: -34px;
+  top: -38px;
   left: -3px;
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  padding: 5px 12px;
-  border-radius: 8px;
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 5px 12px 5px 6px;
+  border-radius: 999px;
   white-space: nowrap;
   max-width: 78vw;
   overflow: hidden;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.35);
+}
+.live-tag-num {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.live-tag-name {
+  overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+}
+.live-tag-sev {
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 0.85rem;
 }
 
 /* Živa traka sa objašnjenjem najozbiljnije opasnosti u kadru */
@@ -392,14 +418,15 @@ body {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  background: rgba(15, 23, 42, 0.82);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(8px);
   border: none;
-  border-radius: 14px;
-  padding: 12px;
-  color: #fff;
+  border-radius: 16px;
+  padding: 13px 14px;
+  color: #0f172a;
   text-align: left;
   cursor: pointer;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.25);
 }
 .live-strip-sev {
   flex-shrink: 0;
@@ -410,17 +437,17 @@ body {
   border-radius: 999px;
 }
 .live-strip-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.live-strip-body strong { font-size: 1.08rem; }
+.live-strip-body strong { font-size: 1.08rem; color: #0f172a; }
 .live-strip-why {
   font-size: 0.9rem;
-  color: #e2e8f0;
+  color: #475569;
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.live-strip-hint { font-size: 0.72rem; color: #5eead4; font-weight: 600; }
+.live-strip-hint { font-size: 0.78rem; color: #0f766e; font-weight: 700; }
 
 .live-topbtns { display: flex; align-items: center; gap: 8px; }
 .live-iconbtn {
@@ -441,7 +468,12 @@ body {
   border-width: 3.5px;
 }
 @keyframes crit-pulse {
-  50% { box-shadow: 0 0 0 6px rgba(225, 29, 72, 0.35); }
+  50% {
+    box-shadow:
+      0 0 0 1.5px rgba(255, 255, 255, 0.75),
+      0 0 28px 8px rgba(225, 29, 72, 0.6),
+      inset 0 0 14px 0 rgba(225, 29, 72, 0.4);
+  }
 }
 
 /* Birač jezika */

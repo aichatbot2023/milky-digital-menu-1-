@@ -97,12 +97,12 @@ export const CATEGORY_LABELS: Record<HazardCategory, string> = {
   other: "Ostalo",
 };
 
-// Boje ozbiljnosti — namerno međusobno udaljene (rozecrvena / narandžasta /
-// tamnožuta / plava) da se markeri razlikuju na prvi pogled; uz njih idu
-// ikone kategorija (i18n.CATEGORY_ICONS) i pulsiranje kritičnih okvira.
+// Boje ozbiljnosti — usklađene sa brend stilom (belo + teal): kritično i
+// visoko ostaju tople upozoravajuće boje, srednje čitljiv ćilibar, nisko
+// brend teal. Markeri na videu su bele pločice sa ovim bojama kao akcentom.
 export const SEVERITY_META: Record<Severity, { label: string; color: string }> = {
   critical: { label: "Kritično", color: "#e11d48" },
-  high: { label: "Visoko", color: "#f97316" },
-  medium: { label: "Srednje", color: "#ca8a04" },
-  low: { label: "Nisko", color: "#3b82f6" },
+  high: { label: "Visoko", color: "#ea580c" },
+  medium: { label: "Srednje", color: "#d97706" },
+  low: { label: "Nisko", color: "#0f766e" },
 };

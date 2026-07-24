@@ -334,13 +334,22 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
               width: `${h.box.w * 100}%`,
               height: `${h.box.h * 100}%`,
               borderColor: meta.color,
+              // Meki oreol u boji ozbiljnosti (banner "glow" stil)
+              ["--sev-glow" as string]: `${meta.color}66`,
             }}
             onClick={() => pauseOn(h)}
             aria-label={h.label}
           >
-            <span className="live-tag" style={{ background: meta.color }}>
-              {CATEGORY_ICONS[h.category]} {i + 1} · {h.label} — {severityLabel(h.severity)}
-              {h.confidence !== undefined && ` · ${Math.round(h.confidence * 100)}%`}
+            <span className="live-tag">
+              <span className="live-tag-num" style={{ background: meta.color }}>
+                {i + 1}
+              </span>
+              <span className="live-tag-name">
+                {CATEGORY_ICONS[h.category]} {h.label}
+              </span>
+              <b className="live-tag-sev" style={{ color: meta.color }}>
+                {severityLabel(h.severity)}
+              </b>
             </span>
           </button>
         );

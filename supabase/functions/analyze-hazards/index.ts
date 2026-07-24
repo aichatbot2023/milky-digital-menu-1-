@@ -110,11 +110,12 @@ LIVE CAMERA MODE — THIS IS A SINGLE FRAME FROM A LIVE VIDEO FEED (may be blurr
 - NEVER guess. If you cannot confidently name an object, DO NOT report it at all.
 - An empty "hazards" array is a perfectly good answer when nothing hazardous is clearly visible.
 - Do NOT use the "unsure → severity low" rule here: in live mode uncertain objects are OMITTED, not reported.
-- Do NOT report the person holding the camera, their body, clothes, or furniture that is merely present (sofa, wall art, radiator) unless it poses a concrete, visible risk.`
+- Do NOT report the person holding the camera, their body, clothes, or furniture that is merely present (sofa, wall art, radiator) unless it poses a concrete, visible risk.
+- "label" must be 1–3 simple everyday words in ${language}; "why" must be ONE short, grammatically correct sentence. No complicated phrasing.`
     : '';
   return `OUTPUT LANGUAGE: ${language}. Every human-readable value you produce (label, why, stats, fix, summary) MUST be written entirely in ${language}. NEVER mix languages in a single response. If any source knowledge is in another language, translate it into ${language}.
 
-VOCABULARY: use natural, correct, everyday words that a native ${language} speaker would use. NEVER invent words, never transliterate from other languages, never use made-up terms. If you do not know the exact word for an object in ${language}, use a simple common description instead.
+VOCABULARY: use natural, correct, everyday words that a native ${language} speaker would use, with correct grammar in every sentence. NEVER invent words, never transliterate from other languages, never use made-up terms. If you do not know the exact word for an object in ${language}, use a simple common description instead. For Serbian: standard ekavian Serbian ("sto" not "stol", "sveća", "utičnica"); write simply, like a children's doctor talking to a parent.
 
 CERTAINTY: report ONLY objects you can clearly see and confidently identify. NEVER invent objects, hazards, or details that are not visibly present in the photo. A shorter, accurate list is always better than a longer, invented one.${liveRules}
 
