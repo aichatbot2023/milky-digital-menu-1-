@@ -352,6 +352,21 @@ const D: Dict = {
   "onb.next": { en: "Next", sr: "Dalje" },
   "onb.skip": { en: "Skip", sr: "Preskoči" },
   "onb.start": { en: "Start protecting 🛡️", sr: "Počni zaštitu 🛡️" },
+
+  // Registracija (obavezna pre skeniranja)
+  "reg.title": { en: "Create your free account", sr: "Napravite besplatan nalog" },
+  "reg.sub": {
+    en: "7 days completely free — no card needed. Your scans and child profiles stay saved.",
+    sr: "7 dana potpuno besplatno — bez kartice. Vaši skenovi i profili deteta ostaju sačuvani.",
+  },
+  "reg.name": { en: "Your name", sr: "Vaše ime" },
+  "reg.email": { en: "Email address", sr: "Email adresa" },
+  "reg.cta": { en: "Start 7 days free", sr: "Započni 7 dana besplatno" },
+  "reg.invalid": { en: "Please enter a valid email address.", sr: "Unesite ispravnu email adresu." },
+  "reg.gdpr": {
+    en: "We only use your email for your account and important safety updates. No spam. GDPR compliant.",
+    sr: "Email koristimo samo za vaš nalog i važna bezbednosna obaveštenja. Bez spama. U skladu sa GDPR.",
+  },
   // Check-lista
   "check.btn": { en: "🧾 Safety checklist", sr: "🧾 Bezbednosna check-lista" },
   "check.btn.sub": {

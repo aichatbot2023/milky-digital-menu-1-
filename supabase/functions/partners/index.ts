@@ -99,7 +99,14 @@ Deno.serve(async (req) => {
         SELECT coalesce(ref_code, '(direktno)') AS code, type, count(*)::int AS n
         FROM sn_events GROUP BY 1, 2`;
       const totals = await s`SELECT type, count(*)::int AS n FROM sn_events GROUP BY type`;
-      return json({ partners, rows, totals });
+      // CRM lista: poslednji registrovani korisnici (ime + email + partner)
+      const users = await s`
+        SELECT meta->>'name' AS name, meta->>'email' AS email,
+               coalesce(ref_code, '(direktno)') AS code, created_at
+        FROM sn_events
+        WHERE type = 'signup' AND meta ? 'email'
+        ORDER BY created_at DESC LIMIT 500`;
+      return json({ partners, rows, totals, users });
     }
 
     return json({ error: 'Nepoznata akcija' }, 400);

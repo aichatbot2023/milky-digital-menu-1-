@@ -62,6 +62,15 @@ code{background:#f1f5f9;padding:2px 7px;border-radius:6px;font-size:.85rem}
     </table>
     <p class="muted">Prihod = prodaje × 7 €. „(direktno)" = korisnici bez referral koda. Link partnera: <code>https://safenessai.co.uk/?ref=KOD</code></p>
   </div>
+
+  <h2>👤 Registrovani korisnici</h2>
+  <div class="card">
+    <table id="utable">
+      <thead><tr><th>Ime</th><th>Email</th><th>Preko partnera</th><th>Datum</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted" id="unote"></p>
+  </div>
 </div>
 
 <script>
@@ -137,6 +146,18 @@ function render(data) {
     tbody.insertAdjacentHTML("beforeend",
       `<tr><td>${names[code] ?? "<i>nepoznat</i>"}</td><td>${link}</td><td>${s.visit}</td><td>${s.signup}</td><td><b>${s.sale}</b></td><td>${s.sale * PRICE} €</td><td>${conv}</td></tr>`);
   }
+
+  const esc = (x) => String(x ?? "").replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+  const utbody = document.querySelector("#utable tbody");
+  utbody.innerHTML = "";
+  for (const u of data.users ?? []) {
+    utbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${esc(u.name) || "—"}</td><td>${esc(u.email)}</td><td>${esc(u.code)}</td><td>${new Date(u.created_at).toLocaleDateString("sr-RS")}</td></tr>`);
+  }
+  document.getElementById("unote").textContent =
+    (data.users?.length ?? 0) === 0
+      ? "Još nema registrovanih korisnika sa emailom (registracija u aplikaciji je od sada obavezna)."
+      : `Prikazano poslednjih ${data.users.length} registracija.`;
 }
 
 if (sessionStorage.getItem("snkey")) { document.getElementById("key").value = sessionStorage.getItem("snkey"); loadStats(); }

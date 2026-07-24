@@ -119,7 +119,11 @@ export function getRef(): string | null {
 }
 
 /** Fire-and-forget događaj ka partners funkciji. */
-export function track(type: "visit" | "signup" | "sale", ref?: string | null) {
+export function track(
+  type: "visit" | "signup" | "sale",
+  ref?: string | null,
+  meta?: Record<string, string>,
+) {
   try {
     fetch(PARTNERS_URL, {
       method: "POST",
@@ -128,22 +132,55 @@ export function track(type: "visit" | "signup" | "sale", ref?: string | null) {
         "Authorization": `Bearer ${ANON}`,
         "apikey": ANON,
       },
-      body: JSON.stringify({ action: "track", type, ref: ref ?? getRef() }),
+      body: JSON.stringify({ action: "track", type, ref: ref ?? getRef(), meta }),
     }).catch(() => {});
   } catch {
     /* ignoriši */
   }
 }
 
-/** Registruj novog korisnika (jednom po uređaju) — mini CRM brojač. */
-export function trackSignupOnce() {
+// ---------- NALOG (obavezna registracija pre skeniranja) ----------
+const ACCOUNT_KEY = "safenest.account";
+
+export interface Account {
+  name: string;
+  email: string;
+}
+
+export function getAccount(): Account | null {
   try {
-    if (localStorage.getItem(SIGNUP_KEY) === "1") return;
-    localStorage.setItem(SIGNUP_KEY, "1");
-    track("signup");
+    const raw = localStorage.getItem(ACCOUNT_KEY);
+    if (!raw) return null;
+    const a = JSON.parse(raw);
+    return a?.email ? { name: String(a.name ?? ""), email: String(a.email) } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Registracija korisnika: čuva nalog na uređaju, pokreće 7-dnevni probni
+ * period od OVOG trenutka i upisuje korisnika u CRM (sa referral atribucijom).
+ */
+export function registerAccount(name: string, email: string) {
+  try {
+    localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ name, email, at: new Date().toISOString() }));
+    // Trial kreće od registracije, ne od prvog otvaranja sajta
+    if (!localStorage.getItem(SUB_KEY)) {
+      localStorage.setItem(TRIAL_KEY, new Date().toISOString());
+    }
+    if (localStorage.getItem(SIGNUP_KEY) !== "1") {
+      localStorage.setItem(SIGNUP_KEY, "1");
+      track("signup", null, { name: name.slice(0, 80), email: email.slice(0, 120) });
+    }
   } catch {
     /* ignoriši */
   }
+}
+
+/** Zadržano zbog kompatibilnosti — registracija sada ide kroz registerAccount. */
+export function trackSignupOnce() {
+  /* signup se upisuje pri registraciji, sa imenom i mejlom */
 }
 
 /** Checkout URL sa atribucijom partnera (client_reference_id → Stripe). */

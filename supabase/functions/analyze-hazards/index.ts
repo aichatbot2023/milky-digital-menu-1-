@@ -262,12 +262,19 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
-  const active = PROVIDERS.filter((p) => p.key);
+  let active = PROVIDERS.filter((p) => p.key);
   if (active.length === 0) return json({ error: 'Nijedan AI provajder nije konfigurisan.' }, 501);
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
   const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian', live = false } = body ?? {};
+
+  // FOTO režim (mali obim): Gemini 2.5 Flash prvi — najprecizniji besplatni
+  // vision model, najbolji jezik. ŽIVI video (veliki obim, poziv na ~10s)
+  // ostaje na NVIDIA NIM da ne potroši Gemini dnevnu kvotu.
+  if (live !== true) {
+    active = [...active.filter((p) => p.name === 'gemini'), ...active.filter((p) => p.name !== 'gemini')];
+  }
   if (!image || typeof image !== 'string' || !image.startsWith('data:image/'))
     return json({ error: 'Missing image (data URL)' }, 400);
   if (image.length > 2_500_000) return json({ error: 'Image too large' }, 413);

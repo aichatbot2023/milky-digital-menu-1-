@@ -13,7 +13,8 @@ import {
   saveScan,
   updateScan,
 } from "./lib/storage";
-import { captureRef, getStatus, trackSignupOnce, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
+import { captureRef, getAccount, getStatus, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
+import { Register } from "./components/Register";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { Onboarding, onboardingSeen } from "./components/Onboarding";
@@ -47,6 +48,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<SubStatus>(() => getStatus());
   const [showPaywall, setShowPaywall] = useState(false);
+  const [account, setAccount] = useState(() => getAccount());
   const [foodImage, setFoodImage] = useState<string | null>(null);
   const [foodResult, setFoodResult] = useState<FoodAnalysis | null>(null);
   const [foodOffline, setFoodOffline] = useState<string[] | null>(null);
@@ -69,7 +71,6 @@ export default function App() {
   const [payMsg, setPayMsg] = useState<string | null>(null);
   useEffect(() => {
     captureRef();
-    trackSignupOnce();
     const sid = new URLSearchParams(window.location.search).get("session_id");
     if (!sid) return;
     window.history.replaceState(null, "", window.location.pathname);
@@ -257,6 +258,11 @@ export default function App() {
 
   if (!onboarded) {
     return <Onboarding onDone={() => setOnboarded(true)} />;
+  }
+
+  // Obavezna registracija: bez naloga nema pristupa skeniranju
+  if (!account) {
+    return <Register onDone={() => setAccount(getAccount())} />;
   }
 
   if (view === "checklist") {

@@ -176,7 +176,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
-  const active = PROVIDERS.filter((p) => p.key);
+  // Foto provera hrane (mali obim): Gemini prvi — najprecizniji besplatni
+  // vision model i najbolji jezik; NVIDIA/OpenRouter su rezerva.
+  let active = PROVIDERS.filter((p) => p.key);
+  active = [...active.filter((p) => p.name === 'gemini'), ...active.filter((p) => p.name !== 'gemini')];
   if (active.length === 0) return json({ error: 'Nijedan AI provajder nije konfigurisan.' }, 501);
 
   let body: any;
