@@ -120,7 +120,7 @@ export function getRef(): string | null {
 
 /** Fire-and-forget događaj ka partners funkciji. */
 export function track(
-  type: "visit" | "signup" | "sale" | "click",
+  type: "visit" | "signup" | "sale" | "click" | "app_open" | "scan",
   ref?: string | null,
   meta?: Record<string, string>,
 ) {
@@ -137,6 +137,45 @@ export function track(
   } catch {
     /* ignoriši */
   }
+}
+
+/** Vremenska zona uređaja — anonimna "lokacija" za CRM (bez IP praćenja). */
+export function deviceTz(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Jedno "otvaranje aplikacije" dnevno po uređaju — merenje korišćenja. */
+export function trackAppOpenOnce() {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem("safenest.lastOpen") === today) return;
+    localStorage.setItem("safenest.lastOpen", today);
+    track("app_open", null, { tz: deviceTz(), lang: navigator.language ?? "" });
+  } catch {
+    /* ignoriši */
+  }
+}
+
+/** Anonimna statistika skena za CRM: šta se skenira i koje opasnosti. */
+export function trackScan(
+  kind: "photo" | "live" | "food",
+  room: string,
+  age: string,
+  categories: string[],
+  found: number,
+) {
+  track("scan", null, {
+    kind,
+    room,
+    age,
+    cats: [...new Set(categories)].slice(0, 10).join(","),
+    n: String(found),
+    tz: deviceTz(),
+  });
 }
 
 // ---------- NALOG (obavezna registracija pre skeniranja) ----------
@@ -171,10 +210,42 @@ export function registerAccount(name: string, email: string) {
     }
     if (localStorage.getItem(SIGNUP_KEY) !== "1") {
       localStorage.setItem(SIGNUP_KEY, "1");
-      track("signup", null, { name: name.slice(0, 80), email: email.slice(0, 120) });
+      track("signup", null, {
+        name: name.slice(0, 80),
+        email: email.slice(0, 120),
+        tz: deviceTz(),
+        lang: navigator.language ?? "",
+      });
     }
   } catch {
     /* ignoriši */
+  }
+}
+
+/**
+ * Poklonjen (free) nalog: admin u CRM-u doda email, a aplikacija pri
+ * registraciji/otvaranju proveri listu — poklonjeni email odmah dobija
+ * Premium bez plaćanja.
+ */
+export async function checkGift(email: string): Promise<boolean> {
+  try {
+    const res = await fetch(PARTNERS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${ANON}`,
+        "apikey": ANON,
+      },
+      body: JSON.stringify({ action: "gift-check", email }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.gift === true) {
+      localStorage.setItem(SUB_KEY, "1");
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
   }
 }
 

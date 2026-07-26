@@ -13,7 +13,16 @@ import {
   saveScan,
   updateScan,
 } from "./lib/storage";
-import { captureRef, getAccount, getStatus, verifyCheckoutSession, type SubStatus } from "./lib/subscription";
+import {
+  captureRef,
+  checkGift,
+  getAccount,
+  getStatus,
+  trackAppOpenOnce,
+  trackScan,
+  verifyCheckoutSession,
+  type SubStatus,
+} from "./lib/subscription";
 import { Register } from "./components/Register";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
@@ -71,6 +80,12 @@ export default function App() {
   const [payMsg, setPayMsg] = useState<string | null>(null);
   useEffect(() => {
     captureRef();
+    trackAppOpenOnce();
+    // Poklonjeni (free) nalozi: admin doda email u CRM → Premium bez plaćanja
+    const acc = getAccount();
+    if (acc && getStatus().state !== "subscribed") {
+      checkGift(acc.email).then((ok) => ok && setSubStatus(getStatus()));
+    }
     const sid = new URLSearchParams(window.location.search).get("session_id");
     if (!sid) return;
     window.history.replaceState(null, "", window.location.pathname);
@@ -168,6 +183,7 @@ export default function App() {
       setScans(loadScans());
       setCurrentScan(scan);
       setSelectedHazardId(null);
+      trackScan("photo", roomType, age, result.hazards.map((h) => h.category), result.hazards.length);
       setView("result");
     } catch (e: any) {
       setError(e?.message ?? t("scan.failed"));
@@ -200,6 +216,7 @@ export default function App() {
         setFoodResult(null);
         setFoodOffline(offlineFoodGuidance(age));
       }
+      trackScan("food", "food", age, [], 0);
       setView("food-result");
     } catch (e: any) {
       setError(e?.message ?? t("scan.failed"));
@@ -262,7 +279,16 @@ export default function App() {
 
   // Obavezna registracija: bez naloga nema pristupa skeniranju
   if (!account) {
-    return <Register onDone={() => setAccount(getAccount())} />;
+    return (
+      <Register
+        onDone={() => {
+          const acc = getAccount();
+          setAccount(acc);
+          // Ako je email na listi poklona → Premium odmah
+          if (acc) checkGift(acc.email).then((ok) => ok && setSubStatus(getStatus()));
+        }}
+      />
+    );
   }
 
   if (view === "checklist") {
@@ -294,6 +320,13 @@ export default function App() {
           setScans(loadScans());
           setCurrentScan(scan);
           setSelectedHazardId(null);
+          trackScan(
+            "live",
+            roomType,
+            selectedChild?.age ?? "1-2y",
+            result.hazards.map((h) => h.category),
+            result.hazards.length,
+          );
           setView("result");
         }}
       />

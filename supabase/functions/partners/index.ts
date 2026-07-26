@@ -70,10 +70,18 @@ async function ensureTables() {
     active boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
+  // Poklonjeni (free) nalozi: registracija sa ovim emailom = Premium
+  await s`CREATE TABLE IF NOT EXISTS sn_gifts (
+    email text PRIMARY KEY,
+    note text,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`;
   ready = true;
 }
 
-const VALID_TYPES = new Set(['visit', 'signup', 'sale', 'click']);
+// app_open (1×/dan po uređaju, meta.tz za lokaciju) i scan (meta: kind/room/
+// age/cats) pune analitiku korišćenja — bez slika i bez ličnih podataka
+const VALID_TYPES = new Set(['visit', 'signup', 'sale', 'click', 'app_open', 'scan']);
 // Kategorije opasnosti iz aplikacije (hazard.category)
 const VALID_CATEGORIES = new Set([
   'fall', 'choking', 'poisoning', 'burn', 'electric', 'cutting',
@@ -106,6 +114,14 @@ Deno.serve(async (req) => {
         SELECT id, category, brand, title, title_en, url, price
         FROM sn_products WHERE active ORDER BY category, id`;
       return json({ products });
+    }
+
+    // JAVNO: da li je email na listi poklonjenih (free) naloga
+    if (action === 'gift-check') {
+      const email = String(body?.email ?? '').trim().toLowerCase().slice(0, 120);
+      if (!email) return json({ gift: false });
+      const rows = await s`SELECT 1 FROM sn_gifts WHERE email = ${email}`;
+      return json({ gift: rows.length > 0 });
     }
 
     // Admin akcije
@@ -145,6 +161,21 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === 'gift-add') {
+      const email = String(body?.email ?? '').trim().toLowerCase().slice(0, 120);
+      const note = body?.note ? String(body.note).slice(0, 120) : null;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'Neispravan email' }, 400);
+      await s`INSERT INTO sn_gifts (email, note) VALUES (${email}, ${note})
+              ON CONFLICT (email) DO UPDATE SET note = ${note}`;
+      return json({ ok: true });
+    }
+
+    if (action === 'gift-del') {
+      const email = String(body?.email ?? '').trim().toLowerCase().slice(0, 120);
+      await s`DELETE FROM sn_gifts WHERE email = ${email}`;
+      return json({ ok: true });
+    }
+
     if (action === 'stats') {
       const partners = await s`SELECT code, name, created_at FROM sn_partners ORDER BY created_at`;
       const rows = await s`
@@ -168,7 +199,25 @@ Deno.serve(async (req) => {
           FROM sn_events WHERE type = 'click' GROUP BY 1
         ) c ON c.pid = p.id
         ORDER BY p.active DESC, clicks DESC, p.id`;
-      return json({ partners, rows, totals, users, products });
+      // Aktivnost po danima (poslednjih 14 dana)
+      const daily = await s`
+        SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS d,
+               type, count(*)::int AS n
+        FROM sn_events
+        WHERE created_at > now() - interval '14 days'
+        GROUP BY 1, 2 ORDER BY 1 DESC`;
+      // Šta se skenira (poslednjih 1000 skenova — agregacija na admin strani)
+      const scans = await s`
+        SELECT meta, created_at FROM sn_events
+        WHERE type = 'scan' ORDER BY created_at DESC LIMIT 1000`;
+      // Lokacije: vremenska zona uređaja iz registracija i otvaranja
+      const locations = await s`
+        SELECT meta->>'tz' AS tz, count(*)::int AS n
+        FROM sn_events
+        WHERE type IN ('signup', 'app_open', 'scan') AND meta ? 'tz' AND meta->>'tz' <> ''
+        GROUP BY 1 ORDER BY n DESC LIMIT 60`;
+      const gifts = await s`SELECT email, note, created_at FROM sn_gifts ORDER BY created_at DESC`;
+      return json({ partners, rows, totals, users, products, daily, scans, locations, gifts });
     }
 
     return json({ error: 'Nepoznata akcija' }, 400);
