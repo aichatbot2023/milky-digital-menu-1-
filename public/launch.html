@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SafeNest AI — Launch paket</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" type="image/png" href="/icon-192.png" />
+<style>
+:root{--teal:#0f766e;--mint:#5eead4;--ink:#0f172a;--muted:#64748b}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f8fafc;color:var(--ink);margin:0;line-height:1.6}
+.wrap{max-width:820px;margin:0 auto;padding:26px 16px 70px}
+h1{letter-spacing:-.02em;color:var(--teal);font-size:1.6rem;margin:0 0 6px}
+h2{font-size:1.15rem;margin:34px 0 6px;padding-top:16px;border-top:2px solid #e2e8f0}
+h3{font-size:1rem;margin:0 0 4px}
+p.lead{color:var(--muted);margin-top:0}
+.card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(15,23,42,.08);margin-top:12px}
+.tip{background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:13px 15px;margin-top:12px;font-size:.92rem}
+.tag{display:inline-block;background:#ecfeff;color:var(--teal);border-radius:999px;padding:2px 10px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+pre{white-space:pre-wrap;background:#f1f5f9;border-radius:10px;padding:13px;font-size:.9rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:8px 0 0;line-height:1.55}
+button{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:9px 15px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit}
+button:active{opacity:.8}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+input{padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:1rem;font-family:inherit;flex:1;min-width:150px}
+.mini{font-size:.82rem;color:var(--muted)}
+ol.plan{padding-left:20px}
+ol.plan li{margin-bottom:9px}
+.day{font-weight:800;color:var(--teal)}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.9rem}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #e2e8f0}
+th{color:var(--muted);font-size:.78rem;text-transform:uppercase}
+a{color:var(--teal)}
+.shots{font-size:.9rem;padding-left:18px;margin:6px 0}
+.shots li{margin-bottom:3px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>🚀 SafeNest AI — Launch paket</h1>
+<p class="lead">Sve što treba za prvih 14 dana: 10 TikTok/Reels scenarija, poruke za influenserke i objave za mama grupe. Klik na „Kopiraj" i nalepi.</p>
+
+<div class="card">
+  <h3>🔗 Partnerski link</h3>
+  <p class="mini">Upiši kod partnera (isti koji si dodao u admin panelu) — svi tekstovi ispod automatski dobijaju njen link.</p>
+  <div class="row">
+    <input id="code" placeholder="npr. MAMA-ANA" oninput="refresh()" />
+    <input id="ime" placeholder="Ime influenserke (npr. Ana)" oninput="refresh()" />
+  </div>
+  <p class="mini" style="margin-top:8px">Link: <b id="linkout">https://safenessai.co.uk/</b></p>
+</div>
+
+<h2>📅 Plan prvih 14 dana</h2>
+<div class="card">
+  <ol class="plan">
+    <li><span class="day">Dan 1–2:</span> Otvori TikTok i Instagram nalog <b>@safenest.ai</b> (ime, opis, link ka sajtu u biografiji). Snimi i objavi <b>Scenario 1</b>.</li>
+    <li><span class="day">Dan 2:</span> Objavi u 3–5 mama grupa (tekst niže, verzija „vrednost prva").</li>
+    <li><span class="day">Dan 3–7:</span> <b>Jedan video dnevno</b> (scenariji 2–6). Ovo je najvažnija stavka celog plana — algoritam nagrađuje doslednost.</li>
+    <li><span class="day">Dan 4:</span> Pošalji poruku prvim <b>10 mikro-influenserki</b> (5k–50k pratilaca, mame). Svakoj napravi kod u admin panelu pre slanja.</li>
+    <li><span class="day">Dan 7:</span> Pogledaj CRM: koliko registracija, iz kojih gradova, šta se skenira. Ponovi format videa koji je najbolje prošao.</li>
+    <li><span class="day">Dan 8–14:</span> Nastavi video dnevno (scenariji 7–10 + ponavljanje pobednika). Prve pretplate stižu (istek 7-dnevnog probnog perioda).</li>
+    <li><span class="day">Dan 14:</span> Ako je neki video prešao 20k pregleda — ubaci 100–200 € oglasa iza tog videa (Meta/TikTok), ne iza novog.</li>
+  </ol>
+  <div class="tip">💡 <b>Pravilo:</b> ne pravi nove kanale dok ne objaviš 10 videa. Bolje 10 videa na jednom nalogu nego 3 na tri.</div>
+</div>
+
+<h2>🎬 10 TikTok / Reels scenarija</h2>
+<p class="mini">Format: vertikalno, 15–30 s, snimljeno telefonom u tvom stanu. Ne treba montaža — treba iskren „aha" momenat. Prve 3 sekunde odlučuju sve.</p>
+<div id="scenarios"></div>
+
+<h2>💌 Poruka za influenserke</h2>
+<div class="card">
+  <span class="tag">Instagram DM · srpski</span>
+  <pre id="inf-sr"></pre>
+  <div class="row"><button onclick="copyEl('inf-sr')">Kopiraj</button></div>
+</div>
+<div class="card">
+  <span class="tag">Instagram DM · engleski (UK)</span>
+  <pre id="inf-en"></pre>
+  <div class="row"><button onclick="copyEl('inf-en')">Kopiraj</button></div>
+</div>
+<div class="tip">
+  <b>Kako biraš influenserke:</b> mame sa 5.000–50.000 pratilaca, koje same objavljuju o bebama i domu. Veliki nalozi traže novac unapred — mikro nalozi pristaju na proviziju. Šalji 10 poruka dnevno; odgovoriće 2–3, prihvatiće 1–2. To je normalno.
+  <br /><br /><b>Ponuda:</b> 50% od svake pretplate prvih 3 meseca (3,50 € po korisniku mesečno) + doživotni besplatan Premium za nju. Ne plaćaš ništa unapred — plaćaš samo iz ostvarene prodaje.
+</div>
+
+<h2>👩‍👧 Objave za mama grupe</h2>
+<div class="card">
+  <span class="tag">Facebook grupa · srpski · „vrednost prva"</span>
+  <pre id="grp-sr1"></pre>
+  <div class="row"><button onclick="copyEl('grp-sr1')">Kopiraj</button></div>
+</div>
+<div class="card">
+  <span class="tag">Facebook grupa · srpski · kratka verzija</span>
+  <pre id="grp-sr2"></pre>
+  <div class="row"><button onclick="copyEl('grp-sr2')">Kopiraj</button></div>
+</div>
+<div class="card">
+  <span class="tag">UK mum group · engleski</span>
+  <pre id="grp-en"></pre>
+  <div class="row"><button onclick="copyEl('grp-en')">Kopiraj</button></div>
+</div>
+<div class="tip">⚠️ <b>Važno za grupe:</b> mnoge zabranjuju reklame. Zato prva verzija počinje savetom, a ne proizvodom — takve objave admini puštaju i članovi ih dele. Nikad ne postavljaj istu objavu u 20 grupa istog dana (Facebook to označi kao spam).</div>
+
+<h2>🏪 Poruka za brendove i prodavnice</h2>
+<div class="card">
+  <span class="tag">Email · srpski</span>
+  <pre id="brand-sr"></pre>
+  <div class="row"><button onclick="copyEl('brand-sr')">Kopiraj</button></div>
+</div>
+<p class="mini">Šalji tek kad u CRM-u imaš bar par stotina skenova — tada u prvom pasusu upiši prave brojke. Brojke prodaju, obećanja ne.</p>
+
+<h2>📊 Čemu da se nadaš (realno)</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Ako dovedeš</th><th>Registracija</th><th>Pretplata</th><th>Mesečno</th></tr></thead>
+    <tbody>
+      <tr><td>1.000 poseta</td><td>~250–350</td><td>15–35</td><td>105–245 €</td></tr>
+      <tr><td>5.000 poseta</td><td>~1.250–1.750</td><td>75–175</td><td>525–1.225 €</td></tr>
+      <tr><td>20.000 poseta</td><td>~5.000–7.000</td><td>300–700</td><td>2.100–4.900 €</td></tr>
+    </tbody>
+  </table>
+  <p class="mini" style="margin-top:10px">Jedan viralan video (100k+ pregleda) donosi 3.000–10.000 poseta. Zato je video kanal najbrži put — a ne oglasi.</p>
+</div>
+
+<p class="mini" style="margin-top:30px">Nicholas Family LTD · <a href="/admin.html">← Admin panel</a></p>
+
+<script>
+const S = [
+  { t: "Skener otkriva ono što ne vidiš", hook: "„Mislila sam da mi je dnevna soba bezbedna. AI je našao 6 opasnosti za bebu.”",
+    shots: ["Krupni kadar tvog lica, iznenađen izraz (3 s)","Okreni telefon: skeniraš sobu uživo, markeri iskaču","Zumiraj 2 najgora nalaza i pročitaj naglas","Završi: „Skeniraj svoju sobu — link u biografiji”"],
+    cap: "Skenirala sam svoju dnevnu sobu i ostala bez teksta 😳 Koliko vas ima ovo isto kod kuće?" },
+  { t: "Izazov za kuhinju", hook: "„Kladim se da tvoja kuhinja ima bar 5 opasnosti za dete.”",
+    shots: ["Ti stojiš u kuhinji: „Da probamo?”","Skeniranje uživo — brojač opasnosti raste","Pauziraj na svakoj: ručka šerpe, nož, utičnica","„Napiši u komentar koliko je našao kod tebe”"],
+    cap: "Izazov: skeniraj svoju kuhinju i napiši broj u komentar 👇 Ja sam imala 7." },
+  { t: "Flašica na ivici", hook: "„Ovo je razlog zašto flašica nikad ne sme da stoji na ivici stola.”",
+    shots: ["Krupni kadar flašice na ivici radne ploče","Skeniraj — aplikacija je označi i objasni zašto","Pročitaj objašnjenje sa ekrana","Pomeri flašicu: „Dve sekunde posla.”"],
+    cap: "Male stvari, velike posledice. Aplikacija objašnjava zašto — na tvom jeziku." },
+  { t: "Muž je rekao da preterujem", hook: "„Muž kaže da preterujem sa bezbednošću. Pustila sam AI da presudi.”",
+    shots: ["Ti: „Kaže da preterujem…”","Skeniranje dečje sobe zajedno","Rezultat: nekoliko kritičnih nalaza","Njegova reakcija / tvoj pogled u kameru"],
+    cap: "Presuda: nisam preterivala 😌 Ko još ima ovakve rasprave kod kuće?" },
+  { t: "3 stvari koje svi propuste", hook: "„3 opasnosti koje 90% roditelja ne primeti u svojoj kući.”",
+    shots: ["Broj 1: gajtan roletne (pokaži + skeniraj)","Broj 2: komoda bez zidnog ankera","Broj 3: dugmasta baterija u daljinskom","„Koju si ti imala?”"],
+    cap: "Treća me je najviše uplašila. Proveri svoju kuću za 2 minuta." },
+  { t: "Beba je počela da puzi", hook: "„Beba je počela da puzi. Evo šta sam uradila istog dana.”",
+    shots: ["Beba puzi (ili igračka na podu)","Spuštaš se na nivo bebe: „Ovako ona vidi svet”","Skeniraš iz tog ugla — nalazi se razlikuju","Rešavaš 2 stvari pred kamerom"],
+    cap: "Skeniraj iz visine deteta — vidiš potpuno drugu sobu. 👶" },
+  { t: "AI protiv mame", hook: "„Ja protiv AI: ko će naći više opasnosti u ovoj sobi?”",
+    shots: ["Podeljen ekran: ti nabrajaš naglas (odbrojavanje 30 s)","Zatim skeniranje","Poređenje rezultata — AI nađe ono što si propustila","Reakcija"],
+    cap: "Rezultat 4:7 za AI. Nisam ni znala za dve stvari 🫠" },
+  { t: "Skener hrane", hook: "„Da li beba od 8 meseci sme ovo? Slikala sam i dobila odgovor.”",
+    shots: ["Tanjir sa hranom / etiketa proizvoda","Slikaš kroz aplikaciju","Odgovor: alergeni, rizik gušenja, kako iseći","„Grožđe uvek po dužini na četvrtine!”"],
+    cap: "Provera hrane za 5 sekundi — po uzrastu deteta. Med ispod godinu dana = ne." },
+  { t: "Kod bake / u apartmanu", hook: "„Pre nego što pustiš dete kod bake — uradi ovo.”",
+    shots: ["Ulaziš u tuđi prostor sa detetom","Skeniraš dnevnu sobu bake","Nalazi: lekovi na dohvat, tepih, stepenice","„2 minuta, i mirna sam.”"],
+    cap: "Tuđi stan nije childproof. Skeniram svaki put — kod bake, u apartmanu, na odmoru." },
+  { t: "Pre / posle", hook: "„Soba za 10 minuta: pre i posle.”",
+    shots: ["Skeniranje: rezultat 45/100, crveni markeri","Ubrzano rešavaš stvari (time-lapse)","Ponovno skeniranje: 90/100, zeleno","Pogled u kameru + osmeh"],
+    cap: "Sa 45 na 90 za deset minuta. Aplikacija ti kaže tačno šta da uradiš." },
+];
+
+const HT = "#bezbednostdece #mamezanate #beba #childproofing #safenestai #roditeljstvo #mamablog #savetizamame";
+const HT_EN = "#childsafety #babyproofing #newmum #parentinghacks #safenestai #ukmums #toddlerlife";
+
+function link() {
+  const c = (document.getElementById("code").value || "").trim().replace(/[^A-Za-z0-9_-]/g, "");
+  return c ? "https://safenessai.co.uk/?ref=" + c : "https://safenessai.co.uk/";
+}
+function ime() { return (document.getElementById("ime").value || "").trim() || "[ime]"; }
+
+const TPL = {
+  "inf-sr": () => `Zdravo ${ime()}! 👋
+
+Pratim tvoj profil i način na koji pišeš o bebi i domu — zato ti se javljam prva.
+
+Napravili smo SafeNest AI: aplikaciju kojom roditelj skenira sobu telefonom, a AI prepozna opasnosti za dete (utičnice, oštre ivice, gajtani, stepenice, sitni predmeti) i objasni šta tačno da uradi. Radi na srpskom i na još 40 jezika.
+
+Predlog saradnje, bez obaveza:
+• Dobijaš doživotno besplatan Premium nalog — probaj je prvo sama
+• Ako ti se svidi i podeliš je, dobijaš svoj link i 50% od svake pretplate prva 3 meseca
+• Sve prodaje se prate automatski, vidiš svoju statistiku, isplata mesečno
+
+Tvoj link bi bio: ${link()}
+
+Ako te zanima, javi mi i šaljem ti pristup danas. Ako ne — hvala na vremenu i samo tako nastavi 🙏
+
+Aleksandar, Nicholas Family LTD`,
+
+  "inf-en": () => `Hi ${ime()}! 👋
+
+I follow your account and love how honestly you talk about motherhood — that's why I'm reaching out.
+
+We built SafeNest AI: parents scan any room with their phone camera and AI spots hazards for children (sockets, sharp edges, blind cords, stairs, choking hazards) and explains exactly what to fix. Works in English and 40+ other languages.
+
+A simple partnership, no strings:
+• You get a lifetime free Premium account — try it yourself first
+• If you like it and share it, you get your own link and 50% of every subscription for the first 3 months
+• Everything is tracked automatically, you see your own stats, paid monthly
+
+Your link would be: ${link()}
+
+If you're interested, just reply and I'll set you up today. If not — thanks for your time and keep doing what you do 🙏
+
+Aleksandar, Nicholas Family LTD`,
+
+  "grp-sr1": () => `Mame, jedna stvar koju sam naučila tek kad je moje dete prohodalo:
+
+Sedite na pod i pogledajte sobu iz visine deteta. Videćete potpuno drugu prostoriju — gajtane roletni, ivice stočića tačno u visini glave, utičnice, sitne delove igračaka starije dece.
+
+Tri stvari koje se najčešće previde:
+1. Komoda i TV bez zidnog ankera (prevrtanje je jedan od najčešćih uzroka teških povreda kod male dece)
+2. Gajtani roletni i zavesa — treba ih namotati visoko
+3. Dugmaste baterije u daljinskim i igračkama — poklopac mora da se otvara šrafcigerom
+
+Nama je pomoglo i to što smo napravili aplikaciju koja skenira sobu telefonom i sama nađe ovakve stvari (SafeNest AI, besplatno prvih 7 dana): ${link()}
+
+Ako ne želite aplikaciju, potpuno je u redu — samo uradite ono sa sedenjem na podu, iskreno pomaže. 💚`,
+
+  "grp-sr2": () => `Da li je neko probao da skenira dečju sobu telefonom? 📱
+
+Napravili smo aplikaciju koja kamerom prepozna opasnosti za dete — utičnice, oštre ivice, gajtane, stepenice, sitne predmete — i objasni šta da se uradi, na srpskom. Ima i proveru hrane po uzrastu (šta sme beba od 8 meseci, kako iseći grožđe...).
+
+Prvih 7 dana je besplatno, bez kartice: ${link()}
+
+Zanima me iskreno mišljenje mama — svaka kritika nam pomaže da je popravimo. 🙏`,
+
+  "grp-en": () => `Mums — a quick tip that changed how I see our living room:
+
+Sit on the floor at your child's height and look around. You'll notice a completely different room: blind cords, table corners exactly at head height, sockets, small toy parts from older siblings.
+
+The three most commonly missed hazards:
+1. Chests of drawers and TVs without wall anchors (tip-overs are a leading cause of serious injury in toddlers)
+2. Blind and curtain cords — they need to be wound up high
+3. Button batteries in remotes and toys — the cover should need a screwdriver
+
+We also built an app that scans a room with your phone camera and finds these things for you (SafeNest AI, 7 days free, no card): ${link()}
+
+If the app isn't for you, that's absolutely fine — just do the floor-level check, it genuinely helps. 💚`,
+
+  "brand-sr": () => `Poštovani,
+
+Pišem vam iz Nicholas Family LTD (London), autora aplikacije SafeNest AI — AI alata kojim roditelji skeniraju svoj dom telefonom i dobijaju listu opasnosti za dete, uz konkretno rešenje za svaku.
+
+Zašto vam pišem: kada naša aplikacija kod korisnika prepozna opasnost (npr. nezaštićenu utičnicu, oštru ivicu nameštaja ili stepenice bez kapije), u tom trenutku roditelju prikazujemo konkretno rešenje. To je najbolji mogući trenutak za preporuku vašeg proizvoda — korisnik upravo vidi problem koji vaš proizvod rešava.
+
+Naši brojevi do sada:
+• [broj] registrovanih korisnika
+• [broj] skeniranja prostora
+• Najčešće detektovane kategorije: [npr. struja, pad, oštre ivice]
+
+Predlog: vaši proizvodi u našim preporukama, uz jedan od dva modela — provizija po ostvarenoj prodaji, ili fiksna mesečna pozicija u kategoriji. Merenje je transparentno: vidite tačan broj prikaza i klikova ka vašoj prodavnici.
+
+Rado bih vam pokazao aplikaciju uživo, 15 minuta poziva je dovoljno.
+
+Srdačno,
+Aleksandar Stiljanović
+Nicholas Family LTD, London
+office@aichatbot.rs · https://safenessai.co.uk`,
+};
+
+function renderScenarios() {
+  document.getElementById("scenarios").innerHTML = S.map((s, i) => `
+    <div class="card">
+      <span class="tag">Scenario ${i + 1}</span>
+      <h3>${s.t}</h3>
+      <p class="mini"><b>Prve 3 sekunde (izgovori ovo):</b><br />${s.hook}</p>
+      <ol class="shots">${s.shots.map((x) => `<li>${x}</li>`).join("")}</ol>
+      <pre id="sc-${i}"></pre>
+      <div class="row"><button onclick="copyEl('sc-${i}')">Kopiraj opis + hashtagove</button></div>
+    </div>`).join("");
+}
+
+function refresh() {
+  document.getElementById("linkout").textContent = link();
+  for (const id in TPL) document.getElementById(id).textContent = TPL[id]();
+  S.forEach((s, i) => {
+    const el = document.getElementById("sc-" + i);
+    if (el) el.textContent = `${s.cap}\n\n👉 ${link()}\n\n${HT}`;
+  });
+}
+
+async function copyEl(id) {
+  const txt = document.getElementById(id).textContent;
+  try { await navigator.clipboard.writeText(txt); }
+  catch {
+    const ta = document.createElement("textarea");
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove();
+  }
+  const b = event.target; const old = b.textContent;
+  b.textContent = "✓ Kopirano"; setTimeout(() => (b.textContent = old), 1600);
+}
+
+renderScenarios();
+refresh();
+</script>
+</div></body></html>
