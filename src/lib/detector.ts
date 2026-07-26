@@ -1,5 +1,5 @@
 /**
- * Lokalna (in-browser) detekcija objekata — TensorFlow.js COCO-SSD.
+ * Lokalna (in-browser) detekcija objekata — YOLOv8n (primarno) / COCO-SSD (rezerva).
  * Model je SPAKOVAN U APLIKACIJU (public/model/) i služi se sa istog domena
  * kao i sajt — NEMA spoljnih preuzimanja u runtime-u, nema šta da padne.
  * WebGL ubrzanje na telefonu, bez API poziva — besplatno i neograničeno.
@@ -103,6 +103,14 @@ export let modelError: string | null = null;
 function loadModel(): Promise<CocoModel> {
   return (async () => {
     modelError = null;
+    // PRIMARNO: YOLOv8n (640×640) — znatno precizniji, manje generalizuje.
+    try {
+      const { YoloModel } = await import("./yolo");
+      return await YoloModel.load();
+    } catch (e) {
+      console.warn("YOLO nije mogao da se učita, prelazim na COCO-SSD:", e);
+    }
+    // REZERVA: COCO-SSD lite (300×300) — stariji, ali proveren
     const tf = await import("@tensorflow/tfjs");
     await tf.ready();
     const cocoSsd = await import("@tensorflow-models/coco-ssd");
