@@ -356,8 +356,8 @@ const D: Dict = {
   // Brend marketplace (preporuke partnerskih proizvoda)
   "shop.title": { en: "Recommended solutions", sr: "Preporučena rešenja" },
   "shop.note": {
-    en: "Products from our partner brands that solve this hazard. We may earn a commission.",
-    sr: "Proizvodi partnerskih brendova koji rešavaju ovu opasnost. Možemo zaraditi proviziju.",
+    en: "Products from our partner brands that solve this hazard. As an Amazon Associate, SafeNest AI earns from qualifying purchases.",
+    sr: "Proizvodi partnerskih brendova koji rešavaju ovu opasnost. Kao Amazon Associate, SafeNest AI zarađuje od kvalifikovanih kupovina.",
   },
   "shop.view": { en: "View", sr: "Pogledaj" },
   "shop.hide": { en: "Hide recommendations", sr: "Sakrij preporuke" },

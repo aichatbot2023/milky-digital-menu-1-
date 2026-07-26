@@ -82,8 +82,28 @@ export function productTitle(p: PartnerProduct): string {
   return isSr() ? p.title : (p.title_en ?? p.title);
 }
 
+/**
+ * Amazon Associates (UK) tag — kada stigne odobren tag (npr. "safenest-21"),
+ * upisati ga ovde: automatski se dodaje na SVAKI amazon.* link u katalogu
+ * koji ga već nema, pa linkovi u bazi ne moraju da se prepravljaju.
+ */
+const AMAZON_TAG = "";
+
+function withAffiliateTag(url: string): string {
+  if (!AMAZON_TAG) return url;
+  try {
+    const u = new URL(url);
+    if (/(^|\.)amazon\./.test(u.hostname) && !u.searchParams.has("tag")) {
+      u.searchParams.set("tag", AMAZON_TAG);
+    }
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** Otvori affiliate link partnera + zabeleži klik (obračun provizije). */
 export function openProduct(p: PartnerProduct) {
   track("click", getRef(), { product_id: String(p.id), brand: p.brand });
-  window.open(p.url, "_blank", "noopener");
+  window.open(withAffiliateTag(p.url), "_blank", "noopener");
 }
