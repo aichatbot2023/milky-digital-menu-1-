@@ -63,6 +63,40 @@ code{background:#f1f5f9;padding:2px 7px;border-radius:6px;font-size:.85rem}
     <p class="muted">Prihod = prodaje × 7 €. „(direktno)" = korisnici bez referral koda. Link partnera: <code>https://safenessai.co.uk/?ref=KOD</code></p>
   </div>
 
+  <h2>🛍️ Brend marketplace — partnerski proizvodi</h2>
+  <div class="card">
+    <div class="row">
+      <select id="prcat" style="flex:1;min-width:140px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:1rem">
+        <option value="fall">Pad (kapije, zaštite prozora, ankeri)</option>
+        <option value="cutting">Sečenje (štitnici za uglove i ivice)</option>
+        <option value="electric">Struja (poklopci utičnica, kablovi)</option>
+        <option value="choking">Gušenje (brave za fioke, sitni predmeti)</option>
+        <option value="poisoning">Trovanje (brave za ormariće, sefovi za lekove)</option>
+        <option value="burn">Opekotine (zaštite šporeta, termometri)</option>
+        <option value="drowning">Davljenje (zaštite kade, ograde bazena)</option>
+        <option value="crush">Prignječenje (usporivači vrata, anti-tip)</option>
+        <option value="strangulation">Davljenje trakom (namotači kablova)</option>
+        <option value="other">Ostalo</option>
+      </select>
+      <input id="prbrand" placeholder="Brend (npr. IKEA)" />
+      <input id="prtitle" placeholder="Naziv (srpski)" />
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input id="prtitleen" placeholder="Naziv (engleski, opciono)" />
+      <input id="prurl" placeholder="Affiliate URL (https://...)" />
+      <input id="prprice" placeholder="Cena (npr. 9,99 €)" style="max-width:120px" />
+      <button onclick="addProduct()">+ Dodaj</button>
+    </div>
+    <p class="ok" id="prmsg"></p>
+  </div>
+  <div class="card">
+    <table id="prtable">
+      <thead><tr><th>Kategorija</th><th>Brend</th><th>Proizvod</th><th>Cena</th><th>Klikovi</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">Klik = korisnik otvorio proizvod iz aplikacije (osnov za obračun provizije sa brendom). Proizvodi se prikazuju uz opasnosti iste kategorije.</p>
+  </div>
+
   <h2>👤 Registrovani korisnici</h2>
   <div class="card">
     <table id="utable">
@@ -107,6 +141,37 @@ async function loadStats() {
   }
 }
 
+async function addProduct() {
+  document.getElementById("prmsg").textContent = "";
+  try {
+    await call({
+      action: "product-add",
+      admin_key: getKey(),
+      category: document.getElementById("prcat").value,
+      brand: document.getElementById("prbrand").value.trim(),
+      title: document.getElementById("prtitle").value.trim(),
+      title_en: document.getElementById("prtitleen").value.trim() || null,
+      url: document.getElementById("prurl").value.trim(),
+      price: document.getElementById("prprice").value.trim() || null,
+    });
+    document.getElementById("prmsg").textContent = "✓ Proizvod dodat — odmah je vidljiv u aplikaciji.";
+    for (const id of ["prbrand", "prtitle", "prtitleen", "prurl", "prprice"]) document.getElementById(id).value = "";
+    loadStats();
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+}
+
+async function delProduct(id) {
+  if (!confirm("Ukloniti proizvod #" + id + " iz aplikacije?")) return;
+  try {
+    await call({ action: "product-del", admin_key: getKey(), id });
+    loadStats();
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+}
+
 async function createPartner() {
   document.getElementById("created").textContent = "";
   try {
@@ -148,6 +213,19 @@ function render(data) {
   }
 
   const esc = (x) => String(x ?? "").replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+
+  const CATS = { fall: "Pad", cutting: "Sečenje", electric: "Struja", choking: "Gušenje",
+    poisoning: "Trovanje", burn: "Opekotine", drowning: "Davljenje", crush: "Prignječenje",
+    strangulation: "Davljenje trakom", other: "Ostalo" };
+  const prtbody = document.querySelector("#prtable tbody");
+  prtbody.innerHTML = "";
+  for (const p of (data.products ?? []).filter((p) => p.active)) {
+    prtbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${CATS[p.category] ?? esc(p.category)}</td><td>${esc(p.brand)}</td>` +
+      `<td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a></td>` +
+      `<td>${esc(p.price) || "—"}</td><td><b>${p.clicks}</b></td>` +
+      `<td><button onclick="delProduct(${p.id})" style="background:#b91c1c;padding:6px 10px;font-size:.8rem">Ukloni</button></td></tr>`);
+  }
   const utbody = document.querySelector("#utable tbody");
   utbody.innerHTML = "";
   for (const u of data.users ?? []) {

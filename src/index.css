@@ -476,6 +476,51 @@ body {
   }
 }
 
+/* Brend marketplace — preporuke partnerskih proizvoda u detaljima opasnosti */
+.shop { margin-top: 4px; }
+.shop-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.shop-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: #f0fdfa;
+  border: 1.5px solid #99f6e4;
+  border-radius: 12px;
+  padding: 11px 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.shop-item:active { background: #ccfbf1; }
+.shop-brand {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0f766e;
+}
+.shop-name { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
+.shop-cta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+.shop-note { font-size: 0.72rem; color: #94a3b8; margin-top: 8px; line-height: 1.4; }
+.shop-toggle {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 0;
+  text-decoration: underline;
+  font-family: inherit;
+}
+
 /* Registracija — obavezan nalog pre skeniranja */
 .register-screen {
   min-height: 100dvh;

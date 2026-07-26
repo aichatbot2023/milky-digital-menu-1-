@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Hazard } from "../types";
 import { SEVERITY_META } from "../types";
 import { categoryLabel, severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
+import {
+  openProduct,
+  productsForCategory,
+  productTitle,
+  recsEnabled,
+  setRecsEnabled,
+  type PartnerProduct,
+} from "../lib/products";
 
 interface Props {
   hazard: Hazard;
@@ -13,6 +21,27 @@ interface Props {
 export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) {
   const meta = SEVERITY_META[hazard.severity];
   const [voted, setVoted] = useState<null | "up" | "down">(null);
+  const [products, setProducts] = useState<PartnerProduct[]>([]);
+  const [recsOn, setRecsOn] = useState(() => recsEnabled());
+
+  // Partnerski proizvodi koji rešavaju OVU kategoriju opasnosti
+  useEffect(() => {
+    let alive = true;
+    if (recsOn) {
+      productsForCategory(hazard.category).then((p) => alive && setProducts(p));
+    } else {
+      setProducts([]);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [hazard.category, recsOn]);
+
+  const toggleRecs = () => {
+    const next = !recsOn;
+    setRecsEnabled(next);
+    setRecsOn(next);
+  };
 
   const vote = (correct: boolean) => {
     if (voted || !hazard.sourceClass) return;
@@ -55,6 +84,33 @@ export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) 
           <h3>{t("sheet.fix")}</h3>
           <p>{hazard.fix}</p>
         </section>
+
+        {recsOn && products.length > 0 && (
+          <section className="shop">
+            <h3>🛍️ {t("shop.title")}</h3>
+            <div className="shop-list">
+              {products.map((p) => (
+                <button key={p.id} className="shop-item" onClick={() => openProduct(p)}>
+                  <span className="shop-brand">{p.brand}</span>
+                  <span className="shop-name">{productTitle(p)}</span>
+                  <span className="shop-cta">
+                    {p.price && <b>{p.price}</b>}
+                    {t("shop.view")} →
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="shop-note">{t("shop.note")}</p>
+            <button className="shop-toggle" onClick={toggleRecs}>
+              {t("shop.hide")}
+            </button>
+          </section>
+        )}
+        {!recsOn && (
+          <button className="shop-toggle" onClick={toggleRecs}>
+            🛍️ {t("shop.show")}
+          </button>
+        )}
 
         {hazard.sourceClass && (
           <section className="feedback">

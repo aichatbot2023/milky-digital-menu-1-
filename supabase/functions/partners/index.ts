@@ -1,16 +1,21 @@
 /**
- * partners — referral/affiliate sistem + mini CRM.
+ * partners — referral/affiliate sistem + mini CRM + BREND MARKETPLACE.
  *
  * JAVNO (bez ključa):
- *   { action: "track", type: "visit"|"signup"|"sale", ref?: "KOD" }
+ *   { action: "track", type: "visit"|"signup"|"sale"|"click", ref?, meta? }
  *     - visit: neko je otvorio sajt preko ?ref=KOD
- *     - signup: novi korisnik pokrenuo aplikaciju (početak probnog perioda)
+ *     - signup: registracija korisnika (meta: name, email)
  *     - sale: rezervni put za prodaju (primarni upis ide iz verify-subscription)
+ *     - click: klik na partnerski proizvod (meta: product_id)
+ *   { action: "products" }  → katalog partnerskih proizvoda (za aplikaciju)
  *
  * ADMIN (traži admin_key == Deno.env ADMIN_KEY):
  *   { action: "create", admin_key, code, name }  → novi partner/influenser
  *   { action: "stats", admin_key }               → CRM: po partneru posete,
- *       registracije, prodaje, prihod, konverzija + ukupni brojevi
+ *       registracije, prodaje, prihod, konverzija + korisnici + klikovi
+ *   { action: "product-add", admin_key, category, brand, title, url,
+ *     price?, title_en? }                        → novi partnerski proizvod
+ *   { action: "product-del", admin_key, id }     → ukloni proizvod
  *
  * Baza: Supabase Postgres preko SUPABASE_DB_URL (auto-injektovan u edge
  * funkcije); tabele se same kreiraju pri prvom pozivu.
@@ -53,10 +58,27 @@ async function ensureTables() {
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
   await s`CREATE INDEX IF NOT EXISTS sn_events_ref_idx ON sn_events (ref_code, type)`;
+  // Brend marketplace: proizvodi partnera po kategoriji opasnosti
+  await s`CREATE TABLE IF NOT EXISTS sn_products (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    category text NOT NULL,
+    brand text NOT NULL,
+    title text NOT NULL,
+    title_en text,
+    url text NOT NULL,
+    price text,
+    active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`;
   ready = true;
 }
 
-const VALID_TYPES = new Set(['visit', 'signup', 'sale']);
+const VALID_TYPES = new Set(['visit', 'signup', 'sale', 'click']);
+// Kategorije opasnosti iz aplikacije (hazard.category)
+const VALID_CATEGORIES = new Set([
+  'fall', 'choking', 'poisoning', 'burn', 'electric', 'cutting',
+  'drowning', 'crush', 'strangulation', 'other',
+]);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -79,6 +101,13 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === 'products') {
+      const products = await s`
+        SELECT id, category, brand, title, title_en, url, price
+        FROM sn_products WHERE active ORDER BY category, id`;
+      return json({ products });
+    }
+
     // Admin akcije
     const adminKey = Deno.env.get('ADMIN_KEY');
     if (!adminKey) return json({ error: 'ADMIN_KEY nije podešen na serveru.' }, 501);
@@ -91,6 +120,29 @@ Deno.serve(async (req) => {
       await s`INSERT INTO sn_partners (code, name) VALUES (${code}, ${name})
               ON CONFLICT (code) DO UPDATE SET name = ${name}`;
       return json({ ok: true, link: `https://safenessai.co.uk/?ref=${code}` });
+    }
+
+    if (action === 'product-add') {
+      const category = String(body?.category ?? '');
+      if (!VALID_CATEGORIES.has(category)) return json({ error: 'Nepoznata kategorija' }, 400);
+      const brand = String(body?.brand ?? '').slice(0, 60);
+      const title = String(body?.title ?? '').slice(0, 140);
+      const titleEn = body?.title_en ? String(body.title_en).slice(0, 140) : null;
+      const url = String(body?.url ?? '').slice(0, 500);
+      const price = body?.price ? String(body.price).slice(0, 30) : null;
+      if (!brand || !title || !/^https?:\/\//.test(url)) {
+        return json({ error: 'brand, title i ispravan url su obavezni' }, 400);
+      }
+      const [row] = await s`INSERT INTO sn_products (category, brand, title, title_en, url, price)
+        VALUES (${category}, ${brand}, ${title}, ${titleEn}, ${url}, ${price}) RETURNING id`;
+      return json({ ok: true, id: row.id });
+    }
+
+    if (action === 'product-del') {
+      const id = Number(body?.id);
+      if (!Number.isInteger(id)) return json({ error: 'id je obavezan' }, 400);
+      await s`UPDATE sn_products SET active = false WHERE id = ${id}`;
+      return json({ ok: true });
     }
 
     if (action === 'stats') {
@@ -106,7 +158,17 @@ Deno.serve(async (req) => {
         FROM sn_events
         WHERE type = 'signup' AND meta ? 'email'
         ORDER BY created_at DESC LIMIT 500`;
-      return json({ partners, rows, totals, users });
+      // Marketplace: svi proizvodi + broj klikova po proizvodu
+      const products = await s`
+        SELECT p.id, p.category, p.brand, p.title, p.url, p.price, p.active,
+               coalesce(c.n, 0)::int AS clicks
+        FROM sn_products p
+        LEFT JOIN (
+          SELECT (meta->>'product_id')::bigint AS pid, count(*) AS n
+          FROM sn_events WHERE type = 'click' GROUP BY 1
+        ) c ON c.pid = p.id
+        ORDER BY p.active DESC, clicks DESC, p.id`;
+      return json({ partners, rows, totals, users, products });
     }
 
     return json({ error: 'Nepoznata akcija' }, 400);

@@ -353,6 +353,16 @@ const D: Dict = {
   "onb.skip": { en: "Skip", sr: "Preskoči" },
   "onb.start": { en: "Start protecting 🛡️", sr: "Počni zaštitu 🛡️" },
 
+  // Brend marketplace (preporuke partnerskih proizvoda)
+  "shop.title": { en: "Recommended solutions", sr: "Preporučena rešenja" },
+  "shop.note": {
+    en: "Products from our partner brands that solve this hazard. We may earn a commission.",
+    sr: "Proizvodi partnerskih brendova koji rešavaju ovu opasnost. Možemo zaraditi proviziju.",
+  },
+  "shop.view": { en: "View", sr: "Pogledaj" },
+  "shop.hide": { en: "Hide recommendations", sr: "Sakrij preporuke" },
+  "shop.show": { en: "Show partner recommendations", sr: "Prikaži preporuke partnera" },
+
   // Registracija (obavezna pre skeniranja)
   "reg.title": { en: "Create your free account", sr: "Napravite besplatan nalog" },
   "reg.sub": {

@@ -120,7 +120,7 @@ export function getRef(): string | null {
 
 /** Fire-and-forget događaj ka partners funkciji. */
 export function track(
-  type: "visit" | "signup" | "sale",
+  type: "visit" | "signup" | "sale" | "click",
   ref?: string | null,
   meta?: Record<string, string>,
 ) {
