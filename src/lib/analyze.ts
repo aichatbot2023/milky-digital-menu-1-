@@ -96,6 +96,7 @@ async function doAnalyze(
     facts: Array.isArray(h.facts) ? h.facts.filter((f) => typeof f === "string") : undefined,
     steps: Array.isArray(h.steps) ? h.steps.filter((s) => typeof s === "string") : undefined,
     reach: typeof h.reach === "number" ? h.reach : undefined,
+    solution: typeof h.solution === "string" && h.solution.trim() ? h.solution.trim() : undefined,
     id: `hz-${i}`,
     resolved: false,
   }));

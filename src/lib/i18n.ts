@@ -389,6 +389,7 @@ const D: Dict = {
     sr: "Rešili ste sve što smo pronašli. Skenirajte ponovo kada preuredite prostor.",
   },
   "focus.newScan": { en: "New scan", sr: "Novo skeniranje" },
+  "focus.searchFor": { en: "Find on Amazon:", sr: "Pronađi na Amazonu:" },
   "focus.wrong": { en: "This isn't right", sr: "Ovo nije tačno" },
 
   // Brend marketplace (preporuke partnerskih proizvoda)

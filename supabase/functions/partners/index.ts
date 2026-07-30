@@ -67,9 +67,12 @@ async function ensureTables() {
     title_en text,
     url text NOT NULL,
     price text,
+    keywords text,
     active boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
+  // Postojeće baze: dodaj kolonu bez rušenja podataka
+  await s`ALTER TABLE sn_products ADD COLUMN IF NOT EXISTS keywords text`;
   // Poklonjeni (free) nalozi: registracija sa ovim emailom = Premium
   await s`CREATE TABLE IF NOT EXISTS sn_gifts (
     email text PRIMARY KEY,
@@ -111,7 +114,7 @@ Deno.serve(async (req) => {
 
     if (action === 'products') {
       const products = await s`
-        SELECT id, category, brand, title, title_en, url, price
+        SELECT id, category, brand, title, title_en, url, price, keywords
         FROM sn_products WHERE active ORDER BY category, id`;
       return json({ products });
     }
@@ -146,11 +149,13 @@ Deno.serve(async (req) => {
       const titleEn = body?.title_en ? String(body.title_en).slice(0, 140) : null;
       const url = String(body?.url ?? '').slice(0, 500);
       const price = body?.price ? String(body.price).slice(0, 30) : null;
+      // Engleske ključne reči — po njima se proizvod vezuje za konkretan nalaz
+      const keywords = body?.keywords ? String(body.keywords).slice(0, 200) : null;
       if (!brand || !title || !/^https?:\/\//.test(url)) {
         return json({ error: 'brand, title i ispravan url su obavezni' }, 400);
       }
-      const [row] = await s`INSERT INTO sn_products (category, brand, title, title_en, url, price)
-        VALUES (${category}, ${brand}, ${title}, ${titleEn}, ${url}, ${price}) RETURNING id`;
+      const [row] = await s`INSERT INTO sn_products (category, brand, title, title_en, url, price, keywords)
+        VALUES (${category}, ${brand}, ${title}, ${titleEn}, ${url}, ${price}, ${keywords}) RETURNING id`;
       return json({ ok: true, id: row.id });
     }
 
@@ -191,7 +196,7 @@ Deno.serve(async (req) => {
         ORDER BY created_at DESC LIMIT 500`;
       // Marketplace: svi proizvodi + broj klikova po proizvodu
       const products = await s`
-        SELECT p.id, p.category, p.brand, p.title, p.url, p.price, p.active,
+        SELECT p.id, p.category, p.brand, p.title, p.url, p.price, p.keywords, p.active,
                coalesce(c.n, 0)::int AS clicks
         FROM sn_products p
         LEFT JOIN (

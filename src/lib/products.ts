@@ -15,6 +15,8 @@ export interface PartnerProduct {
   title_en: string | null;
   url: string;
   price: string | null;
+  /** Engleske ključne reči proizvoda — osnova za kontekstualno poklapanje. */
+  keywords?: string | null;
 }
 
 const PRODUCTS_URL =
@@ -77,11 +79,6 @@ export async function productsForCategory(category: string): Promise<PartnerProd
   return all.filter((p) => p.category === category).slice(0, 3);
 }
 
-/** Lokalizovan naziv proizvoda (sr default, en za ostale jezike). */
-export function productTitle(p: PartnerProduct): string {
-  return isSr() ? p.title : (p.title_en ?? p.title);
-}
-
 /**
  * Amazon Associates (UK) tag Nicholas Family LTD — dodaje se automatski na
  * SVAKI amazon.* link iz kataloga koji ga već nema, pa linkovi u bazi ne
@@ -100,6 +97,179 @@ function withAffiliateTag(url: string): string {
   } catch {
     return url;
   }
+}
+
+// ---------- KONTEKSTUALNA PREPORUKA ----------
+// Preporuka mora da rešava BAŠ uočeni predmet: vrela kafa → šolja koja se
+// ne prosipa, a NE „zaštita za šporet" samo zato što je ista kategorija.
+
+/**
+ * Rezervno rešenje kada cloud ne pošalje `solution` (npr. čisto lokalna
+ * detekcija): mapa iz COCO klase detektora u proizvod koji je rešava.
+ */
+const SOLUTION_BY_CLASS: Record<string, string> = {
+  cup: "spill proof insulated mug",
+  "wine glass": "unbreakable stemless glasses",
+  bottle: "cabinet safety lock",
+  knife: "knife block with lock",
+  scissors: "cabinet safety lock",
+  fork: "drawer safety lock",
+  spoon: "drawer safety lock",
+  oven: "oven door child lock",
+  microwave: "appliance door lock child",
+  toaster: "cord shortener kitchen",
+  sink: "tap thermometer child safe",
+  refrigerator: "fridge door lock child",
+  tv: "tv anti tip strap",
+  laptop: "cable management box",
+  remote: "battery compartment lock",
+  "cell phone": "cable management box",
+  keyboard: "cable tidy clips",
+  mouse: "cable tidy clips",
+  "potted plant": "plant pot child safety strap",
+  chair: "chair moving prevention child",
+  couch: "corner edge protectors",
+  bed: "bed guard rail toddler",
+  "dining table": "corner edge protectors",
+  toilet: "toilet seat lock child",
+  book: "bookcase anti tip strap",
+  vase: "furniture anti tip straps",
+  clock: "wall mount safety strap",
+  scissorsx: "cabinet safety lock",
+  "teddy bear": "toy storage box",
+  "hair drier": "outlet cover with cord",
+  toothbrush: "cabinet safety lock",
+  handbag: "bag hook wall child safe",
+  backpack: "bag hook wall child safe",
+  suitcase: "furniture anti tip straps",
+  dog: "pet gate indoor",
+  cat: "pet gate indoor",
+  bowl: "pet bowl mat raised",
+};
+
+/** Rezerva po kategoriji opasnosti kada ni klasa nije poznata. */
+const SOLUTION_BY_CATEGORY: Record<string, string> = {
+  burn: "child safety hob guard",
+  electric: "plug socket covers",
+  fall: "baby stair gate",
+  choking: "cabinet safety locks",
+  poisoning: "lockable medicine box",
+  cutting: "corner edge protectors",
+  crush: "furniture anti tip straps",
+  strangulation: "blind cord safety winder",
+  drowning: "non slip bath mat baby",
+  other: "baby proofing kit",
+};
+
+/** Engleski upit za proizvod koji rešava OVU opasnost. */
+export function solutionQuery(h: {
+  solution?: string;
+  sourceClass?: string;
+  category: string;
+}): string {
+  if (h.solution && h.solution.trim()) return h.solution.trim();
+  if (h.sourceClass && SOLUTION_BY_CLASS[h.sourceClass]) return SOLUTION_BY_CLASS[h.sourceClass];
+  return SOLUTION_BY_CATEGORY[h.category] ?? SOLUTION_BY_CATEGORY.other;
+}
+
+/**
+ * Reči koje se javljaju kod skoro svakog proizvoda za bebe — po njima se
+ * ne sme poklapati, inače „blind cord safety winder" povuče i „baby stair
+ * gate" samo zbog reči „safety".
+ */
+const STOPWORDS = new Set([
+  "safety", "safe", "baby", "babies", "child", "children", "kids", "toddler",
+  "proof", "proofing", "protector", "protectors", "guard", "guards", "for",
+  "the", "and", "with", "set", "pack", "home", "house",
+]);
+
+function tokens(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+}
+
+/** Amazon pretraga za tačno ovo rešenje (nosi naš affiliate tag). */
+export function amazonSearchUrl(query: string): string {
+  return `https://www.amazon.co.uk/s?k=${encodeURIComponent(query)}`;
+}
+
+export interface Recommendation {
+  key: string;
+  brand: string;
+  title: string;
+  price: string | null;
+  url: string;
+  /** true = pretraga na Amazonu, false = konkretan proizvod iz kataloga */
+  isSearch: boolean;
+  productId?: number;
+}
+
+/**
+ * Preporuke za KONKRETNU opasnost: prvo proizvodi iz kataloga čije se
+ * ključne reči poklapaju sa rešenjem (ne samo kategorija), pa uvek i
+ * ciljana Amazon pretraga da roditelj nikad ne ostane bez rešenja.
+ */
+export async function recommendationsFor(h: {
+  solution?: string;
+  sourceClass?: string;
+  category: string;
+  label: string;
+}): Promise<Recommendation[]> {
+  if (!recsEnabled()) return [];
+  const query = solutionQuery(h);
+  const want = new Set(tokens(query));
+  const all = await fetchCatalog();
+
+  const scored = all
+    .map((p) => {
+      const hay = tokens(`${p.keywords ?? ""} ${p.title_en ?? ""} ${p.title}`);
+      const overlap = hay.filter((w) => want.has(w)).length;
+      // Kategorija je slab signal — sama po sebi ne kvalifikuje proizvod
+      const score = overlap * 10 + (p.category === h.category ? 1 : 0);
+      return { p, score, overlap };
+    })
+    // Bez ijedne zajedničke reči proizvod NIJE u kontekstu → ne prikazuj ga
+    .filter((x) => x.overlap > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2);
+
+  const out: Recommendation[] = scored.map(({ p }) => ({
+    key: `p${p.id}`,
+    brand: p.brand,
+    title: isSr() ? p.title : (p.title_en ?? p.title),
+    price: p.price,
+    url: p.url,
+    isSearch: false,
+    productId: p.id,
+  }));
+
+  out.push({
+    key: `s:${query}`,
+    brand: "Amazon UK",
+    title: query,
+    price: null,
+    url: amazonSearchUrl(query),
+    isSearch: true,
+  });
+  return out;
+}
+
+/** Otvori preporuku + zabeleži klik (kontekst: proizvod ili pretraga). */
+export function openRecommendation(r: Recommendation) {
+  track("click", getRef(), {
+    product_id: r.productId ? String(r.productId) : "search",
+    brand: r.brand,
+    query: r.isSearch ? r.title : "",
+  });
+  window.open(withAffiliateTag(r.url), "_blank", "noopener");
+}
+
+/** Lokalizovan naziv proizvoda (sr default, en za ostale jezike). */
+export function productTitle(p: PartnerProduct): string {
+  return isSr() ? p.title : (p.title_en ?? p.title);
 }
 
 /** Otvori affiliate link partnera + zabeleži klik (obračun provizije). */

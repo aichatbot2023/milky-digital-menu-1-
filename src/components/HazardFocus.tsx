@@ -5,11 +5,9 @@ import { severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
 import { factsFor, liveScore, rankHazards, stepsFor, type RankedHazard } from "../lib/priority";
 import {
-  openProduct,
-  productsForCategory,
-  productTitle,
-  recsEnabled,
-  type PartnerProduct,
+  openRecommendation,
+  recommendationsFor,
+  type Recommendation,
 } from "../lib/products";
 
 interface Props {
@@ -79,19 +77,19 @@ function FocusCard({
   const crop = useCrop(imageDataUrl, h.box);
   const facts = useMemo(() => factsFor(h), [h]);
   const steps = useMemo(() => stepsFor(h), [h]);
-  const [products, setProducts] = useState<PartnerProduct[]>([]);
+  const [products, setProducts] = useState<Recommendation[]>([]);
   const [showShop, setShowShop] = useState(false);
   const [voted, setVoted] = useState(false);
 
+  // Preporuke se vezuju za KONKRETAN predmet (rešenje koje AI predloži),
+  // ne za široku kategoriju — vrela kafa traži šolju, ne zaštitu šporeta
   useEffect(() => {
     let alive = true;
-    if (recsEnabled()) {
-      productsForCategory(h.category).then((p) => alive && setProducts(p));
-    }
+    recommendationsFor(h).then((r) => alive && setProducts(r));
     return () => {
       alive = false;
     };
-  }, [h.category]);
+  }, [h.id, h.solution, h.sourceClass, h.category]);
 
   return (
     <article className="focus-card">
@@ -144,9 +142,15 @@ function FocusCard({
               <h3>{t("focus.safer")}</h3>
               <div className="alt-list">
                 {products.map((p) => (
-                  <button key={p.id} className="alt-item" onClick={() => openProduct(p)}>
+                  <button
+                    key={p.key}
+                    className={`alt-item${p.isSearch ? " alt-search" : ""}`}
+                    onClick={() => openRecommendation(p)}
+                  >
                     <span className="alt-brand">{p.brand}</span>
-                    <span className="alt-name">{productTitle(p)}</span>
+                    <span className="alt-name">
+                      {p.isSearch ? `${t("focus.searchFor")} „${p.title}"` : p.title}
+                    </span>
                     <span className="alt-foot">
                       {p.price && <b>{p.price}</b>}
                       <span className="alt-cta">{t("focus.view")} →</span>

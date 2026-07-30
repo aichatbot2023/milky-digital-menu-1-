@@ -49,6 +49,12 @@ export interface Hazard {
   steps?: string[];
   /** Procena dohvatljivosti detetu 1–10 (cloud). */
   reach?: number;
+  /**
+   * ENGLESKE ključne reči proizvoda koji rešava BAŠ OVU opasnost
+   * (npr. "spill proof insulated mug" za vrelu kafu) — osnova za
+   * kontekstualnu preporuku i Amazon pretragu.
+   */
+  solution?: string;
 }
 
 export interface AnalysisResult {

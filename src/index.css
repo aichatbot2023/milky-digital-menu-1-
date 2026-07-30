@@ -1047,3 +1047,5 @@ body {
   text-decoration: underline;
   font-family: inherit;
 }
+
+.alt-search { background: #f0fdfa; border-color: #99f6e4; }

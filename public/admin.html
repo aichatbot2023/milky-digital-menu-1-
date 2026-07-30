@@ -131,13 +131,14 @@ code{background:#f1f5f9;padding:2px 7px;border-radius:6px;font-size:.85rem}
       <input id="prtitleen" placeholder="Naziv (engleski, opciono)" />
       <input id="prurl" placeholder="Affiliate URL (https://...)" />
       <input id="prprice" placeholder="Cena (npr. 9,99 €)" style="max-width:120px" />
+      <input id="prkw" placeholder="Ključne reči (engleski): spill proof mug" />
       <button onclick="addProduct()">+ Dodaj</button>
     </div>
     <p class="ok" id="prmsg"></p>
   </div>
   <div class="card">
     <table id="prtable">
-      <thead><tr><th>Kategorija</th><th>Brend</th><th>Proizvod</th><th>Cena</th><th>Klikovi</th><th></th></tr></thead>
+      <thead><tr><th>Kategorija</th><th>Brend</th><th>Proizvod</th><th>Cena</th><th>Ključne reči</th><th>Klikovi</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
     <p class="muted">Klik = korisnik otvorio proizvod iz aplikacije (osnov za obračun provizije sa brendom). Proizvodi se prikazuju uz opasnosti iste kategorije.</p>
@@ -199,9 +200,10 @@ async function addProduct() {
       title_en: document.getElementById("prtitleen").value.trim() || null,
       url: document.getElementById("prurl").value.trim(),
       price: document.getElementById("prprice").value.trim() || null,
+      keywords: document.getElementById("prkw").value.trim() || null,
     });
     document.getElementById("prmsg").textContent = "✓ Proizvod dodat — odmah je vidljiv u aplikaciji.";
-    for (const id of ["prbrand", "prtitle", "prtitleen", "prurl", "prprice"]) document.getElementById(id).value = "";
+    for (const id of ["prbrand", "prtitle", "prtitleen", "prurl", "prprice", "prkw"]) document.getElementById(id).value = "";
     loadStats();
   } catch (e) {
     document.getElementById("err").textContent = e.message;
@@ -290,7 +292,7 @@ function render(data) {
     prtbody.insertAdjacentHTML("beforeend",
       `<tr><td>${CATS[p.category] ?? esc(p.category)}</td><td>${esc(p.brand)}</td>` +
       `<td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a></td>` +
-      `<td>${esc(p.price) || "—"}</td><td><b>${p.clicks}</b></td>` +
+      `<td>${esc(p.price) || "—"}</td><td class="muted">${esc(p.keywords) || "—"}</td><td><b>${p.clicks}</b></td>` +
       `<td><button onclick="delProduct(${p.id})" style="background:#b91c1c;padding:6px 10px;font-size:.8rem">Ukloni</button></td></tr>`);
   }
   const utbody = document.querySelector("#utable tbody");

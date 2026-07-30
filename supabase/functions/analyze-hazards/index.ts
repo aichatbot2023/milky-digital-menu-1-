@@ -134,6 +134,7 @@ Return ONLY valid JSON (no markdown fences) of this exact shape:
     "facts": ["2-4 VERY short factual bullets in ${language}, max 6 words each, e.g. \\"Estimated temperature: 78-85°C\\", \\"Within the child's reach\\", \\"Tips over easily\\""],
     "steps": ["1-3 imperative actions in ${language}, max 10 words each, e.g. \\"Move the cup 30 cm from the edge\\""],
     "reach": 1-10 (how easily THIS child can reach it: 10 = on the floor or at child height, 1 = high on a ceiling),
+    "solution": "ALWAYS IN ENGLISH, 2-5 words naming the PRODUCT that fixes THIS EXACT hazard, as a shopper would search for it. It must solve the specific object, not the broad category. Examples: hot coffee cup -> \\"spill proof insulated mug\\"; blind cord -> \\"blind cord safety winder\\"; sharp table corner -> \\"corner edge protectors\\"; open socket -> \\"plug socket covers\\"; unsecured dresser -> \\"furniture anti tip straps\\"; stairs -> \\"baby stair gate\\"; medicines within reach -> \\"lockable medicine box\\". If no product can fix it, use an empty string.",
     "stats": "real injury statistics with source (WHO/CDC/EU), written in ${language}; never invented numbers",
     "fix": "one concrete step doable right now, in ${language}"
   }],
