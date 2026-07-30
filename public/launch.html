@@ -50,6 +50,19 @@ a{color:var(--teal)}
   <p class="mini" style="margin-top:8px">Link: <b id="linkout">https://safenessai.co.uk/</b></p>
 </div>
 
+<h2>🛒 Amazon UK — čeklista povezivanja</h2>
+<div class="card">
+  <p class="mini">Registracija je besplatna i traje ~15 minuta. Čekiraj korake — stanje se pamti na ovom telefonu.</p>
+  <div class="row" style="margin-bottom:6px">
+    <a href="https://affiliate-program.amazon.co.uk/" target="_blank" rel="noopener"
+       style="background:#0f766e;color:#fff;border-radius:10px;padding:11px 16px;font-weight:800;text-decoration:none">
+      → Otvori registraciju (Amazon Associates UK)
+    </a>
+  </div>
+  <p class="mini"><b>affiliate-program.amazon.co.uk</b> — obavezno <b>.co.uk</b> verzija (UK firma, UK kupci, isplata u £).</p>
+  <div id="amzlist"></div>
+</div>
+
 <h2>📅 Plan prvih 14 dana</h2>
 <div class="card">
   <ol class="plan">
@@ -126,6 +139,22 @@ a{color:var(--teal)}
 <p class="mini" style="margin-top:30px">Nicholas Family LTD · <a href="/admin.html">← Admin panel</a></p>
 
 <script>
+const AMZ = [
+  ["Registruj se preko dugmeta iznad", "Prijavi se postojećim Amazon nalogom ili napravi novi. Koristi poslovni email (office@aichatbot.rs)."],
+  ["Account Information", "Ime i adresa primaoca isplate: <b>Nicholas Family LTD</b>, adresa firme u Londonu. Telefon i email firme."],
+  ["Website and Mobile App List", "Upiši <b>https://safenessai.co.uk</b> (i aplikaciju kao mobile app ako pita). Ne dodaji sajtove koje ne posedujete."],
+  ["Associates Store ID", "Predloži <b>safenest-21</b> (UK tagovi se završavaju na <b>-21</b>). Ako je zauzet, probaj safenestai-21 ili nicholasfam-21."],
+  ["Opis sajta (šta radite)", "Nalepi: <i>„AI-powered child safety app. Parents scan rooms with their phone camera; the app detects hazards for children and recommends relevant safety products (socket covers, corner protectors, stair gates).\"</i>"],
+  ["Kako dovodite posetioce", "Označi: <b>Social media / apps</b> (TikTok, Instagram), <b>organic search</b>. Za mesečne posete izaberi najmanji opseg — to nije obećanje, samo procena."],
+  ["Kako zarađujete i birate proizvode", "Nalepi: <i>„Subscription app; product recommendations are shown contextually when our AI detects a matching hazard in the user's home.\"</i>"],
+  ["Verifikacija telefonom", "Amazon zove ili šalje SMS sa PIN kodom — unesi ga i nalog je otvoren."],
+  ["Payment & Tax (može i kasnije)", "Bankovni račun firme (GBP) i tax interview: <b>Company / Non-individual</b>, podaci Nicholas Family LTD. Dok ovo ne popuniš, provizija se skuplja ali se ne isplaćuje."],
+  ["POŠALJI MI TAG ✅", "Kad dobiješ Store ID (npr. <b>safenest-21</b>), pošalji mi ga — ubacujem ga u aplikaciju i SVI Amazon linkovi automatski dobijaju tvoju proviziju."],
+  ["Zameni pretrage pravim proizvodima", "U Amazonu otvori konkretan proizvod → <b>SiteStripe</b> traka na vrhu → <b>Text</b> → kopiraj link. Nalepi ga u admin panelu (Brend marketplace). Konkretan proizvod konvertuje 3–5× bolje od stranice pretrage."],
+  ["Prvih 3 prodaje u 180 dana", "Amazon zatvara nalog bez 3 kvalifikovane kupovine za 6 meseci. Zato se registruj tek kad kreneš sa objavama — sat kuca od dana odobrenja."],
+  ["Nikad ne klikći sopstvene linkove", "Ni ti, ni porodica, ni sa istog Wi-Fi-ja. Amazon to detektuje i gasi nalog bez isplate."],
+];
+
 const S = [
   { t: "Skener otkriva ono što ne vidiš", hook: "„Mislila sam da mi je dnevna soba bezbedna. AI je našao 6 opasnosti za bebu.”",
     shots: ["Krupni kadar tvog lica, iznenađen izraz (3 s)","Okreni telefon: skeniraš sobu uživo, markeri iskaču","Zumiraj 2 najgora nalaza i pročitaj naglas","Završi: „Skeniraj svoju sobu — link u biografiji”"],
@@ -258,6 +287,26 @@ Nicholas Family LTD, London
 office@aichatbot.rs · https://safenessai.co.uk`,
 };
 
+function renderAmz() {
+  const done = JSON.parse(localStorage.getItem("sn.amz") || "[]");
+  document.getElementById("amzlist").innerHTML = AMZ.map((a, i) => `
+    <label style="display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-top:1px solid #e2e8f0;cursor:pointer">
+      <input type="checkbox" data-i="${i}" ${done.includes(i) ? "checked" : ""}
+             style="width:22px;height:22px;flex-shrink:0;margin-top:2px;accent-color:#0f766e" />
+      <span><b style="${done.includes(i) ? "text-decoration:line-through;color:#94a3b8" : ""}">${i + 1}. ${a[0]}</b>
+      <br /><span class="mini">${a[1]}</span></span>
+    </label>`).join("");
+  document.querySelectorAll("#amzlist input").forEach((el) => {
+    el.onchange = () => {
+      const cur = JSON.parse(localStorage.getItem("sn.amz") || "[]");
+      const i = +el.dataset.i;
+      const next = el.checked ? [...new Set([...cur, i])] : cur.filter((x) => x !== i);
+      localStorage.setItem("sn.amz", JSON.stringify(next));
+      renderAmz();
+    };
+  });
+}
+
 function renderScenarios() {
   document.getElementById("scenarios").innerHTML = S.map((s, i) => `
     <div class="card">
@@ -291,6 +340,7 @@ async function copyEl(id) {
   b.textContent = "✓ Kopirano"; setTimeout(() => (b.textContent = old), 1600);
 }
 
+renderAmz();
 renderScenarios();
 refresh();
 </script>
