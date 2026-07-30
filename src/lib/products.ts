@@ -83,11 +83,11 @@ export function productTitle(p: PartnerProduct): string {
 }
 
 /**
- * Amazon Associates (UK) tag — kada stigne odobren tag (npr. "safenest-21"),
- * upisati ga ovde: automatski se dodaje na SVAKI amazon.* link u katalogu
- * koji ga već nema, pa linkovi u bazi ne moraju da se prepravljaju.
+ * Amazon Associates (UK) tag Nicholas Family LTD — dodaje se automatski na
+ * SVAKI amazon.* link iz kataloga koji ga već nema, pa linkovi u bazi ne
+ * moraju da se prepravljaju.
  */
-const AMAZON_TAG = "";
+const AMAZON_TAG = "safenest0b-21";
 
 function withAffiliateTag(url: string): string {
   if (!AMAZON_TAG) return url;
