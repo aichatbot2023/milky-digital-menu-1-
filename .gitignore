@@ -11,3 +11,4 @@ backend/uploads/
 .DS_Store
 Thumbs.db
 tsconfig.tsbuildinfo
+e2e-full.mjs
