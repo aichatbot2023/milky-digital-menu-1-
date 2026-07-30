@@ -24,7 +24,9 @@ import {
   type SubStatus,
 } from "./lib/subscription";
 import { Register } from "./components/Register";
-import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, severityLabel, t } from "./lib/i18n";
+import { Analyzing } from "./components/Analyzing";
+import { HazardFocus } from "./components/HazardFocus";
+import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { Onboarding, onboardingSeen } from "./components/Onboarding";
 import { ChecklistView } from "./components/ChecklistView";
@@ -33,8 +35,6 @@ import { ChildProfiles } from "./components/ChildProfiles";
 import { FoodResult } from "./components/FoodResult";
 import { Paywall } from "./components/Paywall";
 import { VoiceAssistant } from "./components/VoiceAssistant";
-import { HazardOverlay } from "./components/HazardOverlay";
-import { HazardDetailSheet } from "./components/HazardDetailSheet";
 import { LiveScan } from "./components/LiveScan";
 import { ScanHistory } from "./components/ScanHistory";
 
@@ -44,7 +44,6 @@ export default function App() {
   const [view, setView] = useState<View>("home");
   const [langReady, setLangReady] = useState(() => langChosen());
   const [onboarded, setOnboarded] = useState(() => onboardingSeen());
-  const [shareMsg, setShareMsg] = useState(false);
   useEffect(() => applyDir(), [langReady]);
   const [profiles, setProfiles] = useState<ChildProfile[]>(() => loadProfiles());
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
@@ -53,7 +52,6 @@ export default function App() {
   const [roomType, setRoomType] = useState<RoomType>("living_room");
   const [scans, setScans] = useState<ScanRecord[]>(() => loadScans());
   const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
-  const [selectedHazardId, setSelectedHazardId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<SubStatus>(() => getStatus());
   const [showPaywall, setShowPaywall] = useState(false);
@@ -61,6 +59,8 @@ export default function App() {
   const [foodImage, setFoodImage] = useState<string | null>(null);
   const [foodResult, setFoodResult] = useState<FoodAnalysis | null>(null);
   const [foodOffline, setFoodOffline] = useState<string[] | null>(null);
+  /** Kadar koji se upravo analizira — prikazuje se na ekranu analize. */
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
 
   // Kapija za skeniranje: probni period (7 dana) ili aktivna pretplata
   const requireAccess = (): boolean => {
@@ -112,6 +112,7 @@ export default function App() {
     setError(null);
     const photo = await capturePhoto();
     if (!photo) return;
+    setPendingImage(photo);
     setView("scanning");
     try {
       const imageDataUrl = await downscaleImage(photo);
@@ -182,7 +183,6 @@ export default function App() {
       saveScan(scan);
       setScans(loadScans());
       setCurrentScan(scan);
-      setSelectedHazardId(null);
       trackScan("photo", roomType, age, result.hazards.map((h) => h.category), result.hazards.length);
       setView("result");
     } catch (e: any) {
@@ -243,8 +243,6 @@ export default function App() {
     }
     try {
       await navigator.clipboard.writeText(text);
-      setShareMsg(true);
-      setTimeout(() => setShareMsg(false), 4000);
     } catch {
       /* ignoriši */
     }
@@ -265,9 +263,6 @@ export default function App() {
     updateScan(next);
     setScans(loadScans());
   };
-
-  const selectedHazard =
-    currentScan?.result.hazards.find((h) => h.id === selectedHazardId) ?? null;
 
   if (!langReady) {
     return <LanguagePicker onDone={() => setLangReady(true)} />;
@@ -319,8 +314,7 @@ export default function App() {
           saveScan(scan);
           setScans(loadScans());
           setCurrentScan(scan);
-          setSelectedHazardId(null);
-          trackScan(
+              trackScan(
             "live",
             roomType,
             selectedChild?.age ?? "1-2y",
@@ -335,13 +329,11 @@ export default function App() {
 
   if (view === "food-scanning") {
     return (
-      <div className="app center">
-        <div className="spinner" />
-        <h2>{t("food.checking")}</h2>
-        <p className="muted">
-          {t("food.checkingSub")} {ageLabel(selectedChild?.age ?? "1-2y")}.
-        </p>
-      </div>
+      <Analyzing
+        imageDataUrl={foodImage}
+        title={t("analyzing.food")}
+        steps={[t("analyzing.f1"), t("analyzing.f2"), t("analyzing.f3"), t("analyzing.f4")]}
+      />
     );
   }
 
@@ -360,97 +352,40 @@ export default function App() {
 
   if (view === "scanning") {
     return (
-      <div className="app center">
-        <div className="spinner" />
-        <h2>{t("scanning.title")}</h2>
-        <p className="muted">
-          {t("scanning.sub1")} {selectedChild ? selectedChild.name : t("scanning.child")}.{" "}
-          {t("scanning.sub2")}
-        </p>
-      </div>
+      <Analyzing
+        imageDataUrl={pendingImage}
+        title={t("analyzing.title")}
+        steps={[
+          t("analyzing.s1"),
+          t("analyzing.s2"),
+          t("analyzing.s3"),
+          t("analyzing.s4"),
+          t("analyzing.s5"),
+        ]}
+      />
     );
   }
 
+  // Rezultat: JEDNA opasnost u fokusu, po stvarnom riziku za dete —
+  // ne lista svih detekcija (to je debug prikaz, ne korisničko iskustvo)
   if (view === "result" && currentScan) {
-    const { hazards, safety_score, summary } = currentScan.result;
     return (
-      <div className="app">
-        <header className="topbar">
-          <button className="btn btn-ghost" onClick={() => setView("home")}>
-            {t("back")}
-          </button>
-          <span className="score" data-level={safety_score >= 70 ? "ok" : safety_score >= 40 ? "mid" : "bad"}>
-            {t("safety")}: {safety_score}/100
-          </span>
-        </header>
-
-        <HazardOverlay
-          imageUrl={currentScan.imageDataUrl}
-          hazards={hazards}
-          selectedId={selectedHazardId}
-          onSelect={setSelectedHazardId}
+      <>
+        <HazardFocus
+          imageDataUrl={currentScan.imageDataUrl}
+          hazards={currentScan.result.hazards}
+          baseScore={currentScan.result.safety_score}
+          ageGroup={selectedChild?.age ?? "1-2y"}
+          onToggleResolved={toggleResolved}
+          onBack={() => setView("home")}
+          onShare={shareReport}
         />
-
-        <p className="summary">{summary}</p>
-
-        {hazards.length > 0 && (
-          <div className="stats-row">
-            {(["critical", "high", "medium", "low"] as const).map((s) => {
-              const n = hazards.filter((h) => h.severity === s).length;
-              if (n === 0) return null;
-              return (
-                <span key={s} className="stat-chip" data-sev={s}>
-                  {severityLabel(s)} {n}
-                </span>
-              );
-            })}
-            <span className="stat-chip stat-total">{t("stats.total")} {hazards.length}</span>
-            <span className="stat-chip stat-done">
-              {t("stats.resolved")} {hazards.filter((h) => h.resolved).length}
-            </span>
-          </div>
-        )}
-
-        <div className="share-row">
-          <button className="btn btn-outline" onClick={shareReport}>
-            {t("share.btn")}
-          </button>
-          {shareMsg && <span className="ok">{t("share.copied")}</span>}
-        </div>
-
-        <div className="hazard-list">
-          {hazards.length === 0 && (
-            <p className="ok">{t("result.none")}</p>
-          )}
-          {hazards.map((h, i) => (
-            <button
-              key={h.id}
-              className={`hazard-row${h.resolved ? " resolved" : ""}`}
-              onClick={() => setSelectedHazardId(h.id)}
-            >
-              <span className="hazard-num">{h.resolved ? "✓" : i + 1}</span>
-              <span className="hazard-row-label">{h.label}</span>
-              <span className="hazard-row-sev" data-sev={h.severity}>
-                {severityLabel(h.severity)}
-              </span>
-            </button>
-          ))}
-        </div>
-
         <VoiceAssistant
           roomType={currentScan.roomType}
           ageGroup={selectedChild?.age ?? "1-2y"}
-          hazards={hazards}
+          hazards={currentScan.result.hazards}
         />
-
-        {selectedHazard && (
-          <HazardDetailSheet
-            hazard={selectedHazard}
-            onClose={() => setSelectedHazardId(null)}
-            onToggleResolved={toggleResolved}
-          />
-        )}
-      </div>
+      </>
     );
   }
 
@@ -550,8 +485,7 @@ export default function App() {
         scans={scans}
         onOpen={(s) => {
           setCurrentScan(s);
-          setSelectedHazardId(null);
-          setView("result");
+              setView("result");
         }}
         onDelete={(id) => {
           deleteScan(id);

@@ -43,6 +43,12 @@ export interface Hazard {
   sourceClass?: string;
   /** Pouzdanost lokalne detekcije 0–1 (cloud nalazi je nemaju). */
   confidence?: number;
+  /** Kratke činjenice „zašto je opasno" (cloud) — npr. „Temperatura ~85 °C". */
+  facts?: string[];
+  /** Imperativni koraci „uradi odmah" (cloud). */
+  steps?: string[];
+  /** Procena dohvatljivosti detetu 1–10 (cloud). */
+  reach?: number;
 }
 
 export interface AnalysisResult {

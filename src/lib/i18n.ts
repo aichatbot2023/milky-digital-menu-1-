@@ -353,6 +353,44 @@ const D: Dict = {
   "onb.skip": { en: "Skip", sr: "Preskoči" },
   "onb.start": { en: "Start protecting 🛡️", sr: "Počni zaštitu 🛡️" },
 
+  // Ekran analize — koraci umesto praznog čekanja
+  "analyzing.title": { en: "Analysing your space", sr: "Analiziram vaš prostor" },
+  "analyzing.food": { en: "Analysing the food", sr: "Analiziram hranu" },
+  "analyzing.s1": { en: "Detecting objects", sr: "Prepoznajem predmete" },
+  "analyzing.s2": { en: "Estimating reach and height", sr: "Procenjujem dohvat i visinu" },
+  "analyzing.s3": { en: "Checking child safety", sr: "Proveravam bezbednost za dete" },
+  "analyzing.s4": { en: "Prioritising by risk", sr: "Rangiram po riziku" },
+  "analyzing.s5": { en: "Finding safer alternatives", sr: "Tražim sigurnije alternative" },
+  "analyzing.f1": { en: "Identifying the food", sr: "Prepoznajem namirnicu" },
+  "analyzing.f2": { en: "Checking ingredients and allergens", sr: "Proveravam sastojke i alergene" },
+  "analyzing.f3": { en: "Assessing choking risk", sr: "Procenjujem rizik od gušenja" },
+  "analyzing.f4": { en: "Preparing serving advice", sr: "Pripremam savet za serviranje" },
+  "analyzing.note": {
+    en: "This takes a few seconds. Keep the app open.",
+    sr: "Traje nekoliko sekundi. Ostavite aplikaciju otvorenu.",
+  },
+
+  // Fokus ekran — jedna opasnost, jedna akcija
+  "focus.priority": { en: "Priority", sr: "Prioritet" },
+  "focus.of": { en: "of", sr: "od" },
+  "focus.do": { en: "Do this now", sr: "Uradite odmah" },
+  "focus.why": { en: "Why this is dangerous", sr: "Zašto je ovo opasno" },
+  "focus.safer": { en: "Safer alternatives", sr: "Sigurnije alternative" },
+  "focus.saferBtn": { en: "See safer alternatives", sr: "Pogledaj sigurnije alternative" },
+  "focus.view": { en: "View", sr: "Pogledaj" },
+  "focus.fixed": { en: "Mark as fixed", sr: "Rešeno" },
+  "focus.remaining": { en: "Remaining:", sr: "Preostalo:" },
+  "focus.fixedCount": { en: "fixed", sr: "rešeno" },
+  "focus.allClear": { en: "All clear", sr: "Sve je rešeno" },
+  "focus.next": { en: "Next", sr: "Sledeće" },
+  "focus.doneTitle": { en: "This space is safe", sr: "Ovaj prostor je bezbedan" },
+  "focus.doneSub": {
+    en: "You fixed everything we found. Scan again after you rearrange the room.",
+    sr: "Rešili ste sve što smo pronašli. Skenirajte ponovo kada preuredite prostor.",
+  },
+  "focus.newScan": { en: "New scan", sr: "Novo skeniranje" },
+  "focus.wrong": { en: "This isn't right", sr: "Ovo nije tačno" },
+
   // Brend marketplace (preporuke partnerskih proizvoda)
   "shop.title": { en: "Recommended solutions", sr: "Preporučena rešenja" },
   "shop.note": {

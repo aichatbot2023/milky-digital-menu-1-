@@ -91,6 +91,11 @@ async function doAnalyze(
   const raw = await res.json();
   const hazards: Hazard[] = (raw.hazards ?? []).map((h: Omit<Hazard, "id">, i: number) => ({
     ...h,
+    // Kartice u aplikaciji prikazuju kratke stavke — server ih šalje kao
+    // nizove; ako model pogreši tip, ignoriši umesto da rušiš ekran
+    facts: Array.isArray(h.facts) ? h.facts.filter((f) => typeof f === "string") : undefined,
+    steps: Array.isArray(h.steps) ? h.steps.filter((s) => typeof s === "string") : undefined,
+    reach: typeof h.reach === "number" ? h.reach : undefined,
     id: `hz-${i}`,
     resolved: false,
   }));

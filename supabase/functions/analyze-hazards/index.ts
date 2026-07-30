@@ -131,6 +131,9 @@ Return ONLY valid JSON (no markdown fences) of this exact shape:
     "severity": "critical|high|medium|low",
     "box": {"x": 0.1, "y": 0.2, "w": 0.15, "h": 0.1},
     "why": "2-3 sentences in ${language} explaining why it is dangerous for this exact age",
+    "facts": ["2-4 VERY short factual bullets in ${language}, max 6 words each, e.g. \\"Estimated temperature: 78-85°C\\", \\"Within the child's reach\\", \\"Tips over easily\\""],
+    "steps": ["1-3 imperative actions in ${language}, max 10 words each, e.g. \\"Move the cup 30 cm from the edge\\""],
+    "reach": 1-10 (how easily THIS child can reach it: 10 = on the floor or at child height, 1 = high on a ceiling),
     "stats": "real injury statistics with source (WHO/CDC/EU), written in ${language}; never invented numbers",
     "fix": "one concrete step doable right now, in ${language}"
   }],
@@ -144,7 +147,10 @@ Rules:
 - "box" is normalized (0–1): x,y top-left corner, w,h width/height.
 - Adjust severity to the developmental abilities of the age.
 - Also include dangerous ZONES (edges, stairs, unprotected window/balcony, railing with bar gaps > 10 cm, water).
-- LANGUAGE: write ALL text values (label, why, stats, fix, summary) in ${language}. This is mandatory.
+- LANGUAGE: write ALL text values (label, why, facts, steps, stats, fix, summary) in ${language}. This is mandatory.
+- "facts" and "steps" are shown as bullet lists in the app: keep them TELEGRAPHIC, no full sentences, no repetition of the label.
+- "reach" drives risk ranking: a hot cup at the table edge is 9-10, a pot on a high shelf is 2-3.
+- Order does not matter — the app re-ranks by real risk for the child's age.
 
 MANDATORY SMALL-DETAIL SWEEP — inspect the photo carefully, section by section (floor, low surfaces, furniture edges), and report if you spot:
 - SMALL OBJECTS on the floor/low surfaces: screws, nails, coins, buttons, small plastic pieces and toy parts, beads, magnets, pebbles — choking/swallowing (critical up to age 3)
