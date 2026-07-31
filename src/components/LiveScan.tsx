@@ -3,6 +3,7 @@ import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
 import { SEVERITY_META } from "../types";
 import { CATEGORY_ICONS, severityLabel, t } from "../lib/i18n";
 import { analyzeImage } from "../lib/analyze";
+import { rankHazards } from "../lib/priority";
 import { boxIou, detectLocal, modelError, preloadDetector, retryDetector } from "../lib/detector";
 import { primeTts, speak, stopSpeaking } from "../lib/voice";
 import { HazardDetailSheet } from "./HazardDetailSheet";
@@ -51,6 +52,8 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const [modelFail, setModelFail] = useState<string | null>(null);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
+  /** Koja opasnost je trenutno u fokusu (listanje strelicama). */
+  const [focusIdx, setFocusIdx] = useState(0);
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
   const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -211,8 +214,14 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
       cloudHz.every((ch) => boxIou(lh.box, ch.box) < 0.4),
     ),
   ].sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
-  const count = hazards.length;
-  const topHazard = hazards[0] ?? null;
+
+  // JEDAN FOKUS: grupisano (3 iste stolice = 1) i rangirano po stvarnom
+  // riziku za dete. Na ekranu se crta SAMO aktivna opasnost — gomila
+  // preklopljenih okvira je debug prikaz, ne korisničko iskustvo.
+  const ranked = rankHazards(hazards, ageGroup);
+  const count = ranked.length;
+  const active = ranked[Math.min(focusIdx, Math.max(0, ranked.length - 1))] ?? null;
+  const topHazard = active;
 
   // Sesija + glasovna upozorenja na SVAKU novu opasnost
   useEffect(() => {
@@ -311,7 +320,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
       : !modelReady
         ? t("live.loading")
         : count > 0
-          ? `${count} ${count === 1 ? t("live.one") : t("live.many")}`
+          ? `${count} ${count === 1 ? t("live.one") : t("live.many")}${count > 1 ? ` · ${t("live.showingTop")}` : ""}`
           : t("live.scanning");
 
   return (
@@ -321,39 +330,61 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         <img src={frozenFrame} alt="" className="live-video live-frozen" />
       )}
 
-      {hazards.map((h, i) => {
-        const meta = SEVERITY_META[h.severity];
-        return (
-          <button
-            key={h.id}
-            className="hazard-box live-box"
-            data-sev={h.severity}
-            style={{
-              left: `${h.box.x * 100}%`,
-              top: `${h.box.y * 100}%`,
-              width: `${h.box.w * 100}%`,
-              height: `${h.box.h * 100}%`,
-              borderColor: meta.color,
-              // Meki oreol u boji ozbiljnosti (banner "glow" stil)
-              ["--sev-glow" as string]: `${meta.color}66`,
-            }}
-            onClick={() => pauseOn(h)}
-            aria-label={h.label}
-          >
-            <span className="live-tag">
-              <span className="live-tag-num" style={{ background: meta.color }}>
-                {i + 1}
-              </span>
-              <span className="live-tag-name">
-                {CATEGORY_ICONS[h.category]} {h.label}
-              </span>
-              <b className="live-tag-sev" style={{ color: meta.color }}>
-                {severityLabel(h.severity)}
-              </b>
+      {/* SAMO aktivna opasnost: reflektor (ostatak kadra zatamnjen),
+          jedan okvir, jedna oznaka. Nikad više okvira odjednom. */}
+      {active && (
+        <button
+          className="hazard-box live-box live-spot"
+          data-sev={active.severity}
+          style={{
+            left: `${active.box.x * 100}%`,
+            top: `${active.box.y * 100}%`,
+            width: `${active.box.w * 100}%`,
+            height: `${active.box.h * 100}%`,
+            borderColor: SEVERITY_META[active.severity].color,
+            ["--sev-glow" as string]: `${SEVERITY_META[active.severity].color}66`,
+          }}
+          onClick={() => pauseOn(active)}
+          aria-label={active.label}
+        >
+          <span className="live-tag">
+            <span
+              className="live-tag-num"
+              style={{ background: SEVERITY_META[active.severity].color }}
+            >
+              {focusIdx + 1}
             </span>
+            <span className="live-tag-name">
+              {CATEGORY_ICONS[active.category]} {active.label}
+              {active.count > 1 && ` ×${active.count}`}
+            </span>
+            <b
+              className="live-tag-sev"
+              style={{ color: SEVERITY_META[active.severity].color }}
+            >
+              {severityLabel(active.severity)}
+            </b>
+          </span>
+        </button>
+      )}
+
+      {/* Listanje kroz ostale nalaze — po jedan, bez gužve na ekranu */}
+      {count > 1 && !paused && (
+        <div className="live-pager">
+          <button
+            onClick={() => setFocusIdx((i) => (i - 1 + count) % count)}
+            aria-label="‹"
+          >
+            ‹
           </button>
-        );
-      })}
+          <span>
+            {focusIdx + 1} / {count}
+          </span>
+          <button onClick={() => setFocusIdx((i) => (i + 1) % count)} aria-label="›">
+            ›
+          </button>
+        </div>
+      )}
 
       <div className="live-topbar">
         <span className="live-status">
