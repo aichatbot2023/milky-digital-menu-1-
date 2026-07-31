@@ -390,6 +390,8 @@ const D: Dict = {
   },
   "focus.newScan": { en: "New scan", sr: "Novo skeniranje" },
   // Donja navigacija i ekran kamere
+  "live.modeOne": { en: "One at a time", sr: "Jedna po jedna" },
+  "live.modeAll": { en: "Show all", sr: "Sve odjednom" },
   "live.showingTop": { en: "showing the most dangerous", sr: "prikazana najopasnija" },
   "nav.scan": { en: "Scan", sr: "Skeniraj" },
   "nav.history": { en: "History", sr: "Istorija" },

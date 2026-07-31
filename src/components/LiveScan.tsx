@@ -54,6 +54,17 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const [paused, setPaused] = useState(false);
   /** Koja opasnost je trenutno u fokusu (listanje strelicama). */
   const [focusIdx, setFocusIdx] = useState(0);
+  /** Režim prikaza: jedna po jedna (fokus) ili sve odjednom (pregled). */
+  const [showAll, setShowAll] = useState(() => {
+    try {
+      return localStorage.getItem("safenest.liveAll") === "1";
+    } catch {
+      return false;
+    }
+  });
+  /** Nagoveštaj listanja prestaje čim korisnik prvi put prelista. */
+  const [pagerTouched, setPagerTouched] = useState(false);
+  const swipeX = useRef<number | null>(null);
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
   const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -268,6 +279,27 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
     else stopSpeaking();
   };
 
+  const goto = (delta: number) => {
+    if (count < 2) return;
+    setPagerTouched(true);
+    setFocusIdx((i) => (i + delta + count) % count);
+    try {
+      (navigator as any).vibrate?.(12);
+    } catch {
+      /* ignoriši */
+    }
+  };
+
+  const toggleMode = () => {
+    const next = !showAll;
+    setShowAll(next);
+    try {
+      localStorage.setItem("safenest.liveAll", next ? "1" : "0");
+    } catch {
+      /* ignoriši */
+    }
+  };
+
   const pauseOn = (hazard: Hazard) => {
     pausedRef.current = true;
     setPaused(true);
@@ -320,7 +352,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
       : !modelReady
         ? t("live.loading")
         : count > 0
-          ? `${count} ${count === 1 ? t("live.one") : t("live.many")}${count > 1 ? ` · ${t("live.showingTop")}` : ""}`
+          ? `${count} ${count === 1 ? t("live.one") : t("live.many")}`
           : t("live.scanning");
 
   return (
@@ -330,9 +362,61 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         <img src={frozenFrame} alt="" className="live-video live-frozen" />
       )}
 
-      {/* SAMO aktivna opasnost: reflektor (ostatak kadra zatamnjen),
-          jedan okvir, jedna oznaka. Nikad više okvira odjednom. */}
-      {active && (
+      {/* Prevlačenje prstom menja opasnost u fokusu (kao galerija slika) */}
+      {!showAll && count > 1 && !paused && (
+        <div
+          className="live-swipe"
+          onTouchStart={(e) => (swipeX.current = e.touches[0].clientX)}
+          onTouchEnd={(e) => {
+            if (swipeX.current === null) return;
+            const dx = e.changedTouches[0].clientX - swipeX.current;
+            if (Math.abs(dx) > 45) goto(dx < 0 ? 1 : -1);
+            swipeX.current = null;
+          }}
+        />
+      )}
+
+      {/* REŽIM „SVE ODJEDNOM": svi okviri, ali samo brojevi — bez tekstualnih
+          oznaka koje se preklapaju; naziv nosi aktivni. */}
+      {showAll &&
+        ranked.map((h, i) => (
+          <button
+            key={h.id}
+            className={`hazard-box live-box${i === focusIdx ? " live-box-active" : " live-box-dim"}`}
+            data-sev={h.severity}
+            style={{
+              left: `${h.box.x * 100}%`,
+              top: `${h.box.y * 100}%`,
+              width: `${h.box.w * 100}%`,
+              height: `${h.box.h * 100}%`,
+              borderColor: SEVERITY_META[h.severity].color,
+              ["--sev-glow" as string]: `${SEVERITY_META[h.severity].color}66`,
+            }}
+            onClick={() => {
+              setFocusIdx(i);
+              setPagerTouched(true);
+            }}
+            aria-label={h.label}
+          >
+            <span
+              className="live-pin"
+              style={{ background: SEVERITY_META[h.severity].color }}
+            >
+              {i + 1}
+            </span>
+            {i === focusIdx && (
+              <span className="live-tag live-tag-float">
+                <span className="live-tag-name">
+                  {CATEGORY_ICONS[h.category]} {h.label}
+                  {h.count > 1 && ` ×${h.count}`}
+                </span>
+              </span>
+            )}
+          </button>
+        ))}
+
+      {/* REŽIM „JEDNA PO JEDNA": reflektor — ostatak kadra zatamnjen */}
+      {!showAll && active && (
         <button
           className="hazard-box live-box live-spot"
           data-sev={active.severity}
@@ -368,30 +452,20 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         </button>
       )}
 
-      {/* Listanje kroz ostale nalaze — po jedan, bez gužve na ekranu */}
-      {count > 1 && !paused && (
-        <div className="live-pager">
-          <button
-            onClick={() => setFocusIdx((i) => (i - 1 + count) % count)}
-            aria-label="‹"
-          >
-            ‹
-          </button>
-          <span>
-            {focusIdx + 1} / {count}
-          </span>
-          <button onClick={() => setFocusIdx((i) => (i + 1) % count)} aria-label="›">
-            ›
-          </button>
-        </div>
-      )}
-
       <div className="live-topbar">
         <span className="live-status">
           {!cameraError && !paused && <span className="live-dot" />}
           {status}
         </span>
         <div className="live-topbtns">
+          <button
+            className={`live-iconbtn${showAll ? " live-iconbtn-on" : ""}`}
+            onClick={toggleMode}
+            aria-label={t(showAll ? "live.modeAll" : "live.modeOne")}
+            title={t(showAll ? "live.modeAll" : "live.modeOne")}
+          >
+            {showAll ? "▦" : "◎"}
+          </button>
           <button
             className={`live-iconbtn${soundOn ? " live-iconbtn-on" : ""}`}
             onClick={toggleSound}
@@ -420,21 +494,56 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         <div className="live-cloudnote">{t("live.cloudnote")}</div>
       )}
 
-      {/* ŽIVO objašnjenje najozbiljnije opasnosti u kadru */}
+      {/* Donji stub: listač IZNAD kartice — nikad se ne preklapaju */}
       {topHazard && !paused && (
-        <button className="live-strip" onClick={() => pauseOn(topHazard)}>
-          <span
-            className="live-strip-sev"
-            style={{ background: SEVERITY_META[topHazard.severity].color }}
-          >
-            {CATEGORY_ICONS[topHazard.category]} {severityLabel(topHazard.severity)}
-          </span>
-          <span className="live-strip-body">
-            <strong>{topHazard.label}</strong>
-            <span className="live-strip-why">{topHazard.why}</span>
-            <span className="live-strip-hint">{t("live.tapMore")}</span>
-          </span>
-        </button>
+        <div className="live-bottom">
+          {count > 1 && (
+            <div className={`pager${pagerTouched ? "" : " pager-hint"}`}>
+              <button className="pager-arrow" onClick={() => goto(-1)} aria-label="‹">
+                ‹
+              </button>
+              <div className="pager-dots">
+                {ranked.slice(0, 8).map((h, i) => (
+                  <button
+                    key={h.id}
+                    className={`pager-dot${i === focusIdx ? " pager-dot-on" : ""}`}
+                    style={
+                      i === focusIdx
+                        ? { background: SEVERITY_META[h.severity].color }
+                        : undefined
+                    }
+                    onClick={() => {
+                      setFocusIdx(i);
+                      setPagerTouched(true);
+                    }}
+                    aria-label={`${i + 1}`}
+                  />
+                ))}
+                {count > 8 && <span className="pager-more">+{count - 8}</span>}
+              </div>
+              <button className="pager-arrow" onClick={() => goto(1)} aria-label="›">
+                ›
+              </button>
+              <span className="pager-count">
+                {focusIdx + 1}/{count}
+              </span>
+            </div>
+          )}
+
+          <button className="live-strip" onClick={() => pauseOn(topHazard)}>
+            <span
+              className="live-strip-sev"
+              style={{ background: SEVERITY_META[topHazard.severity].color }}
+            >
+              {CATEGORY_ICONS[topHazard.category]} {severityLabel(topHazard.severity)}
+            </span>
+            <span className="live-strip-body">
+              <strong>{topHazard.label}</strong>
+              <span className="live-strip-why">{topHazard.why}</span>
+              <span className="live-strip-hint">{t("live.tapMore")}</span>
+            </span>
+          </button>
+        </div>
       )}
 
       <div className="live-bottombar">

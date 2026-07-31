@@ -1263,30 +1263,111 @@ body {
       0 0 0 9999px rgba(15, 23, 42, 0.55);
   }
 }
-.live-pager {
+
+
+/* ===== Donji stub uživo: listač IZNAD kartice (nikad preklapanje) ===== */
+.live-bottom {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom) + 168px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  left: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.live-bottom .live-strip { position: static; left: auto; right: auto; bottom: auto; width: 100%; }
+
+/* Listač opasnosti: naglašen, sa tačkicama i nagoveštajem prevlačenja */
+.pager {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.97);
   border-radius: 999px;
-  padding: 5px 8px;
-  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.3);
+  padding: 6px 8px 6px 6px;
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.35);
 }
-.live-pager button {
-  width: 32px;
-  height: 32px;
+.pager-arrow {
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
   border: none;
-  background: #f1f5f9;
-  font-size: 1.2rem;
+  background: linear-gradient(150deg, #10b981, #0f766e);
+  color: #fff;
+  font-size: 1.35rem;
   font-weight: 800;
-  color: #0f172a;
-  cursor: pointer;
   line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 3px 10px rgba(15, 118, 110, 0.45);
+  flex-shrink: 0;
 }
-.live-pager span { font-size: 0.82rem; font-weight: 800; color: #475569; padding: 0 4px; }
+.pager-arrow:active { transform: scale(0.92); }
+.pager-dots { display: flex; align-items: center; gap: 6px; padding: 0 4px; }
+.pager-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: none;
+  background: #cbd5e1;
+  padding: 0;
+  cursor: pointer;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+.pager-dot-on { width: 22px; }
+.pager-more { font-size: 0.7rem; font-weight: 800; color: #94a3b8; }
+.pager-count {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #475569;
+  padding-right: 6px;
+  flex-shrink: 0;
+}
+
+/* Nagoveštaj: strelice se blago njišu dok korisnik prvi put ne prelista */
+.pager-hint .pager-arrow:last-of-type { animation: nudge-r 1.9s ease-in-out infinite; }
+.pager-hint .pager-arrow:first-of-type { animation: nudge-l 1.9s ease-in-out infinite; }
+@keyframes nudge-r {
+  0%, 62%, 100% { transform: none; }
+  74% { transform: translateX(5px); }
+  86% { transform: translateX(0); }
+}
+@keyframes nudge-l {
+  0%, 62%, 100% { transform: none; }
+  74% { transform: translateX(-5px); }
+  86% { transform: translateX(0); }
+}
+.pager-hint { animation: pager-pop 2.4s ease-in-out infinite; }
+@keyframes pager-pop {
+  0%, 100% { box-shadow: 0 6px 22px rgba(15, 23, 42, 0.35); }
+  50% { box-shadow: 0 6px 22px rgba(15, 23, 42, 0.35), 0 0 0 6px rgba(94, 234, 212, 0.25); }
+}
+
+/* Zona za prevlačenje prstom preko kadra */
+.live-swipe {
+  position: absolute;
+  inset: 70px 0 210px;
+  z-index: 1;
+}
+
+/* Režim „sve odjednom": brojčane značke umesto tekstualnih oznaka */
+.live-box-dim { opacity: 0.55; }
+.live-box-active { opacity: 1; }
+.live-pin {
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.live-tag-float { top: -34px; left: 18px; }
