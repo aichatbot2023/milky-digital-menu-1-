@@ -887,7 +887,7 @@ body {
 .sheet-source { color: var(--muted); font-size: 0.8rem; margin-top: -8px; }
 
 /* Pretplata */
-.subbar {
+.subbar-full {
   border: none;
   cursor: pointer;
   text-align: left;
@@ -1077,3 +1077,169 @@ body {
 .mem-item-days { font-size: 0.76rem; color: #92400e; font-weight: 700; white-space: nowrap; }
 .mem-ask-row { display: flex; gap: 8px; margin-top: 8px; }
 .mem-ask-row .btn { flex: 1; padding: 9px 12px; font-size: 0.9rem; }
+
+/* ===== DONJA NAVIGACIJA (4 taba, ništa više) ===== */
+.bottomnav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid #e2e8f0;
+  padding: 8px 0 calc(env(safe-area-inset-bottom) + 8px);
+  max-width: 560px;
+  margin: 0 auto;
+}
+.bn-item {
+  flex: 1;
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 0;
+  cursor: pointer;
+  color: #94a3b8;
+  font-family: inherit;
+}
+.bn-active { color: var(--primary); }
+.bn-icon { font-size: 1.25rem; line-height: 1; position: relative; }
+.bn-label { font-size: 0.7rem; font-weight: 700; }
+.bn-dot {
+  position: absolute;
+  top: -5px;
+  right: -11px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+}
+.has-nav { padding-bottom: calc(env(safe-area-inset-bottom) + 86px); }
+
+/* ===== EKRAN KAMERE: jedan okvir, jedno dugme ===== */
+.cam { position: fixed; inset: 0; background: #000; z-index: 45; }
+.cam-video { width: 100%; height: 100%; object-fit: cover; }
+.cam-flash { position: absolute; inset: 0; background: #fff; animation: camflash 0.25s ease-out; }
+@keyframes camflash { from { opacity: 0.9; } to { opacity: 0; } }
+.cam-close {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 14px);
+  left: 14px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.cam-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  width: min(76vw, 330px);
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+.cf { position: absolute; width: 34px; height: 34px; border: 3px solid rgba(255, 255, 255, 0.95); }
+.cf.tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+.cf.tr { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 12px 0 0; }
+.cf.bl { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 12px; }
+.cf.br { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
+.cam-hint {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 145px);
+  left: 20px;
+  right: 20px;
+  text-align: center;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+.cam-bar {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 34px);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+.cam-shutter {
+  width: 78px;
+  height: 78px;
+  border-radius: 999px;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.cam-shutter span {
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  background: #10b981;
+  display: block;
+  box-shadow: 0 3px 14px rgba(16, 185, 129, 0.6);
+}
+.cam-shutter:disabled span { background: #64748b; }
+.cam-gallery, .cam-spacer {
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.cam-spacer { background: transparent; }
+
+/* ===== SCAN TAB u stilu brenda ===== */
+.scan-hero {
+  background: linear-gradient(160deg, #0f766e, #115e59);
+  border-radius: 22px;
+  padding: 22px;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(15, 118, 110, 0.28);
+}
+.scan-hero h2 { font-size: 1.35rem; }
+.scan-hero p { color: rgba(255, 255, 255, 0.85); font-size: 0.9rem; margin-top: 5px; }
+.scan-cta {
+  width: 100%;
+  margin-top: 16px;
+  background: #fff;
+  color: var(--primary-dark);
+  border: none;
+  border-radius: 16px;
+  padding: 15px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+.scan-row { display: flex; gap: 10px; margin-top: 10px; }
+.scan-row .btn { flex: 1; padding: 13px; font-size: 0.92rem; }
+
+.empty-state { text-align: center; padding: 34px 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.empty-emoji { font-size: 2.8rem; }
+.empty-state .btn { margin-top: 6px; }
+
+.hero-chips { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.sub-chip { font-size: 0.8rem; font-weight: 800; padding: 7px 12px; }
+.sub-chip[data-state="trial"] { background: #f0fdfa; border-color: #99f6e4; color: var(--primary-dark); }
+.sub-chip[data-state="subscribed"] { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+.sub-chip[data-state="expired"] { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }

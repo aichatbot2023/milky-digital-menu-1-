@@ -389,6 +389,40 @@ const D: Dict = {
     sr: "Rešili ste sve što smo pronašli. Skenirajte ponovo kada preuredite prostor.",
   },
   "focus.newScan": { en: "New scan", sr: "Novo skeniranje" },
+  // Donja navigacija i ekran kamere
+  "nav.scan": { en: "Scan", sr: "Skeniraj" },
+  "nav.history": { en: "History", sr: "Istorija" },
+  "nav.tips": { en: "Tips", sr: "Saveti" },
+  "nav.profile": { en: "Profile", sr: "Profil" },
+  "cam.hint": { en: "Point the camera at the room", sr: "Usmerite kameru ka prostoru" },
+  "cam.hintFood": { en: "Point at the food or the label", sr: "Usmerite ka hrani ili etiketi" },
+  "cam.shoot": { en: "Take photo", sr: "Slikaj" },
+  "cam.gallery": { en: "Choose from gallery", sr: "Izaberi iz galerije" },
+  "cam.noAccess": {
+    en: "Camera unavailable — choose a photo from your gallery",
+    sr: "Kamera nije dostupna — izaberite sliku iz galerije",
+  },
+  "scan.mainTitle": { en: "Scan a room", sr: "Skenirajte prostor" },
+  "scan.mainSub": {
+    en: "AI finds the dangers for your child and tells you what to do first.",
+    sr: "AI pronalazi opasnosti za vaše dete i kaže šta prvo da uradite.",
+  },
+  "scan.for": { en: "Scanning for", sr: "Skeniram za" },
+  "hist.emptyTitle": { en: "No scans yet", sr: "Još nema skeniranja" },
+  "hist.emptySub": {
+    en: "Your scans and unresolved hazards will appear here so you can track progress.",
+    sr: "Ovde će se pojaviti vaša skeniranja i nerešene opasnosti, da pratite napredak.",
+  },
+  "tips.title": { en: "Safety tips", sr: "Bezbednosni saveti" },
+  "profile.title": { en: "Profile", sr: "Profil" },
+  "profile.lang": { en: "Language", sr: "Jezik" },
+  "profile.memory": { en: "Hazard memory", sr: "Memorija opasnosti" },
+  "profile.memoryClear": { en: "Clear memory", sr: "Obriši memoriju" },
+  "profile.memoryNote": {
+    en: "The app remembers unresolved hazards to recognise them in your next scan. Clear it after moving house.",
+    sr: "Aplikacija pamti nerešene opasnosti da ih prepozna pri sledećem skeniranju. Obrišite je posle selidbe.",
+  },
+
   // Memorija opasnosti (re-identifikacija kroz skenove)
   "mem.seen": { en: "Seen", sr: "Viđeno" },
   "mem.times": { en: "times", sr: "puta" },

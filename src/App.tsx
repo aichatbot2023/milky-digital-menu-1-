@@ -45,11 +45,17 @@ import { Paywall } from "./components/Paywall";
 import { VoiceAssistant } from "./components/VoiceAssistant";
 import { LiveScan } from "./components/LiveScan";
 import { ScanHistory } from "./components/ScanHistory";
+import { BottomNav, type Tab } from "./components/BottomNav";
+import { CameraCapture } from "./components/CameraCapture";
+import { clearMemory } from "./lib/memory";
 
 type View = "home" | "scanning" | "result" | "live" | "food-scanning" | "food-result" | "checklist" | "firstaid";
 
 export default function App() {
   const [view, setView] = useState<View>("home");
+  const [tab, setTab] = useState<Tab>("scan");
+  /** Otvoren ekran kamere: "room" (prostor) ili "food" (hrana). */
+  const [camera, setCamera] = useState<null | "room" | "food">(null);
   const [langReady, setLangReady] = useState(() => langChosen());
   const [onboarded, setOnboarded] = useState(() => onboardingSeen());
   useEffect(() => applyDir(), [langReady]);
@@ -119,10 +125,10 @@ export default function App() {
     [profiles, selectedChildId],
   );
 
-  const startScan = async () => {
+  const startScan = async (captured?: string) => {
     if (!requireAccess()) return;
     setError(null);
-    const photo = await capturePhoto();
+    const photo = captured ?? (await capturePhoto());
     if (!photo) return;
     setPendingImage(photo);
     setView("scanning");
@@ -210,10 +216,10 @@ export default function App() {
   };
 
   // Sken hrane/pića: fotografija → AI procena po uzrastu (alergeni, gušenje…)
-  const startFoodScan = async () => {
+  const startFoodScan = async (captured?: string) => {
     if (!requireAccess()) return;
     setError(null);
-    const photo = await capturePhoto();
+    const photo = captured ?? (await capturePhoto());
     if (!photo) return;
     setView("food-scanning");
     const age = selectedChild?.age ?? "1-2y";
@@ -305,6 +311,21 @@ export default function App() {
           setAccount(acc);
           // Ako je email na listi poklona → Premium odmah
           if (acc) checkGift(acc.email).then((ok) => ok && setSubStatus(getStatus()));
+        }}
+      />
+    );
+  }
+
+  if (camera) {
+    const kind = camera;
+    return (
+      <CameraCapture
+        hint={t(kind === "food" ? "cam.hintFood" : "cam.hint")}
+        onClose={() => setCamera(null)}
+        onCapture={(dataUrl) => {
+          setCamera(null);
+          if (kind === "food") startFoodScan(dataUrl);
+          else startScan(dataUrl);
         }}
       />
     );
@@ -414,91 +435,149 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app has-nav">
       <header className="hero">
         <div className="hero-top">
           <h1>🛡️ SafeNest AI</h1>
-          <button
-            className="chip lang-chip"
-            onClick={() => setLangReady(false)}
-            aria-label="Change language"
-          >
-            🌐 {LANGS.find((l) => l.code === getLang())?.native ?? "Language"}
-          </button>
+          <div className="hero-chips">
+            <button
+              className="chip sub-chip subbar"
+              onClick={() => setShowPaywall(true)}
+              data-state={subStatus.state}
+            >
+              {subStatus.state === "subscribed"
+                ? "⭐ Premium"
+                : subStatus.state === "trial"
+                  ? `🎁 ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? t("sub.dayLeft") : t("sub.daysLeft")}`
+                  : `🔒 ${t("paywall.subscribe")}`}
+            </button>
+            <button
+              className="chip lang-chip"
+              onClick={() => setLangReady(false)}
+              aria-label="Change language"
+            >
+              🌐 {LANGS.find((l) => l.code === getLang())?.native ?? "Language"}
+            </button>
+          </div>
         </div>
-        <p>{t("hero.sub")}</p>
       </header>
 
       {error && <div className="error">{error}</div>}
       {payMsg && <div className="paymsg">{payMsg}</div>}
-      {scans[0] &&
-        Math.floor((Date.now() - new Date(scans[0].createdAt).getTime()) / 86400000) >= 7 && (
-          <div className="nudge">
-            {t("nudge.pre")}{" "}
-            {Math.floor((Date.now() - new Date(scans[0].createdAt).getTime()) / 86400000)}{" "}
-            {t("nudge.days")}
-          </div>
-        )}
 
-      <button className="subbar" onClick={() => setShowPaywall(true)}>
-        {subStatus.state === "subscribed"
-          ? t("sub.active")
-          : subStatus.state === "trial"
-            ? `${t("sub.trial")} ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? t("sub.dayLeft") : t("sub.daysLeft")} ${t("sub.trialTail")}`
-            : t("sub.expired")}
-      </button>
+      {tab === "scan" && (
+        <>
+          {scans[0] &&
+            Math.floor((Date.now() - new Date(scans[0].createdAt).getTime()) / 86400000) >= 7 && (
+              <div className="nudge">
+                {t("nudge.pre")}{" "}
+                {Math.floor((Date.now() - new Date(scans[0].createdAt).getTime()) / 86400000)}{" "}
+                {t("nudge.days")}
+              </div>
+            )}
 
-      <ChildProfiles
-        profiles={profiles}
-        selectedId={selectedChildId}
-        onSelect={setSelectedChildId}
-        onChange={setProfiles}
-      />
-
-      <div className="room-picker">
-        <h3>{t("room.title")}</h3>
-        <div className="profile-chips">
-          {(Object.keys(ROOM_LABELS) as RoomType[]).map((r) => (
-            <button
-              key={r}
-              className={`chip${r === roomType ? " chip-active" : ""}`}
-              onClick={() => setRoomType(r)}
-            >
-              {roomLabel(r)}
+          <div className="scan-hero">
+            <h2>{t("scan.mainTitle")}</h2>
+            <p>{t("scan.mainSub")}</p>
+            <button className="scan-cta" onClick={() => requireAccess() && setCamera("room")}>
+              ◎ {t("cam.shoot")}
             </button>
-          ))}
-        </div>
-      </div>
+            <div className="scan-row">
+              <button
+                className="btn btn-outline"
+                style={{ background: "rgba(255,255,255,.15)", color: "#fff", borderColor: "rgba(255,255,255,.5)" }}
+                onClick={() => requireAccess() && setView("live")}
+              >
+                {t("btn.live")}
+              </button>
+              <button
+                className="btn btn-outline"
+                style={{ background: "rgba(255,255,255,.15)", color: "#fff", borderColor: "rgba(255,255,255,.5)" }}
+                onClick={() => requireAccess() && setCamera("food")}
+              >
+                {t("btn.food")}
+              </button>
+            </div>
+          </div>
 
-      <button
-        className="btn btn-primary btn-scan"
-        onClick={() => {
-          if (requireAccess()) setView("live");
-        }}
-      >
-        {t("btn.live")}
-        <span className="btn-sub">{t("btn.live.sub")}</span>
-      </button>
-      <button className="btn btn-outline btn-scan" onClick={startScan}>
-        {t("btn.photo")}
-        <span className="btn-sub">{t("btn.photo.sub")}</span>
-      </button>
-      <button className="btn btn-outline btn-scan btn-food" onClick={startFoodScan}>
-        {t("btn.food")}
-        <span className="btn-sub">{t("btn.food.sub")}</span>
-      </button>
+          <div className="room-picker">
+            <h3>{t("room.title")}</h3>
+            <div className="profile-chips">
+              {(Object.keys(ROOM_LABELS) as RoomType[]).map((r) => (
+                <button
+                  key={r}
+                  className={`chip${r === roomType ? " chip-active" : ""}`}
+                  onClick={() => setRoomType(r)}
+                >
+                  {roomLabel(r)}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <div className="tool-row">
-        <button className="btn btn-outline btn-tool" onClick={() => setView("checklist")}>
-          {t("check.btn")}
-          <span className="btn-sub">{t("check.btn.sub")}</span>
-        </button>
-        <button className="btn btn-outline btn-tool btn-fa" onClick={() => setView("firstaid")}>
-          {t("fa.btn")}
-          <span className="btn-sub">{t("fa.btn.sub")}</span>
-        </button>
-      </div>
+          <ChildProfiles
+            profiles={profiles}
+            selectedId={selectedChildId}
+            onSelect={setSelectedChildId}
+            onChange={setProfiles}
+          />
+        </>
+      )}
 
+      {tab === "tips" && (
+        <>
+          <div className="tool-row">
+            <button className="btn btn-outline btn-tool" onClick={() => setView("checklist")}>
+              {t("check.btn")}
+              <span className="btn-sub">{t("check.btn.sub")}</span>
+            </button>
+            <button className="btn btn-outline btn-tool btn-fa" onClick={() => setView("firstaid")}>
+              {t("fa.btn")}
+              <span className="btn-sub">{t("fa.btn.sub")}</span>
+            </button>
+          </div>
+          <VoiceAssistant
+            roomType={roomType}
+            ageGroup={selectedChild?.age ?? "1-2y"}
+            hazards={scans[0]?.result.hazards ?? []}
+          />
+        </>
+      )}
+
+      {tab === "profile" && (
+        <>
+          <button className="subbar-full" onClick={() => setShowPaywall(true)}>
+            {subStatus.state === "subscribed"
+              ? t("sub.active")
+              : subStatus.state === "trial"
+                ? `${t("sub.trial")} ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? t("sub.dayLeft") : t("sub.daysLeft")} ${t("sub.trialTail")}`
+                : t("sub.expired")}
+          </button>
+          <ChildProfiles
+            profiles={profiles}
+            selectedId={selectedChildId}
+            onSelect={setSelectedChildId}
+            onChange={setProfiles}
+          />
+          <div className="room-picker">
+            <h3>{t("profile.memory")}</h3>
+            <p className="muted">{t("profile.memoryNote")}</p>
+            <button
+              className="btn btn-outline"
+              style={{ marginTop: 10 }}
+              onClick={() => {
+                clearMemory();
+                setCarried([]);
+                setAskFixed([]);
+              }}
+            >
+              {t("profile.memoryClear")}
+            </button>
+          </div>
+        </>
+      )}
+
+      {tab === "history" && (<>
       {/* Memorija: nerešeno iz ranijih skenova nije se pojavilo u novom —
           pitamo roditelja umesto da tiho zaboravimo */}
       {askFixed.length > 0 && (
@@ -563,12 +642,6 @@ export default function App() {
         </div>
       )}
 
-      <VoiceAssistant
-        roomType={roomType}
-        ageGroup={selectedChild?.age ?? "1-2y"}
-        hazards={scans[0]?.result.hazards ?? []}
-      />
-
       <ScanHistory
         scans={scans}
         onOpen={(s) => {
@@ -580,6 +653,19 @@ export default function App() {
           setScans(loadScans());
         }}
       />
+      {scans.length === 0 && carried.length === 0 && askFixed.length === 0 && (
+        <div className="history empty-state">
+          <div className="empty-emoji">🕘</div>
+          <h3>{t("hist.emptyTitle")}</h3>
+          <p className="muted">{t("hist.emptySub")}</p>
+          <button className="btn btn-primary" onClick={() => setTab("scan")}>
+            ◎ {t("scan.mainTitle")}
+          </button>
+        </div>
+      )}
+      </>)}
+
+      <BottomNav tab={tab} onChange={setTab} pending={carried.length} />
 
       <footer className="disclaimer">
         {t("footer.disclaimer")}
