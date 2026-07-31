@@ -65,12 +65,25 @@ function reachability(h: Hazard): number {
   return Math.min(10, byHeight + bySize);
 }
 
+/**
+ * Upornost: opasnost koju roditelj vidi po treći put, a stoji nerešena
+ * nedeljama, nije „ista" kao nova — dokazano je trajna. Memorija
+ * (re-identifikacija) je diže u listi, najviše 1.6×.
+ */
+function persistence(h: Hazard): number {
+  const seen = Math.max(1, h.timesSeen ?? 1);
+  const days = h.firstSeenAt
+    ? Math.max(0, (Date.now() - new Date(h.firstSeenAt).getTime()) / 86_400_000)
+    : 0;
+  return Math.min(1.6, 1 + (seen - 1) * 0.12 + Math.min(0.3, days * 0.02));
+}
+
 /** Ukupan rizik — jedini kriterijum redosleda. */
 export function riskScore(h: Hazard, age: AgeGroup): number {
   const sev = SEVERITY_W[h.severity] ?? 4;
   const prob = PROBABILITY_W[h.category] ?? 4;
   const ageF = AGE_W[age]?.[h.category] ?? AGE_DEFAULT;
-  return sev * reachability(h) * prob * ageF;
+  return sev * reachability(h) * prob * ageF * persistence(h);
 }
 
 /**
@@ -107,6 +120,11 @@ export function rankHazards(hazards: Hazard[], age: AgeGroup): RankedHazard[] {
         existing.severity = h.severity;
       }
       existing.risk = Math.max(existing.risk, riskScore(h, age));
+      // Grupa nasleđuje najdužu istoriju svojih pojava
+      existing.timesSeen = Math.max(existing.timesSeen ?? 1, h.timesSeen ?? 1);
+      if (h.firstSeenAt && (!existing.firstSeenAt || h.firstSeenAt < existing.firstSeenAt)) {
+        existing.firstSeenAt = h.firstSeenAt;
+      }
       if (h.resolved === false) existing.resolved = false;
     } else {
       groups.set(key, {

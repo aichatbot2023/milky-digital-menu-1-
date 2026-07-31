@@ -25,6 +25,14 @@ import {
 } from "./lib/subscription";
 import { Register } from "./components/Register";
 import { Analyzing } from "./components/Analyzing";
+import {
+  daysSince,
+  forgetMemory,
+  reconcileWithMemory,
+  rememberResolved,
+  unresolvedMemories,
+  type RememberedHazard,
+} from "./lib/memory";
 import { HazardFocus } from "./components/HazardFocus";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
@@ -61,6 +69,10 @@ export default function App() {
   const [foodOffline, setFoodOffline] = useState<string[] | null>(null);
   /** Kadar koji se upravo analizira — prikazuje se na ekranu analize. */
   const [pendingImage, setPendingImage] = useState<string | null>(null);
+  /** Nerešeno iz ranijih skenova — memorija prepoznaje iste predmete. */
+  const [carried, setCarried] = useState<RememberedHazard[]>(() => unresolvedMemories());
+  /** Zapamćene opasnosti kojih nema u novom skenu — pitamo da li su rešene. */
+  const [askFixed, setAskFixed] = useState<RememberedHazard[]>([]);
 
   // Kapija za skeniranje: probni period (7 dana) ili aktivna pretplata
   const requireAccess = (): boolean => {
@@ -172,6 +184,12 @@ export default function App() {
             t("scan.failed"),
         );
       }
+      // Memorija: prepoznaj iste predmete iz ranijih skenova ove prostorije
+      const mem = await reconcileWithMemory(imageDataUrl, result.hazards, roomType);
+      result = { ...result, hazards: mem.hazards };
+      setAskFixed(mem.missing);
+      setCarried(unresolvedMemories());
+
       const scan: ScanRecord = {
         id: `scan-${Date.now()}`,
         createdAt: new Date().toISOString(),
@@ -262,6 +280,12 @@ export default function App() {
     setCurrentScan(next);
     updateScan(next);
     setScans(loadScans());
+    // Memorija pamti rešeno, da se ista opasnost ne vraća u fokus
+    const hz = currentScan.result.hazards.find((h) => h.id === hazardId);
+    if (hz?.memoryId) {
+      if (!hz.resolved) rememberResolved(hz.memoryId);
+      setCarried(unresolvedMemories());
+    }
   };
 
   if (!langReady) {
@@ -474,6 +498,70 @@ export default function App() {
           <span className="btn-sub">{t("fa.btn.sub")}</span>
         </button>
       </div>
+
+      {/* Memorija: nerešeno iz ranijih skenova nije se pojavilo u novom —
+          pitamo roditelja umesto da tiho zaboravimo */}
+      {askFixed.length > 0 && (
+        <div className="history mem-card">
+          <h3>✅ {t("mem.askTitle")}</h3>
+          <p className="muted">{t("mem.askSub")}</p>
+          <div className="mem-list">
+            {askFixed.map((m) => (
+              <div key={m.id} className="mem-item">
+                <span className="mem-item-label">{m.label}</span>
+                <div className="mem-ask-row">
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      rememberResolved(m.id);
+                      setAskFixed((p) => p.filter((x) => x.id !== m.id));
+                      setCarried(unresolvedMemories());
+                    }}
+                  >
+                    {t("mem.yesFixed")}
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => setAskFixed((p) => p.filter((x) => x.id !== m.id))}
+                  >
+                    {t("mem.stillThere")}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Nerešeno od ranije — aplikacija pamti i prepoznaje iste predmete */}
+      {carried.length > 0 && (
+        <div className="history mem-card">
+          <h3>🔁 {t("mem.carriedTitle")} ({carried.length})</h3>
+          <p className="muted">{t("mem.carriedSub")}</p>
+          <div className="mem-list">
+            {carried.slice(0, 6).map((m) => (
+              <div key={m.id} className="mem-item">
+                <span className="mem-item-label">{m.label}</span>
+                <span className="mem-item-days">
+                  {daysSince(m.firstSeen) > 0
+                    ? `${daysSince(m.firstSeen)} ${t("mem.days")}`
+                    : t("mem.since")}
+                </span>
+                <button
+                  className="history-delete"
+                  onClick={() => {
+                    forgetMemory(m.id);
+                    setCarried(unresolvedMemories());
+                  }}
+                  aria-label={t("history.delete")}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <VoiceAssistant
         roomType={roomType}

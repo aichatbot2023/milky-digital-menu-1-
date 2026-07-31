@@ -389,6 +389,26 @@ const D: Dict = {
     sr: "Rešili ste sve što smo pronašli. Skenirajte ponovo kada preuredite prostor.",
   },
   "focus.newScan": { en: "New scan", sr: "Novo skeniranje" },
+  // Memorija opasnosti (re-identifikacija kroz skenove)
+  "mem.seen": { en: "Seen", sr: "Viđeno" },
+  "mem.times": { en: "times", sr: "puta" },
+  "mem.unresolvedDays": { en: "Unresolved for", sr: "Nerešeno već" },
+  "mem.days": { en: "days", sr: "dana" },
+  "mem.since": { en: "since yesterday", sr: "od juče" },
+  "mem.uncertain": { en: "possibly the same object", sr: "verovatno isti predmet" },
+  "mem.carriedTitle": { en: "Unresolved from earlier", sr: "Nerešeno od ranije" },
+  "mem.carriedSub": {
+    en: "The app remembers these and will recognise them in your next scan.",
+    sr: "Aplikacija ih pamti i prepoznaće ih pri sledećem skeniranju.",
+  },
+  "mem.askTitle": { en: "Did you fix this?", sr: "Da li ste ovo rešili?" },
+  "mem.askSub": {
+    en: "These were not visible in the new scan. Confirm so we can update your safety score.",
+    sr: "Ovo se nije videlo u novom skeniranju. Potvrdite da ažuriramo vaš bezbednosni skor.",
+  },
+  "mem.yesFixed": { en: "Yes, fixed", sr: "Da, rešeno" },
+  "mem.stillThere": { en: "Still there", sr: "I dalje stoji" },
+  "mem.recognized": { en: "recognised from earlier scans", sr: "prepoznato iz ranijih skenova" },
   "focus.searchFor": { en: "Find on Amazon:", sr: "Pronađi na Amazonu:" },
   "focus.wrong": { en: "This isn't right", sr: "Ovo nije tačno" },
 

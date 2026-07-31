@@ -55,6 +55,14 @@ export interface Hazard {
    * kontekstualnu preporuku i Amazon pretragu.
    */
   solution?: string;
+  /** Identitet u memoriji (re-identifikacija kroz skenove). */
+  memoryId?: string;
+  /** Koliko je puta ista opasnost viđena u ovoj prostoriji. */
+  timesSeen?: number;
+  /** Kada je prvi put uočena — osnova za „nerešeno N dana". */
+  firstSeenAt?: string;
+  /** Prepoznata je, ali poklapanje nije bilo sigurno. */
+  recognitionUncertain?: boolean;
 }
 
 export interface AnalysisResult {

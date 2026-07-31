@@ -3,6 +3,7 @@ import type { AgeGroup, Hazard } from "../types";
 import { SEVERITY_META } from "../types";
 import { severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
+import { daysSince } from "../lib/memory";
 import { factsFor, liveScore, rankHazards, stepsFor, type RankedHazard } from "../lib/priority";
 import {
   openRecommendation,
@@ -103,6 +104,17 @@ function FocusCard({
       <p className="focus-priority">
         {t("focus.priority")} {index + 1} {t("focus.of")} {total}
       </p>
+
+      {/* Memorija: ista opasnost prepoznata iz ranijih skenova */}
+      {(h.timesSeen ?? 1) > 1 && (
+        <p className="focus-memory">
+          🔁 {t("mem.seen")} {h.timesSeen}× ·{" "}
+          {h.firstSeenAt && daysSince(h.firstSeenAt) > 0
+            ? `${t("mem.unresolvedDays")} ${daysSince(h.firstSeenAt)} ${t("mem.days")}`
+            : t("mem.since")}
+          {h.recognitionUncertain && ` · ${t("mem.uncertain")}`}
+        </p>
+      )}
       <h2 className="focus-title">
         {h.label}
         {h.count > 1 && <span className="focus-count">×{h.count}</span>}

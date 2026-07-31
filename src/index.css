@@ -1049,3 +1049,31 @@ body {
 }
 
 .alt-search { background: #f0fdfa; border-color: #99f6e4; }
+
+/* Memorija: prepoznata opasnost iz ranijih skenova */
+.focus-memory {
+  margin: 6px 18px 0;
+  padding: 7px 12px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #92400e;
+  display: inline-block;
+}
+.mem-card { background: #fffbeb; border: 1.5px solid #fde68a; }
+.mem-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.mem-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+}
+.mem-item-label { flex: 1; font-weight: 600; }
+.mem-item-days { font-size: 0.76rem; color: #92400e; font-weight: 700; white-space: nowrap; }
+.mem-ask-row { display: flex; gap: 8px; margin-top: 8px; }
+.mem-ask-row .btn { flex: 1; padding: 9px 12px; font-size: 0.9rem; }
