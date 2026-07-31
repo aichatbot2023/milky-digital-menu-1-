@@ -13,3 +13,4 @@ Thumbs.db
 tsconfig.tsbuildinfo
 e2e-full.mjs
 ctx-test.*
+reid-test.*
