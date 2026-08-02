@@ -536,3 +536,13 @@
 @media (prefers-reduced-motion: reduce) {
   .lp *, .lp *::before, .lp *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* --------------------------------------------------- fotografije ili crtež */
+.sm-art { position: relative; overflow: hidden; display: grid; place-items: center; }
+.sm-art-draw { display: block; width: 58px; color: #6b7c78; }
+.sm-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sm-art-off { opacity: 0; }
+.sm-art-on { opacity: 1; animation: lp-fade 420ms ease both; }
+@keyframes lp-fade { from { opacity: 0; } to { opacity: 1; } }
+.lp-step-art .sm-art-draw { width: 62px; }
+.lp-thumb .sm-art-draw { width: 44px; }

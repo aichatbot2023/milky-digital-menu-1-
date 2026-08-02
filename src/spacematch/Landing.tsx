@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { analyzeSpace, downscale, recommend, call, type Match, type RoomProfile } from "./api";
 import { aiLanguage, getLang, t, type Lang } from "./i18n";
+import { Art } from "./Art";
 import { LangPicker } from "./LangPicker";
 import { Signup } from "./Signup";
 
@@ -82,13 +83,15 @@ const ART: Record<string, JSX.Element> = {
   ),
 };
 
+const IMG = "/spacematch/img";
+
 const IND = [
-  { key: "d.v2", art: "sofa", tint: "#e9e2d8" },
-  { key: "d.v1", art: "frame", tint: "#e4ecea" },
-  { key: "d.v3", art: "lamp", tint: "#eae6dd" },
-  { key: "d.v5", art: "kitchen", tint: "#e3ebe9" },
-  { key: "d.v6", art: "rug", tint: "#ece5da" },
-  { key: "d.v7", art: "bed", tint: "#e6ebe8" },
+  { key: "d.v2", art: "sofa", tint: "#e9e2d8", file: "ind-furniture" },
+  { key: "d.v1", art: "frame", tint: "#e4ecea", file: "ind-art" },
+  { key: "d.v3", art: "lamp", tint: "#eae6dd", file: "ind-lighting" },
+  { key: "d.v5", art: "kitchen", tint: "#e3ebe9", file: "ind-kitchen" },
+  { key: "d.v6", art: "rug", tint: "#ece5da", file: "ind-flooring" },
+  { key: "d.v7", art: "bed", tint: "#e6ebe8", file: "ind-realestate" },
 ] as const;
 
 interface Plan {
@@ -204,11 +207,15 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
                 <span>{t("d.v6")}</span>
               </div>
               <div className="lp-grid4">
-                {[["sofa", "#e9e2d8", "£899", "d.v2"], ["frame", "#e4ecea", "£249", "d.v1"], ["lamp", "#eae6dd", "£139", "d.v3"]].map(([art, tint, price, label]) => (
+                {[["sofa", "#e9e2d8", "£899", "d.v2"], ["frame", "#e4ecea", "£249", "d.v1"], ["lamp", "#eae6dd", "£139", "d.v3"]].map(([art, tint, price, label], i) => (
                   <div className="lp-card" key={art}>
-                    <div className="lp-thumb" style={{ background: tint, color: "#6b7c78" }}>
-                      <span style={{ width: 44, display: "block" }}>{ART[art]}</span>
-                    </div>
+                    <Art
+                      className="lp-thumb"
+                      src={`${IMG}/hero-piece-${i + 1}.jpg`}
+                      fallback={ART[art]}
+                      tint={tint}
+                      eager
+                    />
                     <b>{t(label)}</b>
                     <span>{price}</span>
                   </div>
@@ -219,7 +226,13 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
 
           <div className="lp-phone">
             <div className="lp-step-mini"><i>1</i> {t("ty.upload")}</div>
-            <div className="lp-mini-img" style={{ background: "linear-gradient(150deg,#e7ece9,#d7e2df)" }} />
+            <Art
+              className="lp-mini-img"
+              src={`${IMG}/hero-room.jpg`}
+              fallback={ART.house}
+              tint="linear-gradient(150deg,#e7ece9,#d7e2df)"
+              eager
+            />
             <div className="lp-step-mini"><i>2</i> {t("ty.analyzing")}</div>
             <div className="lp-mini-img" style={{ background: "linear-gradient(150deg,#0d2f2a,#14857a)" }} />
             <div className="lp-step-mini"><i>3</i> {t("ty.recfor")}</div>
@@ -259,17 +272,13 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
               <span className="lp-step-n">{n}</span>
               <b>{t(`d.s${n}t`)}</b>
               <p>{t(`d.s${n}d`)}</p>
-              <div
+              <Art
                 className="lp-step-art"
-                style={{
-                  background: ["linear-gradient(150deg,#eef2f1,#dde7e4)", "linear-gradient(150deg,#0d2f2a,#17a094)", "linear-gradient(150deg,#f2efe8,#e3ddd2)", "linear-gradient(150deg,#e8f4f1,#cfe6e1)"][n - 1],
-                  color: n === 2 ? "rgba(255,255,255,.85)" : "#7b8b87",
-                }}
-              >
-                <span style={{ width: 62, display: "block" }}>
-                  {[ART.house, ART.lamp, ART.sofa, ART.frame][n - 1]}
-                </span>
-              </div>
+                src={`${IMG}/step-${n}-${["photograph", "understand", "recommend", "preview"][n - 1]}.jpg`}
+                fallback={[ART.house, ART.lamp, ART.sofa, ART.frame][n - 1]}
+                tint={["linear-gradient(150deg,#eef2f1,#dde7e4)", "linear-gradient(150deg,#0d2f2a,#17a094)", "linear-gradient(150deg,#f2efe8,#e3ddd2)", "linear-gradient(150deg,#e8f4f1,#cfe6e1)"][n - 1]}
+                alt={t(`d.s${n}t`)}
+              />
             </div>
           ))}
         </div>
@@ -294,9 +303,13 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
         <div className="lp-inds">
           {IND.map((i) => (
             <div className="lp-ind" key={i.key}>
-              <div className="lp-ind-art" style={{ background: i.tint, color: "#6b7c78" }}>
-                <span style={{ width: 58, display: "block" }}>{ART[i.art]}</span>
-              </div>
+              <Art
+                className="lp-ind-art"
+                src={`${IMG}/${i.file}.jpg`}
+                fallback={ART[i.art]}
+                tint={i.tint}
+                alt={t(i.key)}
+              />
               <b>{t(i.key)}</b>
             </div>
           ))}
