@@ -16,3 +16,4 @@ ctx-test.*
 reid-test.*
 live-test.*
 pager-test.*
+list-test.*
