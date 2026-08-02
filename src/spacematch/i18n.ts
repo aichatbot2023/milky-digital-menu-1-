@@ -30,6 +30,24 @@ const D: Dict = {
   "d.embed": { en: "One line on your website", sr: "Jedan red na vašem sajtu" },
   "d.embedNote": { en: "Paste it before </body>. A floating button appears; everything else is handled.", sr: "Nalepite pre </body>. Pojavi se plutajuće dugme; sve ostalo je rešeno." },
   "d.studio": { en: "Studio login", sr: "Prijava studija" },
+  "d.cta": { en: "Become a studio", sr: "Postanite studio" },
+
+  // ——— prijava firme (budući klijent platforme)
+  "b.title": { en: "Become a SpaceMatch studio", sr: "Postanite SpaceMatch studio" },
+  "b.sub": { en: "Tell us about your business and we set up your scanner, your branding and your catalogue.", sr: "Recite nam nešto o svom poslu i mi podešavamo vaš skener, vaš brend i vaš katalog." },
+  "b.company": { en: "Company name", sr: "Naziv firme" },
+  "b.person": { en: "Contact person", sr: "Kontakt osoba" },
+  "b.email": { en: "Work email", sr: "Poslovni email" },
+  "b.phone": { en: "Phone (optional)", sr: "Telefon (opciono)" },
+  "b.website": { en: "Website", sr: "Sajt" },
+  "b.vertical": { en: "What do you sell?", sr: "Šta prodajete?" },
+  "b.size": { en: "How many products in your catalogue?", sr: "Koliko proizvoda ima vaš katalog?" },
+  "b.plan": { en: "Plan you have in mind", sr: "Plan koji vam odgovara" },
+  "b.msg": { en: "Anything else we should know?", sr: "Ima li još nešto što treba da znamo?" },
+  "b.send": { en: "Send request", sr: "Pošalji zahtev" },
+  "b.sent": { en: "Thank you. We will contact you within one working day with your studio key.", sr: "Hvala. Javljamo vam se u roku od jednog radnog dana sa ključem vašeg studija." },
+  "b.bad": { en: "Please add a company name and a valid email.", sr: "Unesite naziv firme i ispravan email." },
+  "b.cta": { en: "Become a studio", sr: "Postanite studio" },
 
   // ——— skener
   "s.start": { en: "Photograph your space", sr: "Fotografišite svoj prostor" },

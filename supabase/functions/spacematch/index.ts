@@ -13,10 +13,11 @@
  * `api_key` koji se poredi sa ključem baš tog zakupca; akcije vlasnika
  * platforme traže ADMIN_KEY (Supabase secret, isti kao za SafeNest CRM).
  *
- * JAVNO:   tenant, products, analyze, recommend, inquiry, track
+ * JAVNO:   tenant, products, analyze, recommend, inquiry, track, signup
+ *           (signup = firma se prijavljuje da postane klijent platforme)
  * ZAKUPAC: t-stats, t-leads, t-product-add, t-product-del, t-import,
  *          t-update (brend, prompt, kontakt)
- * VLASNIK: list, create, delete, platform-stats
+ * VLASNIK: list, create, delete, platform-stats, signups, signup-status
  */
 import postgres from 'npm:postgres';
 
@@ -114,6 +115,22 @@ async function ensureTables() {
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
   await s`CREATE INDEX IF NOT EXISTS sm_events_tenant_idx ON sm_events (tenant_id, type, created_at)`;
+  // Prijave firmi koje žele da postanu klijenti platforme (nisu vezane za
+  // nijednog zakupca — to su budući zakupci, pa nema tenant_id)
+  await s`CREATE TABLE IF NOT EXISTS sm_signups (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company text NOT NULL,
+    person text,
+    email text NOT NULL,
+    phone text,
+    website text,
+    vertical text,
+    catalogue_size text,
+    plan text,
+    message text,
+    status text NOT NULL DEFAULT 'new',
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`;
   ready = true;
 }
 
@@ -634,6 +651,19 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === 'signup') {
+      const email = String(body.email ?? '').trim().slice(0, 120);
+      const company = String(body.company ?? '').trim().slice(0, 120);
+      if (!company) return json({ error: 'company required' }, 400);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'bad email' }, 400);
+      await s`INSERT INTO sm_signups (company, person, email, phone, website, vertical, catalogue_size, plan, message)
+        VALUES (${company}, ${String(body.person ?? '').slice(0, 80)}, ${email},
+                ${String(body.phone ?? '').slice(0, 40)}, ${String(body.website ?? '').slice(0, 160)},
+                ${String(body.vertical ?? '').slice(0, 30)}, ${String(body.catalogue_size ?? '').slice(0, 30)},
+                ${String(body.plan ?? '').slice(0, 30)}, ${String(body.message ?? '').slice(0, 600)})`;
+      return json({ ok: true });
+    }
+
     if (action === 'track') {
       const t = await tenantBySlug(String(body.slug ?? ''));
       if (!t) return json({ ok: true });
@@ -778,12 +808,24 @@ Deno.serve(async (req) => {
       return json({ tenants: rows });
     }
 
+    if (action === 'signups') {
+      const rows = await s`SELECT * FROM sm_signups ORDER BY id DESC LIMIT 300`;
+      return json({ signups: rows });
+    }
+
+    if (action === 'signup-status') {
+      await s`UPDATE sm_signups SET status = ${String(body.status ?? 'new').slice(0, 20)}
+        WHERE id = ${Number(body.id)}`;
+      return json({ ok: true });
+    }
+
     if (action === 'platform-stats') {
       const [tot] = await s`SELECT
         (SELECT count(*)::int FROM sm_tenants WHERE active) AS tenants,
         (SELECT count(*)::int FROM sm_products WHERE active) AS products,
         (SELECT count(*)::int FROM sm_scans) AS scans,
-        (SELECT count(*)::int FROM sm_leads) AS leads`;
+        (SELECT count(*)::int FROM sm_leads) AS leads,
+        (SELECT count(*)::int FROM sm_signups WHERE status = 'new') AS signups`;
       const daily = await s`SELECT to_char(created_at, 'YYYY-MM-DD') AS day, count(*)::int AS n
         FROM sm_scans WHERE created_at > now() - interval '30 days' GROUP BY 1 ORDER BY 1`;
       return json({ totals: tot, daily });

@@ -10,6 +10,7 @@ const KEY_STORE = "spacematch.owner";
 export function Owner() {
   const [key, setKey] = useState(() => sessionStorage.getItem(KEY_STORE) ?? "");
   const [rows, setRows] = useState<any[] | null>(null);
+  const [signups, setSignups] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [err, setErr] = useState("");
   const [form, setForm] = useState({ name: "", slug: "", vertical: "art", plan: "starter", contact_email: "" });
@@ -21,6 +22,7 @@ export function Owner() {
       const d = await call<{ tenants: any[] }>({ action: "list", admin_key: k });
       setRows(d.tenants);
       setStats(await call({ action: "platform-stats", admin_key: k }));
+      setSignups((await call<{ signups: any[] }>({ action: "signups", admin_key: k })).signups);
       sessionStorage.setItem(KEY_STORE, k);
     } catch {
       setErr("Wrong key.");
@@ -73,8 +75,98 @@ export function Owner() {
             <b>{stats.totals.leads}</b>
             <span>Enquiries</span>
           </div>
+          <div className="sm-kpi">
+            <b>{stats.totals.signups ?? 0}</b>
+            <span>New requests</span>
+          </div>
         </div>
       )}
+
+      <div className="sm-panel" style={{ marginTop: 14 }}>
+        <b>Company requests · {signups.filter((x) => x.status === "new").length} new</b>
+        <div style={{ overflowX: "auto" }}>
+          <table className="sm-table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Company</th>
+                <th>Contact</th>
+                <th>Sector</th>
+                <th>Catalogue</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {signups.map((r) => (
+                <tr key={r.id} style={r.status === "new" ? undefined : { opacity: 0.55 }}>
+                  <td>{String(r.created_at).slice(0, 10)}</td>
+                  <td>
+                    <b>{r.company}</b>
+                    {r.website && (
+                      <>
+                        <br />
+                        <a className="sm-link" href={r.website} target="_blank" rel="noopener">
+                          {r.website}
+                        </a>
+                      </>
+                    )}
+                    {r.message && <div className="sm-muted" style={{ fontSize: "0.78rem" }}>{r.message}</div>}
+                  </td>
+                  <td>
+                    {r.person}
+                    <br />
+                    <a className="sm-link" href={`mailto:${r.email}`}>{r.email}</a>
+                    {r.phone && <div>{r.phone}</div>}
+                  </td>
+                  <td>{r.vertical}</td>
+                  <td>{r.catalogue_size}</td>
+                  <td>{r.plan}</td>
+                  <td>{r.status}</td>
+                  <td>
+                    {r.status === "new" && (
+                      <>
+                        <button
+                          className="sm-link"
+                          onClick={() =>
+                            setForm({
+                              name: r.company,
+                              slug: "",
+                              vertical: r.vertical || "art",
+                              plan: r.plan || "starter",
+                              contact_email: r.email || "",
+                            })
+                          }
+                        >
+                          Prefill
+                        </button>
+                        <br />
+                        <button
+                          className="sm-link"
+                          onClick={async () => {
+                            await call({ action: "signup-status", admin_key: key, id: r.id, status: "done" });
+                            load(key);
+                          }}
+                        >
+                          Mark done
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {signups.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="sm-muted">
+                    No requests yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div className="sm-panel" style={{ marginTop: 14 }}>
         <b>New studio</b>

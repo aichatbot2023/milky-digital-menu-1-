@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { t } from "./i18n";
+import { Signup } from "./Signup";
 
 const SECTORS = [
   { en: "Art galleries", sr: "Galerije" },
@@ -11,10 +13,10 @@ const SECTORS = [
 ];
 
 const PLANS = [
-  { name: "Starter", price: "£49", items: ["50 pieces", "300 scans / month", "Embed widget", "Email support"] },
-  { name: "Professional", price: "£149", items: ["500 pieces", "3 000 scans / month", "Custom branding", "CSV import"], on: true },
-  { name: "Business", price: "£399", items: ["5 000 pieces", "25 000 scans / month", "Custom domain", "Priority support"] },
-  { name: "Enterprise", price: "Talk to us", items: ["Unlimited catalogue", "Multiple studios", "API access", "Onboarding"] },
+  { name: "Starter", key: "starter", price: "£49", items: ["50 pieces", "300 scans / month", "Embed widget", "Email support"] },
+  { name: "Professional", key: "professional", price: "£149", items: ["500 pieces", "3 000 scans / month", "Custom branding", "CSV import"], on: true },
+  { name: "Business", key: "business", price: "£399", items: ["5 000 pieces", "25 000 scans / month", "Custom domain", "Priority support"] },
+  { name: "Enterprise", key: "enterprise", price: "Talk to us", items: ["Unlimited catalogue", "Multiple studios", "API access", "Onboarding"] },
 ];
 
 interface Props {
@@ -27,6 +29,8 @@ interface Props {
 /** Javna stranica odeljenja — prodaje sistem, ne objašnjava tehnologiju. */
 export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
   const origin = typeof location !== "undefined" ? location.origin : "https://safenessai.co.uk";
+  // null = zatvoreno; string = otvoreno sa unapred izabranim planom
+  const [signup, setSignup] = useState<string | null>(null);
   return (
     <>
       <header className="sm-top">
@@ -41,9 +45,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
           <button className="sm-link" onClick={() => onLang(lang === "en" ? "sr" : "en")}>
             {lang === "en" ? "SR" : "EN"}
           </button>
-          <a className="sm-btn sm-btn-accent" href="#pricing">
+          <button className="sm-btn sm-btn-accent" onClick={() => setSignup("")}>
             {t("d.talk")}
-          </a>
+          </button>
         </nav>
       </header>
 
@@ -55,9 +59,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
           <button className="sm-btn sm-btn-accent sm-btn-lg" onClick={onDemo}>
             {t("d.try")}
           </button>
-          <a className="sm-btn sm-btn-quiet sm-btn-lg" href="#how">
-            {t("d.how")}
-          </a>
+          <button className="sm-btn sm-btn-quiet sm-btn-lg" onClick={() => setSignup("")}>
+            {t("d.cta")}
+          </button>
         </div>
         <div className="sm-strip">
           <span className="sm-kicker" style={{ margin: 0, alignSelf: "center" }}>
@@ -99,6 +103,13 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
                   <li key={i}>{i}</li>
                 ))}
               </ul>
+              <button
+                className={`sm-btn ${p.on ? "sm-btn-accent" : "sm-btn-quiet"}`}
+                style={{ marginTop: "auto" }}
+                onClick={() => setSignup(p.key)}
+              >
+                {t("b.cta")}
+              </button>
             </div>
           ))}
         </div>
@@ -128,6 +139,8 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
           </a>
         </span>
       </footer>
+
+      {signup !== null && <Signup plan={signup} onClose={() => setSignup(null)} />}
     </>
   );
 }
