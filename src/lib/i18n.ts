@@ -446,6 +446,14 @@ const D: Dict = {
   "mem.yesFixed": { en: "Yes, fixed", sr: "Da, rešeno" },
   "mem.stillThere": { en: "Still there", sr: "I dalje stoji" },
   "mem.recognized": { en: "recognised from earlier scans", sr: "prepoznato iz ranijih skenova" },
+  "focus.listMode": { en: "See all findings", sr: "Prikaži sve nalaze" },
+  "focus.focusMode": { en: "One at a time", sr: "Jedna po jedna" },
+  "focus.listTitle": { en: "All findings", sr: "Svi nalazi" },
+  "focus.listSub": {
+    en: "Sorted by real risk for your child. Tap any item to see the fix.",
+    sr: "Poređano po stvarnom riziku za vaše dete. Dodirnite stavku za rešenje.",
+  },
+  "focus.done": { en: "fixed", sr: "rešeno" },
   "focus.searchFor": { en: "Find on Amazon:", sr: "Pronađi na Amazonu:" },
   "focus.wrong": { en: "This isn't right", sr: "Ovo nije tačno" },
 

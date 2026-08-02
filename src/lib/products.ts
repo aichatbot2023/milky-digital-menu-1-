@@ -17,6 +17,8 @@ export interface PartnerProduct {
   price: string | null;
   /** Engleske ključne reči proizvoda — osnova za kontekstualno poklapanje. */
   keywords?: string | null;
+  /** URL slike proizvoda (opciono) — kartica izgleda kao prava prodavnica. */
+  image_url?: string | null;
 }
 
 const PRODUCTS_URL =
@@ -205,6 +207,7 @@ export interface Recommendation {
   /** true = pretraga na Amazonu, false = konkretan proizvod iz kataloga */
   isSearch: boolean;
   productId?: number;
+  image?: string | null;
 }
 
 /**
@@ -244,6 +247,7 @@ export async function recommendationsFor(h: {
     url: p.url,
     isSearch: false,
     productId: p.id,
+    image: p.image_url ?? null,
   }));
 
   out.push({

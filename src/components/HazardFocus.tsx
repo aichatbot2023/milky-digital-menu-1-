@@ -80,7 +80,7 @@ function FocusCard({
   const facts = useMemo(() => factsFor(h), [h]);
   const steps = useMemo(() => stepsFor(h), [h]);
   const [products, setProducts] = useState<Recommendation[]>([]);
-  const [showShop, setShowShop] = useState(false);
+
   const [voted, setVoted] = useState(false);
   /** Broj potvrda — svaka pokreće novu eksploziju čestica. */
   const [burst, setBurst] = useState(0);
@@ -146,36 +146,35 @@ function FocusCard({
         </section>
       )}
 
+      {/* Rešenja su UVEK vidljiva — to je odgovor na uočen problem,
+          ne reklama koju treba tražiti iza dugmeta. */}
       {products.length > 0 && (
         <section className="focus-block">
-          {!showShop ? (
-            <button className="btn btn-outline btn-alt" onClick={() => setShowShop(true)}>
-              🛡️ {t("focus.saferBtn")}
-            </button>
-          ) : (
-            <>
-              <h3>{t("focus.safer")}</h3>
-              <div className="alt-list snap-row">
-                {products.map((p) => (
-                  <button
-                    key={p.key}
-                    className={`alt-item${p.isSearch ? " alt-search" : ""}`}
-                    onClick={() => openRecommendation(p)}
-                  >
-                    <span className="alt-brand">{p.brand}</span>
-                    <span className="alt-name">
-                      {p.isSearch ? `${t("focus.searchFor")} „${p.title}"` : p.title}
-                    </span>
-                    <span className="alt-foot">
-                      {p.price && <b>{p.price}</b>}
-                      <span className="alt-cta">{t("focus.view")} →</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="alt-note">{t("shop.note")}</p>
-            </>
-          )}
+          <h3>🛡️ {t("focus.safer")}</h3>
+          <div className="alt-list snap-row">
+            {products.map((p) => (
+              <button
+                key={p.key}
+                className={`alt-item${p.isSearch ? " alt-search" : ""}`}
+                onClick={() => openRecommendation(p)}
+              >
+                <span className="alt-thumb" aria-hidden="true">
+                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <span>{p.isSearch ? "🔎" : "🛒"}</span>}
+                </span>
+                <span className="alt-text">
+                  <span className="alt-brand">{p.brand}</span>
+                  <span className="alt-name">
+                    {p.isSearch ? `${t("focus.searchFor")} „${p.title}"` : p.title}
+                  </span>
+                  <span className="alt-foot">
+                    {p.price && <b>{p.price}</b>}
+                    <span className="alt-cta">{t("focus.view")} →</span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="alt-note">{t("shop.note")}</p>
         </section>
       )}
 
@@ -230,6 +229,8 @@ export function HazardFocus({
   const open = ranked.filter((h) => !h.resolved);
   const score = liveScore(baseScore, ranked);
   const [leaving, setLeaving] = useState(false);
+  /** Pregled: jedna po jedna (fokus) ili lista svih nalaza. */
+  const [listMode, setListMode] = useState(false);
   const prevScore = useRef(score);
   const [bump, setBump] = useState(false);
 
@@ -281,12 +282,49 @@ export function HazardFocus({
             {doneCount > 0 && ` · ${doneCount} ${t("focus.fixedCount")}`}
           </p>
         </div>
+        <button
+          className={`focus-back${listMode ? " focus-back-on" : ""}`}
+          onClick={() => setListMode((v) => !v)}
+          aria-label={t(listMode ? "focus.focusMode" : "focus.listMode")}
+          title={t(listMode ? "focus.focusMode" : "focus.listMode")}
+        >
+          {listMode ? "◎" : "☰"}
+        </button>
         <button className="focus-back" onClick={onShare} aria-label={t("share.btn")}>
           ↗
         </button>
       </header>
 
-      {current ? (
+      {listMode ? (
+        <div className="focus-list">
+          <p className="focus-list-sub">{t("focus.listSub")}</p>
+          {ranked.map((h, i) => (
+            <button
+              key={h.id}
+              className={`fl-item${h.resolved ? " fl-done" : ""}`}
+              onClick={() => {
+                setListMode(false);
+                if (!h.resolved) return;
+              }}
+            >
+              <span className="fl-num" style={{ background: SEVERITY_META[h.severity].color }}>
+                {h.resolved ? "✓" : i + 1}
+              </span>
+              <span className="fl-body">
+                <span className="fl-top">
+                  <b>{h.label}</b>
+                  {h.count > 1 && <span className="fl-count">×{h.count}</span>}
+                  <span className="fl-sev" style={{ color: SEVERITY_META[h.severity].color }}>
+                    {severityLabel(h.severity)}
+                  </span>
+                </span>
+                <span className="fl-why">{h.why}</span>
+                {stepsFor(h)[0] && <span className="fl-fix">→ {stepsFor(h)[0]}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : current ? (
         <div className={`focus-stage${leaving ? " focus-leaving" : ""}`} key={current.id}>
           <FocusCard
             h={current}

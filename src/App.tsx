@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ChildProfile, RoomType, ScanRecord } from "./types";
+import type { AnalysisResult, ChildProfile, Hazard, RoomType, ScanRecord } from "./types";
 import { ROOM_LABELS } from "./types";
 import { analyzeFood, offlineFoodGuidance, type FoodAnalysis } from "./lib/food";
 import { analyzeImage, downscaleImage } from "./lib/analyze";
@@ -157,39 +157,27 @@ export default function App() {
         childName: selectedChild?.name,
       });
 
-      const [cloudS, localS] = await Promise.allSettled([cloudPromise, localPromise]);
-      const localHazards = localS.status === "fulfilled" ? localS.value : [];
-
-      let result;
-      if (cloudS.status === "fulfilled") {
-        // Spoji: cloud nalazi + lokalni koji NISU isti objekat (IoU < 0.4)
-        const cloud = cloudS.value;
-        const extras = localHazards
-          .filter((lh) => cloud.hazards.every((ch) => boxIou(lh.box, ch.box) < 0.4))
-          .map((lh, i) => ({ ...lh, id: `merge-${i}-${lh.id}` }));
-        result = {
-          ...cloud,
-          hazards: [...cloud.hazards, ...extras],
-          summary:
-            extras.length > 0
-              ? `${cloud.summary} ${t("scan.extras")} ${extras.length} ${t("scan.extrasTail")}`
-              : cloud.summary,
-        };
-      } else if (localS.status === "fulfilled") {
+      // BRZINA: ne čekamo oba modela. Cloud analiza je bogatija i stiže
+      // prva — nju odmah prikazujemo, a lokalni nalazi se dopisuju u
+      // pozadini kada budu gotovi. Percipirano čekanje = samo cloud.
+      let result: AnalysisResult;
+      let mergeLater = true;
+      try {
+        result = await cloudPromise;
+      } catch (cloudErr) {
+        // Cloud pao → sada stvarno čekamo lokalni model
+        mergeLater = false;
+        const localHazards = await localPromise.catch(() => []);
+        if (localHazards.length === 0) {
+          throw new Error((cloudErr as Error)?.message ?? t("scan.failed"));
+        }
         result = {
           hazards: localHazards,
           safety_score: Math.max(20, 90 - localHazards.length * 12),
-          summary:
-            localHazards.length > 0
-              ? t("scan.localSummary")
-              : t("scan.localNone"),
+          summary: t("scan.localSummary"),
         };
-      } else {
-        throw new Error(
-          (cloudS as PromiseRejectedResult).reason?.message ??
-            t("scan.failed"),
-        );
       }
+
       // Memorija: prepoznaj iste predmete iz ranijih skenova ove prostorije
       const mem = await reconcileWithMemory(imageDataUrl, result.hazards, roomType);
       result = { ...result, hazards: mem.hazards };
@@ -209,6 +197,34 @@ export default function App() {
       setCurrentScan(scan);
       trackScan("photo", roomType, age, result.hazards.map((h) => h.category), result.hazards.length);
       setView("result");
+
+      // Pozadinsko dopunjavanje: sitni predmeti koje je lokalni model
+      // uhvatio a cloud propustio. Prag pouzdanosti je visok jer je cloud
+      // već dao pouzdanu listu — dodajemo samo ono u šta smo sigurni.
+      if (mergeLater) {
+        localPromise
+          .then(async (localHazards: Hazard[]) => {
+            const extras = localHazards
+              .filter((lh) => (lh.confidence ?? 1) >= 0.5)
+              .filter((lh) => result.hazards.every((ch: Hazard) => boxIou(lh.box, ch.box) < 0.4))
+              .map((lh, i) => ({ ...lh, id: `merge-${i}-${lh.id}` }));
+            if (extras.length === 0) return;
+            const merged = await reconcileWithMemory(imageDataUrl, extras, roomType);
+            setCurrentScan((prev) => {
+              if (!prev || prev.id !== scan.id) return prev;
+              const next = {
+                ...prev,
+                result: { ...prev.result, hazards: [...prev.result.hazards, ...merged.hazards] },
+              };
+              updateScan(next);
+              return next;
+            });
+            setScans(loadScans());
+          })
+          .catch(() => {
+            /* lokalni model nije uspeo — cloud rezultat je već prikazan */
+          });
+      }
     } catch (e: any) {
       setError(e?.message ?? t("scan.failed"));
       setView("home");
