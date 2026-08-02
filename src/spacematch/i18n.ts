@@ -29,6 +29,9 @@ export const LANGS: { code: Lang; label: string; ai: string; rtl?: boolean }[] =
 type Dict = Record<string, string>;
 
 const en: Dict = {
+  "lv.loading": "Waking the camera up",
+  "lv.deep": "Looking deeper",
+  "lv.instant": "from what the camera sees",
   "lv.title": "Scan live",
   "lv.hint": "Point the camera at the room and the suggestions follow along.",
   "lv.start": "Scan live",
@@ -233,6 +236,9 @@ const en: Dict = {
 };
 
 const sr: Dict = {
+  "lv.loading": "Budimo kameru",
+  "lv.deep": "Gledamo dublje",
+  "lv.instant": "po onome što kamera vidi",
   "lv.title": "Skeniraj uživo",
   "lv.hint": "Uperite kameru u prostoriju i predlozi se menjaju sami.",
   "lv.start": "Skeniraj uživo",
@@ -437,6 +443,9 @@ const sr: Dict = {
 };
 
 const de: Dict = {
+  "lv.loading": "Kamera wird bereit",
+  "lv.deep": "Wir schauen genauer hin",
+  "lv.instant": "nach dem, was die Kamera sieht",
   "lv.title": "Live scannen",
   "lv.hint": "Richten Sie die Kamera auf den Raum, die Vorschläge folgen von selbst.",
   "lv.start": "Live scannen",
@@ -641,6 +650,9 @@ const de: Dict = {
 };
 
 const fr: Dict = {
+  "lv.loading": "La caméra se prépare",
+  "lv.deep": "Nous regardons de plus près",
+  "lv.instant": "d'après ce que voit la caméra",
   "lv.title": "Scanner en direct",
   "lv.hint": "Pointez la caméra vers la pièce, les propositions suivent d'elles-mêmes.",
   "lv.start": "Scanner en direct",
@@ -845,6 +857,9 @@ const fr: Dict = {
 };
 
 const es: Dict = {
+  "lv.loading": "Preparando la cámara",
+  "lv.deep": "Miramos con más detalle",
+  "lv.instant": "según lo que ve la cámara",
   "lv.title": "Escanear en directo",
   "lv.hint": "Apunte la cámara a la habitación y las propuestas se van actualizando solas.",
   "lv.start": "Escanear en directo",
@@ -1049,6 +1064,9 @@ const es: Dict = {
 };
 
 const it: Dict = {
+  "lv.loading": "Prepariamo la fotocamera",
+  "lv.deep": "Guardiamo più a fondo",
+  "lv.instant": "da ciò che vede la fotocamera",
   "lv.title": "Scansiona dal vivo",
   "lv.hint": "Punta la fotocamera sulla stanza e le proposte si aggiornano da sole.",
   "lv.start": "Scansiona dal vivo",
@@ -1253,6 +1271,9 @@ const it: Dict = {
 };
 
 const nl: Dict = {
+  "lv.loading": "Camera wordt klaargemaakt",
+  "lv.deep": "Wij kijken dieper",
+  "lv.instant": "op basis van wat de camera ziet",
   "lv.title": "Live scannen",
   "lv.hint": "Richt de camera op de kamer en de voorstellen volgen vanzelf.",
   "lv.start": "Live scannen",
@@ -1457,6 +1478,9 @@ const nl: Dict = {
 };
 
 const pt: Dict = {
+  "lv.loading": "A preparar a câmara",
+  "lv.deep": "A olhar com mais detalhe",
+  "lv.instant": "pelo que a câmara vê",
   "lv.title": "Digitalizar ao vivo",
   "lv.hint": "Aponte a câmara à divisão e as propostas acompanham sozinhas.",
   "lv.start": "Digitalizar ao vivo",
@@ -1661,6 +1685,9 @@ const pt: Dict = {
 };
 
 const pl: Dict = {
+  "lv.loading": "Przygotowujemy aparat",
+  "lv.deep": "Przyglądamy się dokładniej",
+  "lv.instant": "na podstawie tego, co widzi aparat",
   "lv.title": "Skanuj na żywo",
   "lv.hint": "Skieruj aparat na wnętrze, a propozycje zmieniają się same.",
   "lv.start": "Skanuj na żywo",
@@ -1865,6 +1892,9 @@ const pl: Dict = {
 };
 
 const sv: Dict = {
+  "lv.loading": "Kameran startar",
+  "lv.deep": "Vi tittar närmare",
+  "lv.instant": "utifrån vad kameran ser",
   "lv.title": "Skanna live",
   "lv.hint": "Rikta kameran mot rummet så följer förslagen med av sig själva.",
   "lv.start": "Skanna live",
@@ -2069,6 +2099,9 @@ const sv: Dict = {
 };
 
 const tr: Dict = {
+  "lv.loading": "Kamera hazırlanıyor",
+  "lv.deep": "Daha derin bakıyoruz",
+  "lv.instant": "kameranın gördüğüne göre",
   "lv.title": "Canlı tarama",
   "lv.hint": "Kamerayı odaya doğrultun, öneriler kendiliğinden değişsin.",
   "lv.start": "Canlı tarama",
@@ -2273,6 +2306,9 @@ const tr: Dict = {
 };
 
 const ru: Dict = {
+  "lv.loading": "Готовим камеру",
+  "lv.deep": "Смотрим внимательнее",
+  "lv.instant": "по тому, что видит камера",
   "lv.title": "Сканировать вживую",
   "lv.hint": "Наведите камеру на комнату — предложения меняются сами.",
   "lv.start": "Сканировать вживую",
@@ -2477,6 +2513,9 @@ const ru: Dict = {
 };
 
 const ar: Dict = {
+  "lv.loading": "نُجهّز الكاميرا",
+  "lv.deep": "ننظر بعمق أكبر",
+  "lv.instant": "بحسب ما تراه الكاميرا",
   "lv.title": "مسح مباشر",
   "lv.hint": "وجّهوا الكاميرا نحو الغرفة وتتبدّل الاقتراحات تلقائياً.",
   "lv.start": "مسح مباشر",

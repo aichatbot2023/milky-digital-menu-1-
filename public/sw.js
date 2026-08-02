@@ -3,7 +3,7 @@
  * API-ja (iOS ograničenja skladišta, privatni mod, kvota) završava običnim
  * mrežnim zahtevom. respondWith NIKAD ne dobija odbijen promise.
  */
-const CACHE = "safenest-v15";
+const CACHE = "safenest-v16";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
