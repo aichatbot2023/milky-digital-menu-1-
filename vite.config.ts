@@ -3,12 +3,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
-  // Dve stranice: landing (/) + aplikacija (/app/)
+  // Tri stranice: landing (/), aplikacija (/app/), odeljenje (/spacematch/)
   build: {
     rollupOptions: {
       input: {
         landing: resolve(__dirname, "index.html"),
         app: resolve(__dirname, "app/index.html"),
+        spacematch: resolve(__dirname, "spacematch/index.html"),
       },
     },
   },
