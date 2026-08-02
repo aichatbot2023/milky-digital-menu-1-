@@ -3,6 +3,7 @@ import type { AgeGroup, Hazard } from "../types";
 import { SEVERITY_META } from "../types";
 import { severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
+import { Burst } from "./Burst";
 import { daysSince } from "../lib/memory";
 import { factsFor, liveScore, rankHazards, stepsFor, type RankedHazard } from "../lib/priority";
 import {
@@ -81,6 +82,8 @@ function FocusCard({
   const [products, setProducts] = useState<Recommendation[]>([]);
   const [showShop, setShowShop] = useState(false);
   const [voted, setVoted] = useState(false);
+  /** Broj potvrda — svaka pokreće novu eksploziju čestica. */
+  const [burst, setBurst] = useState(0);
 
   // Preporuke se vezuju za KONKRETAN predmet (rešenje koje AI predloži),
   // ne za široku kategoriju — vrela kafa traži šolju, ne zaštitu šporeta
@@ -93,7 +96,7 @@ function FocusCard({
   }, [h.id, h.solution, h.sourceClass, h.category]);
 
   return (
-    <article className="focus-card">
+    <article className="focus-card stagger">
       <div className="focus-photo">
         {crop ? <img src={crop} alt={h.label} /> : <div className="focus-photo-skel" />}
         <span className="focus-risk" style={{ background: meta.color }}>
@@ -152,7 +155,7 @@ function FocusCard({
           ) : (
             <>
               <h3>{t("focus.safer")}</h3>
-              <div className="alt-list">
+              <div className="alt-list snap-row">
                 {products.map((p) => (
                   <button
                     key={p.key}
@@ -176,9 +179,18 @@ function FocusCard({
         </section>
       )}
 
-      <button className="btn btn-primary btn-fixed" onClick={onFixed}>
-        ✓ {t("focus.fixed")}
-      </button>
+      <div className="fixed-wrap">
+        <Burst trigger={burst} />
+        <button
+          className={`btn btn-primary btn-fixed${burst > 0 ? " flash" : ""}`}
+          onClick={() => {
+            setBurst((b) => b + 1);
+            onFixed();
+          }}
+        >
+          ✓ {t("focus.fixed")}
+        </button>
+      </div>
 
       {/* Samoučenje: diskretno, ne odvlači pažnju sa akcije */}
       {h.sourceClass && (

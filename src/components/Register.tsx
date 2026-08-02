@@ -25,7 +25,7 @@ export function Register({ onDone }: Props) {
 
   return (
     <div className="register-screen">
-      <div className="register-card">
+      <div className="register-card stagger">
         <div className="register-shield">🛡️</div>
         <h1>{t("reg.title")}</h1>
         <p className="muted">{t("reg.sub")}</p>

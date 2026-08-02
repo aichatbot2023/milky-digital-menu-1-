@@ -435,7 +435,7 @@ export default function App() {
   }
 
   return (
-    <div className="app has-nav">
+    <div className="app has-nav stagger">
       <header className="hero">
         <div className="hero-top">
           <h1>🛡️ SafeNest AI</h1>
