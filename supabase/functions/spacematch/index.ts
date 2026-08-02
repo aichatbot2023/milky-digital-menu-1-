@@ -899,12 +899,21 @@ function publicTenant(t: any) {
   };
 }
 
-const PLAN_LIMITS: Record<string, { products: number; scans: number }> = {
-  starter: { products: 50, scans: 300 },
-  professional: { products: 500, scans: 3000 },
-  business: { products: 5000, scans: 25000 },
-  enterprise: { products: 1_000_000, scans: 10_000_000 },
+/**
+ * Granice moraju da odgovaraju cenovniku na stranici. Prekoračenje se ne
+ * gasi nemo: klijent dobija jasnu poruku, a prekobrojna skeniranja se
+ * naplaćuju po jedinici (0,03 £) — nikada se ne prekida usluga kupcu
+ * usred razgledanja.
+ */
+const PLAN_LIMITS: Record<string, { products: number; scans: number; stores: number }> = {
+  starter: { products: 150, scans: 750, stores: 1 },
+  professional: { products: 1500, scans: 7500, stores: 3 },
+  business: { products: 15000, scans: 40000, stores: 10 },
+  enterprise: { products: 5_000_000, scans: 50_000_000, stores: 100000 },
 };
+
+/** Koliko se preko plana toleriše pre nego što se skeniranje zaustavi. */
+const OVERAGE_GRACE = 1.5;
 
 async function tenantBySlug(slug: string) {
   const s = db();
@@ -967,7 +976,11 @@ Deno.serve(async (req) => {
       const limit = PLAN_LIMITS[t.plan] ?? PLAN_LIMITS.starter;
       const [{ count }] = await s`SELECT count(*)::int AS count FROM sm_scans
         WHERE tenant_id = ${t.id} AND created_at > date_trunc('month', now())`;
-      if (count >= limit.scans) return json({ error: 'plan_scan_limit', limit: limit.scans }, 429);
+      // Do 50% preko plana radi i naplaćuje se; iznad toga stajemo, da
+      // račun ne pobegne klijentu bez njegovog znanja.
+      if (count >= Math.round(limit.scans * OVERAGE_GRACE)) {
+        return json({ error: 'plan_scan_limit', limit: limit.scans, used: count }, 429);
+      }
 
       const language = String(body.language ?? 'English').slice(0, 30);
       const live = body.live === true;

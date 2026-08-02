@@ -94,18 +94,39 @@ const IND = [
 interface Plan {
   key: string;
   name: string;
-  /** Mesečna cena u funtama; 0 = po dogovoru. */
+  /** Mesečna cena u funtama. */
   m: number;
+  /** Cena je donja granica — velikim sistemima se pravi ponuda. */
+  from?: boolean;
   desc: string;
   on?: boolean;
   feats: [string, string][];
 }
 
+/**
+ * Lestvica je namerno strma. Galerija sa jednom prostorijom i lanac sa
+ * sto salona ne dobijaju istu vrednost od istog alata: prvom je to lep
+ * dodatak, drugom je to prodajni kanal. Zato ulaz mora biti dovoljno
+ * jeftin da se ne razmišlja, a vrh dovoljno visok da nosi ugovor,
+ * uvođenje i odgovornost koju veliki sistem traži.
+ */
 const PLANS: Plan[] = [
-  { key: "starter", name: "Starter", m: 49, desc: "pd.1", feats: [["pf.pieces", "50"], ["pf.scans", "300"], ["pf.embed", ""], ["pf.support", ""]] },
-  { key: "professional", name: "Professional", m: 149, desc: "pd.2", on: true, feats: [["pf.pieces", "500"], ["pf.scans", "3 000"], ["pf.branding", ""], ["pf.csv", ""]] },
-  { key: "business", name: "Business", m: 399, desc: "pd.3", feats: [["pf.pieces", "5 000"], ["pf.scans", "25 000"], ["pf.domain", ""], ["pf.priority", ""]] },
-  { key: "enterprise", name: "Enterprise", m: 0, desc: "pd.4", feats: [["pf.unlimited", ""], ["pf.multi", ""], ["pf.api", ""], ["pf.dedicated", ""]] },
+  {
+    key: "starter", name: "Starter", m: 89, desc: "pd.1",
+    feats: [["pf.pieces", "150"], ["pf.scans", "750"], ["pf.embed", ""], ["pf.support", ""]],
+  },
+  {
+    key: "professional", name: "Professional", m: 349, desc: "pd.2", on: true,
+    feats: [["pf.pieces", "1 500"], ["pf.scans", "7 500"], ["pf.branding", ""], ["pf.csv", ""], ["pf.stores", "3"]],
+  },
+  {
+    key: "business", name: "Business", m: 1190, desc: "pd.3",
+    feats: [["pf.pieces", "15 000"], ["pf.scans", "40 000"], ["pf.stores", "10"], ["pf.domain", ""], ["pf.feed", ""], ["pf.api", ""]],
+  },
+  {
+    key: "enterprise", name: "Enterprise", m: 3500, from: true, desc: "pd.4",
+    feats: [["pf.unlimited", ""], ["pf.storesUnl", ""], ["pf.sso", ""], ["pf.sla", ""], ["pf.rules", ""], ["pf.manager", ""]],
+  },
 ];
 
 const FLOW = ["c.f1", "c.f2", "c.f3", "c.f4", "c.f5"];
@@ -401,8 +422,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
               {p.on && <span className="lp-plan-tag">{t("pr.popular")}</span>}
               <h3>{p.name}</h3>
               <div className="lp-plan-price">
-                {p.m ? `£${annual ? Math.round(p.m * 0.8) : p.m}` : t("pr.custom")}
-                {p.m > 0 && <small>{t("d.month")}</small>}
+                {p.from && <em>{t("pr.from")} </em>}
+                £{(annual ? Math.round(p.m * 0.8) : p.m).toLocaleString("en-GB")}
+                <small>{t("d.month")}</small>
               </div>
               <p>{t(p.desc)}</p>
               <ul>
@@ -414,12 +436,14 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
                 className={`lb ${p.on ? "lb-primary" : "lb-ghost"} lb-block`}
                 onClick={() => setSignup(p.key)}
               >
-                {p.m ? t("pr.start") : t("pr.talk")}
+                {p.from ? t("pr.talk") : t("pr.start")}
               </button>
             </div>
           ))}
         </div>
         <p className="lp-plan-note">{t("pr.note")}</p>
+        <p className="lp-plan-note lp-plan-fine">{t("pr.overage")}</p>
+        <p className="lp-plan-note lp-plan-fine">{t("pr.setup")}</p>
       </section>
 
       {/* --------------------------------------------------------- podnožje */}

@@ -481,6 +481,8 @@
 .lp-plan li svg { color: var(--l-teal); flex-shrink: 0; margin-top: 2px; }
 .lp-plan .lb { margin-top: auto; }
 .lp-plan-note { text-align: center; font-size: 0.8rem; margin-top: 18px; }
+.lp-plan-fine { font-size: 0.74rem; margin-top: 6px; color: #8a9895; }
+.lp-plan-price em { font-style: normal; font-size: 0.9rem; font-weight: 600; color: var(--l-body); }
 
 /* podnožje */
 .lp-foot { background: var(--l-dark); color: rgba(255, 255, 255, 0.72); padding: 52px 0 26px; margin-top: 30px; }

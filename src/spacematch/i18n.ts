@@ -29,6 +29,16 @@ export const LANGS: { code: Lang; label: string; ai: string; rtl?: boolean }[] =
 type Dict = Record<string, string>;
 
 const en: Dict = {
+  "pf.stores": "{n} stores or showrooms",
+  "pf.storesUnl": "Unlimited stores",
+  "pf.feed": "Automatic product feed sync",
+  "pf.sso": "Single sign-on and user roles",
+  "pf.sla": "99.9% uptime, contractual",
+  "pf.manager": "Named account manager",
+  "pf.rules": "Scoring rules tuned to your range",
+  "pr.from": "from",
+  "pr.setup": "Enterprise includes guided onboarding and catalogue migration, quoted separately.",
+  "pr.overage": "Extra scans are billed at £0.03 each. Annual billing saves 20%.",
   "lv.loading": "Waking the camera up",
   "lv.deep": "Looking deeper",
   "lv.instant": "from what the camera sees",
@@ -236,6 +246,16 @@ const en: Dict = {
 };
 
 const sr: Dict = {
+  "pf.stores": "{n} prodavnica ili salona",
+  "pf.storesUnl": "Neograničen broj prodavnica",
+  "pf.feed": "Automatsko povlačenje kataloga",
+  "pf.sso": "Jedinstvena prijava i uloge korisnika",
+  "pf.sla": "99,9% dostupnosti, ugovorom",
+  "pf.manager": "Imenovani vođa naloga",
+  "pf.rules": "Pravila rangiranja podešena vašem asortimanu",
+  "pr.from": "od",
+  "pr.setup": "Enterprise uključuje vođeno uvođenje i prenos kataloga, koji se posebno kotiraju.",
+  "pr.overage": "Skeniranja preko plana naplaćuju se 0,03 £ po komadu. Godišnje plaćanje je 20% jeftinije.",
   "lv.loading": "Budimo kameru",
   "lv.deep": "Gledamo dublje",
   "lv.instant": "po onome što kamera vidi",
@@ -443,6 +463,16 @@ const sr: Dict = {
 };
 
 const de: Dict = {
+  "pf.stores": "{n} Filialen oder Ausstellungsräume",
+  "pf.storesUnl": "Unbegrenzte Filialen",
+  "pf.feed": "Automatischer Produktfeed-Abgleich",
+  "pf.sso": "Single Sign-on und Benutzerrollen",
+  "pf.sla": "99,9% Verfügbarkeit, vertraglich",
+  "pf.manager": "Fester Ansprechpartner",
+  "pf.rules": "Auf Ihr Sortiment abgestimmte Bewertungsregeln",
+  "pr.from": "ab",
+  "pr.setup": "Enterprise umfasst begleitete Einführung und Katalogmigration, separat angeboten.",
+  "pr.overage": "Zusätzliche Scans kosten 0,03 £ pro Stück. Jährliche Zahlung spart 20%.",
   "lv.loading": "Kamera wird bereit",
   "lv.deep": "Wir schauen genauer hin",
   "lv.instant": "nach dem, was die Kamera sieht",
@@ -650,6 +680,16 @@ const de: Dict = {
 };
 
 const fr: Dict = {
+  "pf.stores": "{n} magasins ou showrooms",
+  "pf.storesUnl": "Magasins illimités",
+  "pf.feed": "Synchronisation automatique du flux produits",
+  "pf.sso": "Authentification unique et rôles",
+  "pf.sla": "99,9% de disponibilité, contractuel",
+  "pf.manager": "Interlocuteur dédié nommé",
+  "pf.rules": "Règles de classement adaptées à votre gamme",
+  "pr.from": "à partir de",
+  "pr.setup": "L'offre Enterprise comprend l'accompagnement et la migration du catalogue, chiffrés séparément.",
+  "pr.overage": "Les analyses supplémentaires sont facturées 0,03 £ l'unité. Le paiement annuel fait économiser 20%.",
   "lv.loading": "La caméra se prépare",
   "lv.deep": "Nous regardons de plus près",
   "lv.instant": "d'après ce que voit la caméra",
@@ -857,6 +897,16 @@ const fr: Dict = {
 };
 
 const es: Dict = {
+  "pf.stores": "{n} tiendas o salas de exposición",
+  "pf.storesUnl": "Tiendas ilimitadas",
+  "pf.feed": "Sincronización automática del catálogo",
+  "pf.sso": "Inicio de sesión único y roles",
+  "pf.sla": "99,9% de disponibilidad, por contrato",
+  "pf.manager": "Gestor de cuenta asignado",
+  "pf.rules": "Reglas de puntuación ajustadas a su gama",
+  "pr.from": "desde",
+  "pr.setup": "Enterprise incluye implantación acompañada y migración del catálogo, presupuestadas aparte.",
+  "pr.overage": "Los escaneos adicionales se facturan a 0,03 £ cada uno. El pago anual ahorra un 20%.",
   "lv.loading": "Preparando la cámara",
   "lv.deep": "Miramos con más detalle",
   "lv.instant": "según lo que ve la cámara",
@@ -1064,6 +1114,16 @@ const es: Dict = {
 };
 
 const it: Dict = {
+  "pf.stores": "{n} negozi o showroom",
+  "pf.storesUnl": "Negozi illimitati",
+  "pf.feed": "Sincronizzazione automatica del catalogo",
+  "pf.sso": "Accesso unico e ruoli utente",
+  "pf.sla": "99,9% di disponibilità, contrattuale",
+  "pf.manager": "Referente dedicato nominale",
+  "pf.rules": "Regole di punteggio tarate sulla tua gamma",
+  "pr.from": "da",
+  "pr.setup": "Enterprise comprende avvio assistito e migrazione del catalogo, quotati a parte.",
+  "pr.overage": "Le scansioni extra costano 0,03 £ ciascuna. Il pagamento annuale fa risparmiare il 20%.",
   "lv.loading": "Prepariamo la fotocamera",
   "lv.deep": "Guardiamo più a fondo",
   "lv.instant": "da ciò che vede la fotocamera",
@@ -1271,6 +1331,16 @@ const it: Dict = {
 };
 
 const nl: Dict = {
+  "pf.stores": "{n} winkels of showrooms",
+  "pf.storesUnl": "Onbeperkt aantal winkels",
+  "pf.feed": "Automatische productfeed-synchronisatie",
+  "pf.sso": "Single sign-on en gebruikersrollen",
+  "pf.sla": "99,9% beschikbaarheid, contractueel",
+  "pf.manager": "Vaste accountmanager",
+  "pf.rules": "Scoreregels afgestemd op uw assortiment",
+  "pr.from": "vanaf",
+  "pr.setup": "Enterprise omvat begeleide invoering en catalogusmigratie, apart geoffreerd.",
+  "pr.overage": "Extra scans kosten £0,03 per stuk. Jaarlijks betalen scheelt 20%.",
   "lv.loading": "Camera wordt klaargemaakt",
   "lv.deep": "Wij kijken dieper",
   "lv.instant": "op basis van wat de camera ziet",
@@ -1478,6 +1548,16 @@ const nl: Dict = {
 };
 
 const pt: Dict = {
+  "pf.stores": "{n} lojas ou showrooms",
+  "pf.storesUnl": "Lojas ilimitadas",
+  "pf.feed": "Sincronização automática do catálogo",
+  "pf.sso": "Início de sessão único e perfis",
+  "pf.sla": "99,9% de disponibilidade, por contrato",
+  "pf.manager": "Gestor de conta dedicado",
+  "pf.rules": "Regras de pontuação afinadas à sua gama",
+  "pr.from": "desde",
+  "pr.setup": "O Enterprise inclui arranque acompanhado e migração do catálogo, orçamentados à parte.",
+  "pr.overage": "Leituras adicionais custam 0,03 £ cada. O pagamento anual poupa 20%.",
   "lv.loading": "A preparar a câmara",
   "lv.deep": "A olhar com mais detalhe",
   "lv.instant": "pelo que a câmara vê",
@@ -1685,6 +1765,16 @@ const pt: Dict = {
 };
 
 const pl: Dict = {
+  "pf.stores": "{n} sklepów lub salonów",
+  "pf.storesUnl": "Nieograniczona liczba sklepów",
+  "pf.feed": "Automatyczna synchronizacja katalogu",
+  "pf.sso": "Logowanie jednokrotne i role",
+  "pf.sla": "99,9% dostępności, w umowie",
+  "pf.manager": "Wskazany opiekun klienta",
+  "pf.rules": "Reguły oceny dopasowane do asortymentu",
+  "pr.from": "od",
+  "pr.setup": "Enterprise obejmuje prowadzone wdrożenie i migrację katalogu, wyceniane osobno.",
+  "pr.overage": "Skany ponad plan kosztują 0,03 £ za sztukę. Płatność roczna jest tańsza o 20%.",
   "lv.loading": "Przygotowujemy aparat",
   "lv.deep": "Przyglądamy się dokładniej",
   "lv.instant": "na podstawie tego, co widzi aparat",
@@ -1892,6 +1982,16 @@ const pl: Dict = {
 };
 
 const sv: Dict = {
+  "pf.stores": "{n} butiker eller showroom",
+  "pf.storesUnl": "Obegränsat antal butiker",
+  "pf.feed": "Automatisk synk av produktflöde",
+  "pf.sso": "Enkel inloggning och roller",
+  "pf.sla": "99,9% tillgänglighet, avtalat",
+  "pf.manager": "Namngiven kundansvarig",
+  "pf.rules": "Poängregler anpassade till ert sortiment",
+  "pr.from": "från",
+  "pr.setup": "Enterprise inkluderar guidad uppstart och katalogmigrering, offereras separat.",
+  "pr.overage": "Extra skanningar kostar £0,03 styck. Årsbetalning sparar 20%.",
   "lv.loading": "Kameran startar",
   "lv.deep": "Vi tittar närmare",
   "lv.instant": "utifrån vad kameran ser",
@@ -2099,6 +2199,16 @@ const sv: Dict = {
 };
 
 const tr: Dict = {
+  "pf.stores": "{n} mağaza veya showroom",
+  "pf.storesUnl": "Sınırsız mağaza",
+  "pf.feed": "Otomatik ürün akışı eşitleme",
+  "pf.sso": "Tek oturum açma ve kullanıcı rolleri",
+  "pf.sla": "Sözleşmeli %99,9 erişilebilirlik",
+  "pf.manager": "Atanmış müşteri yöneticisi",
+  "pf.rules": "Ürün gamınıza göre ayarlanmış sıralama kuralları",
+  "pr.from": "başlangıç",
+  "pr.setup": "Enterprise, rehberli kurulum ve katalog taşımayı içerir; ayrıca fiyatlandırılır.",
+  "pr.overage": "Plan dışı taramalar tanesi 0,03 £. Yıllık ödeme %20 tasarruf sağlar.",
   "lv.loading": "Kamera hazırlanıyor",
   "lv.deep": "Daha derin bakıyoruz",
   "lv.instant": "kameranın gördüğüne göre",
@@ -2306,6 +2416,16 @@ const tr: Dict = {
 };
 
 const ru: Dict = {
+  "pf.stores": "{n} магазинов или салонов",
+  "pf.storesUnl": "Неограниченное число магазинов",
+  "pf.feed": "Автоматическая синхронизация каталога",
+  "pf.sso": "Единый вход и роли пользователей",
+  "pf.sla": "99,9% доступности по договору",
+  "pf.manager": "Персональный менеджер",
+  "pf.rules": "Правила ранжирования под ваш ассортимент",
+  "pr.from": "от",
+  "pr.setup": "Enterprise включает сопровождаемое внедрение и перенос каталога, которые оцениваются отдельно.",
+  "pr.overage": "Сканирования сверх плана — 0,03 £ за штуку. Годовая оплата дешевле на 20%.",
   "lv.loading": "Готовим камеру",
   "lv.deep": "Смотрим внимательнее",
   "lv.instant": "по тому, что видит камера",
@@ -2513,6 +2633,16 @@ const ru: Dict = {
 };
 
 const ar: Dict = {
+  "pf.stores": "{n} متجراً أو صالة عرض",
+  "pf.storesUnl": "متاجر بلا حدود",
+  "pf.feed": "مزامنة تلقائية لتغذية المنتجات",
+  "pf.sso": "دخول موحّد وأدوار للمستخدمين",
+  "pf.sla": "توافر ٩٩٫٩٪ بموجب العقد",
+  "pf.manager": "مدير حساب مخصص باسمه",
+  "pf.rules": "قواعد ترجيح مضبوطة على تشكيلتكم",
+  "pr.from": "ابتداءً من",
+  "pr.setup": "تشمل باقة Enterprise التهيئة المرافَقة ونقل الكتالوج، ويُسعّران بشكل منفصل.",
+  "pr.overage": "عمليات المسح الزائدة تُحتسب بـ ٠٫٠٣ جنيه للواحدة. الدفع السنوي يوفّر ٢٠٪.",
   "lv.loading": "نُجهّز الكاميرا",
   "lv.deep": "ننظر بعمق أكبر",
   "lv.instant": "بحسب ما تراه الكاميرا",

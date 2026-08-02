@@ -50,48 +50,77 @@ sistem donese stvarnu prodaju. Zato tri sloja:
 
 ### Sloj 1 — pretplata (predvidiv prihod)
 
-| Plan | Cena | Katalog | Skeniranja/mes. |
-|---|---|---|---|
-| Starter | £49 | 50 | 300 |
-| Professional | £149 | 500 | 3.000 |
-| Business | £399 | 5.000 | 25.000 |
-| Enterprise | dogovor | neograničeno | neograničeno |
+Lestvica je namerno strma. Galerija sa jednom prostorijom i lanac sa sto
+salona ne dobijaju istu vrednost od istog alata: prvom je to lep dodatak,
+drugom je prodajni kanal. Cena mora da prati tu razliku.
 
-### Sloj 2 — učinak (tu je pravi novac)
+| Plan | Cena | Katalog | Skeniranja/mes. | Prodavnica |
+|---|---|---|---|---|
+| Starter | £89 | 150 | 750 | 1 |
+| Professional | £349 | 1.500 | 7.500 | 3 |
+| Business | £1.190 | 15.000 | 40.000 | 10 |
+| Enterprise | od £3.500 | neograničeno | neograničeno | neograničeno |
+
+Godišnje plaćanje je 20% jeftinije. Skeniranja preko plana naplaćuju se
+**0,03 £ po komadu**; do 50% preko plana usluga radi normalno, iznad toga
+staje — da račun ne pobegne klijentu bez njegovog znanja.
+
+**Enterprise nije samo veći broj.** To je ugovor: jedinstvena prijava i
+uloge korisnika, 99,9% dostupnosti kao obaveza, pravila rangiranja
+podešena baš njihovom asortimanu, imenovani vođa naloga i vođeno uvođenje.
+Za lanac sa pedeset salona realan godišnji ugovor je **£60.000–£150.000**,
+a ne £4.788 koliko bi izašlo po staroj ceni. Ta razlika nije pohlepa nego
+tačno merenje: njima jedan mesec rada donese više nego što ceo naš račun
+košta za godinu.
+
+### Sloj 2 — uvođenje (jednokratno)
+
+| Veličina | Uvođenje |
+|---|---|
+| Starter / Professional | £0 (sami uvoze katalog) |
+| Business | £1.500 — prenos kataloga i podešavanje |
+| Enterprise | £6.000–£25.000 — spajanje sa njihovim sistemom, obuka, testni period |
+
+Kod malih se uvođenje poklanja jer je prepreka. Kod velikih se **ne sme**
+pokloniti: firma koja plati uvođenje ozbiljno shvata projekat i ne otkazuje
+ga posle dva meseca.
+
+### Sloj 3 — učinak (tu je gornja granica)
 
 Klijent bira jedan od dva ugovora:
 
-- **Niža pretplata + provizija:** Starter cena + 3% na svaku prodaju koja
-  je nastala iz upita preko skenera.
+- **Niža pretplata + provizija:** cena nižeg plana + 3% na svaku prodaju
+  koja je nastala iz upita preko skenera.
 - **Viša pretplata bez provizije:** cena iz tabele, ništa više.
 
-Iskustvo iz affiliate posla kaže: većina bira drugo, ali oni koji izaberu
-prvo donesu najviše. Alternativa za firme koje ne mogu da prate prodaju
-do kraja: **£8 po kvalifikovanom upitu** iznad uključenih 20 mesečno.
-
-### Sloj 3 — postavljanje
-
-£250 jednokratno za uvoz i sređivanje kataloga. **Praktično uvek se
-poklanja pri potpisu** — ali mora da postoji u ponudi, jer poklonjenih
-£250 vredi više od £250 popusta.
+Alternativa za firme koje ne prate prodaju do kraja: **£8 po kvalifikovanom
+upitu** iznad uključenih 20 mesečno.
 
 ## 4. Ekonomika po klijentu
 
 *Pretpostavke, za proveru posle prvih 30 klijenata:*
 
-| Stavka | Iznos |
-|---|---|
-| Prosečan prihod po klijentu (ARPU) | £149 |
-| Trošak posluživanja (Supabase, saobraćaj) | ~£2 |
-| Bruto marža | ~98% |
-| Trošak sticanja klijenta (CAC) | £40–60 (uglavnom vreme) |
-| Povraćaj CAC-a | manje od mesec dana |
-| Očekivano trajanje | 24 meseca *(pretpostavka)* |
-| Vrednost klijenta (LTV) | ~£3.500 |
+Sa novom lestvicom prosek zavisi od toga koga lovimo. Zato dve kolone —
+mali klijent i srednji/veliki:
 
-Odnos LTV:CAC preko 50:1 je nerealno dobar i **znači samo jedno: rast
-ograničava broj kontakata koje napravimo, a ne novac.** Zato je ceo
-sistem koji smo izgradili usmeren na to da se demo pravi za minut.
+| Stavka | Mali (Starter/Pro) | Veliki (Business/Enterprise) |
+|---|---|---|
+| Prosečan prihod mesečno | ~£220 | ~£1.900 |
+| Trošak posluživanja | ~£2 | ~£25 |
+| Bruto marža | ~99% | ~98% |
+| Trošak sticanja (CAC) | £40–60 | £900–2.500 (duži ciklus, sastanci) |
+| Povraćaj CAC-a | manje od mesec dana | 1–2 meseca |
+| Očekivano trajanje | 24 meseca *(pretpostavka)* | 36 meseci *(pretpostavka)* |
+| Vrednost klijenta (LTV) | ~£5.300 | ~£68.000 + uvođenje |
+
+**Deset velikih klijenata vredi kao sto pedeset malih.** Zato mali plan
+postoji da puni levak i pravi studije slučaja, a ne da nosi prihod.
+
+Kod malih klijenata odnos LTV:CAC je nerealno dobar i **znači samo jedno:
+rast ograničava broj kontakata koje napravimo, a ne novac.** Zato se demo
+pravi za minut. Kod velikih odnos je i dalje odličan (oko 30:1), ali tu
+ograničenje nije broj mejlova nego broj sastanaka koje možemo da održimo —
+zato Enterprise ide preko preporuke i partnera, ne preko liste.
 
 ## 5. Kako rastemo — dvanaest meseci
 
@@ -99,26 +128,27 @@ sistem koji smo izgradili usmeren na to da se demo pravi za minut.
 200 demoa: galerije, nameštaj, rasveta — UK i Balkan. Sve preko CRM-a:
 uvezi listu → napravi demo → pošalji ponudu na njihovom jeziku.
 Cilj: **10 klijenata koji plaćaju.** Ne više — hoćemo da naučimo ko
-konvertuje, ne da jurimo broj.
+konvertuje, ne da jurimo broj. Ovde su svi na Starteru i Professionalu;
+oni nisu prihod, oni su dokaz.
 
 **Mesec 3–4: fokus na najbolju vertikalu.**
 Ona koja je konvertovala najbolje dobija sve vreme. Prva studija slučaja
 sa PRAVIM brojevima klijenta (koliko upita, koliko prodaje). Bez te
 studije ne može dalje.
-Cilj: **30 klijenata, ~£4.500 MRR.**
+Cilj: **30 klijenata i prva dva Business ugovora, ~£12.000 MRR.**
 
 **Mesec 5–8: kanal partnera — ovo je poluga.**
 Web agencije i Shopify partneri prodaju našim klijentima svakog dana.
 Dajemo im **30% ponavljajuće provizije** doživotno. Agencija sa 40
 klijenata iz sveta nameštaja vredi kao 40 naših hladnih kontakata, a
 košta nas samo maržu.
-Cilj: **10 partnera, 100 klijenata, ~£15.000 MRR.**
+Cilj: **10 partnera, 100 klijenata, ~£40.000 MRR.**
 
 **Mesec 9–12: samoposluživanje.**
 Aplikacija u Shopify App Store i WooCommerce dodatak. Klijent sam
 instalira, katalog se uvozi automatski (već imamo čitač), plaća karticom.
 Tu prestaje da nas ograničava broj naših mejlova.
-Cilj: **300 klijenata, ~£45.000 MRR** plus prihod od učinka.
+Cilj: **300 malih klijenata i 3–5 Enterprise ugovora, ~£120.000 MRR** plus prihod od učinka i uvođenja.
 
 ## 6. Krajnja igra — od alata do tržišta
 
@@ -141,7 +171,11 @@ tržišta, nema šta da pokaže kupcu prvog dana.
 3. **Nameštaj** — najveće tržište, ali najduži ciklus odlučivanja.
 4. **Kuhinje i podovi** — velika vrednost porudžbine, spor prodajni proces
    kod klijenta; ostavljamo za kasnije.
-5. **Agencije za nekretnine** — druga upotreba (uređenje praznog stana);
+5. **Lanci nameštaja (Enterprise)** — najduži ciklus (šest do dvanaest
+   meseci, tender, pravna služba), ali jedan potpis vredi kao cela godina
+   rada sa malima. Ovde se ne ide hladnim mejlom nego preko preporuke
+   prvog zadovoljnog srednjeg klijenta.
+6. **Agencije za nekretnine** — druga upotreba (uređenje praznog stana);
    drugačiji jezik prodaje, čeka posebnu kampanju.
 
 ## 8. Rizici i odgovori
@@ -153,6 +187,8 @@ tržišta, nema šta da pokaže kupcu prvog dana.
 | Slike proizvoda u demou se povlače sa njihovog sajta | To su NJIHOVE slike, u demou napravljenom za njih. Kod potpisa katalog se prebacuje na njihove trajne linkove. Demo naloge treba gasiti posle 30 dana. |
 | Veliki igrač (IKEA, Houzz) uradi isto | Oni to rade samo za svoj katalog. Naša vrednost je baš u tome što radimo za bilo čiji — i pod njihovim imenom. |
 | Klijent otkaže posle tri meseca | Upiti i analitika ostaju kod nas; što duže rade, to im više vredi. Godišnje plaćanje sa dva meseca gratis. |
+| Veliki traži cenu malog | Ne spuštamo cenu, spuštamo obim: manje prodavnica u planu. Popust bez smanjenja obima obara celu lestvicu, jer se cene među lancima znaju. |
+| Enterprise traži funkciju koju nemamo | Naplaćuje se kao razvoj, ali ostaje u proizvodu i za ostale. Nikad ne pravimo granu koda samo za jednog klijenta. |
 | GDPR — fotografije tuđih domova | Slika se obrađuje prolazno i ne čuva se; čuva se samo opis prostora bez lične informacije. To mora ostati tako. |
 
 ## 9. Šta meriti (i ništa drugo)
