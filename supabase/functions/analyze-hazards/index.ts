@@ -117,7 +117,14 @@ LIVE CAMERA MODE — THIS IS A SINGLE FRAME FROM A LIVE VIDEO FEED (may be blurr
 
 VOCABULARY: use natural, correct, everyday words that a native ${language} speaker would use, with correct grammar in every sentence. NEVER invent words, never transliterate from other languages, never use made-up terms. If you do not know the exact word for an object in ${language}, use a simple common description instead. For Serbian: standard ekavian Serbian ("sto" not "stol", "sveća", "utičnica"); write simply, like a children's doctor talking to a parent.
 
-CERTAINTY: report ONLY objects you can clearly see and confidently identify. NEVER invent objects, hazards, or details that are not visibly present in the photo. A shorter, accurate list is always better than a longer, invented one.${liveRules}
+CERTAINTY: report ONLY objects you can clearly see and confidently identify. NEVER invent objects, hazards, or details that are not visibly present in the photo. A shorter, accurate list is always better than a longer, invented one.
+
+SCALE FIRST — ESTIMATE REAL-WORLD SIZE BEFORE JUDGING RISK:
+Before you call anything a hazard, work out how BIG it really is. Compare it to reference objects in the same photo whose true size you know: a standard plug socket is ~8 cm wide, a shelf board is ~2 cm thick, a shelf compartment is ~30 cm tall, a mug ~9 cm, a door handle ~12 cm, a floor tile ~30-60 cm, a skirting board ~10 cm, an adult hand ~19 cm. Use the object's share of the frame together with those references.
+- A choking hazard ONLY exists if the object (or a piece that can realistically break off it) fits inside a toddler's mouth: the longest dimension is UNDER ~4.5 cm, roughly the diameter of a toilet-paper tube. A large rubber duck, a football, a teddy bear, a full-size shoe, a book or a big toy CANNOT be swallowed — do NOT report them as choking hazards. If such an object has a small detachable part (a squeaker, an eye, a battery cover, a bell), report THAT part and say so explicitly.
+- Same logic for every other category: an object that is too heavy for a child to lift is not a throwing hazard, a shelf 2 m up is not within reach, a 5 mm gap cannot trap a head.
+- If an object is clearly big enough to be harmless in that category, leave it out completely rather than reporting it with low severity.
+Include your estimate in "size_cm" so it can be checked.${liveRules}
 
 You are a certified child-safety (childproofing) expert with knowledge of pediatric injury epidemiology (WHO, CDC, EU Child Safety Alliance).
 
@@ -134,6 +141,7 @@ Return ONLY valid JSON (no markdown fences) of this exact shape:
     "facts": ["2-4 VERY short factual bullets in ${language}, max 6 words each, e.g. \\"Estimated temperature: 78-85°C\\", \\"Within the child's reach\\", \\"Tips over easily\\""],
     "steps": ["1-3 imperative actions in ${language}, max 10 words each, e.g. \\"Move the cup 30 cm from the edge\\""],
     "reach": 1-10 (how easily THIS child can reach it: 10 = on the floor or at child height, 1 = high on a ceiling),
+    "size_cm": estimated longest real-world dimension of the object in centimetres, derived from reference objects in the photo (a number, e.g. 3 for a coin, 22 for a large rubber duck),
     "solution": "ALWAYS IN ENGLISH, 2-5 words naming the PRODUCT that fixes THIS EXACT hazard, as a shopper would search for it. It must solve the specific object, not the broad category. Examples: hot coffee cup -> \\"spill proof insulated mug\\"; blind cord -> \\"blind cord safety winder\\"; sharp table corner -> \\"corner edge protectors\\"; open socket -> \\"plug socket covers\\"; unsecured dresser -> \\"furniture anti tip straps\\"; stairs -> \\"baby stair gate\\"; medicines within reach -> \\"lockable medicine box\\". If no product can fix it, use an empty string.",
     "stats": "real injury statistics with source (WHO/CDC/EU), written in ${language}; never invented numbers",
     "fix": "one concrete step doable right now, in ${language}"
@@ -258,8 +266,15 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
       h: Math.max(0.02, Math.min(1, Number(h.box?.h) || 0.1)),
     },
   }));
+  // Provera razmere: gušenje je fizički moguće samo za predmet koji staje u
+  // usta deteta (~4.5 cm). Ako je model sam procenio da je predmet veliki
+  // (velika gumena patka, lopta, plišanac), taj nalaz ne sme da prođe.
+  parsed.hazards = parsed.hazards.filter((h: any) => {
+    const cm = Number(h.size_cm);
+    return !(h.category === 'choking' && Number.isFinite(cm) && cm > 6);
+  });
   parsed.safety_score = Math.max(0, Math.min(100, Number(parsed.safety_score) || 0));
-  parsed._v = 3;
+  parsed._v = 4;
   parsed._provider = p.name;
   parsed._model = model;
   return parsed;

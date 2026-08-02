@@ -1,3 +1,4 @@
+import { Logo } from "./Logo";
 import { useState } from "react";
 import { LANGS, setLang } from "../lib/i18n";
 
@@ -25,7 +26,7 @@ export function LanguagePicker({ onDone }: Props) {
   return (
     <div className="app langpick">
       <header className="hero">
-        <h1>🛡️ SafeNest AI</h1>
+        <h1><Logo size={38} wordmark /></h1>
         <p>
           Choose your language · Izaberite jezik · Elige tu idioma · اختر لغتك ·
           अपनी भाषा चुनें · 选择语言

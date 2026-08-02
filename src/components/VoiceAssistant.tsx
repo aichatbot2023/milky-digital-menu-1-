@@ -12,6 +12,7 @@ import {
 } from "../lib/voice";
 import { offlineAssistantAnswer } from "../lib/hazardKnowledge";
 import { t } from "../lib/i18n";
+import { Icon } from "./Icon";
 
 interface Props {
   roomType: RoomType;
@@ -109,6 +110,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
           setOpen(true);
         }}
       >
+        <Icon name="mic" size={19} />
         {t("va.fab")}
       </button>
     );
@@ -126,7 +128,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
             setOpen(false);
           }}
         >
-          ×
+          <Icon name="close" size={18} />
         </button>
       </div>
       <p className="muted">{t("va.hint")}</p>
@@ -136,6 +138,7 @@ export function VoiceAssistant({ roomType, ageGroup, hazards }: Props) {
         onClick={toggleMic}
         disabled={busy || transcribing}
       >
+        <Icon name="mic" size={19} />
         {listening ? t("va.stop") : t("va.speak")}
       </button>
       {transcribing && <p className="muted">{t("va.transcribing")}</p>}

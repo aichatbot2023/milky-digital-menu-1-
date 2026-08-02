@@ -46,6 +46,8 @@ import { VoiceAssistant } from "./components/VoiceAssistant";
 import { LiveScan } from "./components/LiveScan";
 import { ScanHistory } from "./components/ScanHistory";
 import { BottomNav, type Tab } from "./components/BottomNav";
+import { Logo } from "./components/Logo";
+import { Icon } from "./components/Icon";
 import { CameraCapture } from "./components/CameraCapture";
 import { clearMemory } from "./lib/memory";
 
@@ -454,7 +456,7 @@ export default function App() {
     <div className="app has-nav stagger">
       <header className="hero">
         <div className="hero-top">
-          <h1>🛡️ SafeNest AI</h1>
+          <Logo size={30} wordmark />
           <div className="hero-chips">
             <button
               className="chip sub-chip subbar"
@@ -462,17 +464,18 @@ export default function App() {
               data-state={subStatus.state}
             >
               {subStatus.state === "subscribed"
-                ? "⭐ Premium"
+                ? "Premium"
                 : subStatus.state === "trial"
-                  ? `🎁 ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? t("sub.dayLeft") : t("sub.daysLeft")}`
-                  : `🔒 ${t("paywall.subscribe")}`}
+                  ? `${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? t("sub.dayLeft") : t("sub.daysLeft")}`
+                  : t("paywall.subscribe")}
             </button>
             <button
               className="chip lang-chip"
               onClick={() => setLangReady(false)}
               aria-label="Change language"
             >
-              🌐 {LANGS.find((l) => l.code === getLang())?.native ?? "Language"}
+              <Icon name="globe" size={15} />
+              {LANGS.find((l) => l.code === getLang())?.native ?? "Language"}
             </button>
           </div>
         </div>
@@ -496,7 +499,8 @@ export default function App() {
             <h2>{t("scan.mainTitle")}</h2>
             <p>{t("scan.mainSub")}</p>
             <button className="scan-cta" onClick={() => requireAccess() && setCamera("room")}>
-              ◎ {t("cam.shoot")}
+              <Icon name="camera" size={21} />
+              {t("cam.shoot")}
             </button>
             <div className="scan-row">
               <button
@@ -504,14 +508,16 @@ export default function App() {
                 style={{ background: "rgba(255,255,255,.15)", color: "#fff", borderColor: "rgba(255,255,255,.5)" }}
                 onClick={() => requireAccess() && setView("live")}
               >
-                {t("btn.live")}
+                <Icon name="video" size={18} />
+                {t("live.short")}
               </button>
               <button
                 className="btn btn-outline"
                 style={{ background: "rgba(255,255,255,.15)", color: "#fff", borderColor: "rgba(255,255,255,.5)" }}
                 onClick={() => requireAccess() && setCamera("food")}
               >
-                {t("btn.food")}
+                <Icon name="bottle" size={18} />
+                {t("food.short")}
               </button>
             </div>
           </div>
@@ -598,7 +604,7 @@ export default function App() {
           pitamo roditelja umesto da tiho zaboravimo */}
       {askFixed.length > 0 && (
         <div className="history mem-card">
-          <h3>✅ {t("mem.askTitle")}</h3>
+          <h3>{t("mem.askTitle")}</h3>
           <p className="muted">{t("mem.askSub")}</p>
           <div className="mem-list">
             {askFixed.map((m) => (
@@ -631,7 +637,7 @@ export default function App() {
       {/* Nerešeno od ranije — aplikacija pamti i prepoznaje iste predmete */}
       {carried.length > 0 && (
         <div className="history mem-card">
-          <h3>🔁 {t("mem.carriedTitle")} ({carried.length})</h3>
+          <h3>{t("mem.carriedTitle")} ({carried.length})</h3>
           <p className="muted">{t("mem.carriedSub")}</p>
           <div className="mem-list">
             {carried.slice(0, 6).map((m) => (
@@ -671,11 +677,11 @@ export default function App() {
       />
       {scans.length === 0 && carried.length === 0 && askFixed.length === 0 && (
         <div className="history empty-state">
-          <div className="empty-emoji">🕘</div>
+          <div className="empty-emoji"><Icon name="history" size={42} /></div>
           <h3>{t("hist.emptyTitle")}</h3>
           <p className="muted">{t("hist.emptySub")}</p>
           <button className="btn btn-primary" onClick={() => setTab("scan")}>
-            ◎ {t("scan.mainTitle")}
+            {t("scan.mainTitle")}
           </button>
         </div>
       )}

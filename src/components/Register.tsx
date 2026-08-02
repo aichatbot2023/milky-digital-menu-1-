@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { registerAccount } from "../lib/subscription";
 import { t } from "../lib/i18n";
+import { Logo } from "./Logo";
 
 interface Props {
   onDone: () => void;
@@ -26,7 +27,7 @@ export function Register({ onDone }: Props) {
   return (
     <div className="register-screen">
       <div className="register-card stagger">
-        <div className="register-shield">🛡️</div>
+        <div className="register-shield"><Logo size={60} /></div>
         <h1>{t("reg.title")}</h1>
         <p className="muted">{t("reg.sub")}</p>
 

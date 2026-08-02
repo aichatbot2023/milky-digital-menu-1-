@@ -198,6 +198,92 @@ export function amazonSearchUrl(query: string): string {
   return `https://www.amazon.co.uk/s?k=${encodeURIComponent(query)}`;
 }
 
+/**
+ * Ugrađena polica rešenja — da roditelj UVEK vidi konkretne proizvode, i
+ * kada partnerski katalog još nije popunjen. Svaka stavka vodi na ciljanu
+ * Amazon UK pretragu sa našim affiliate tagom: link nikad ne „umre" (za
+ * razliku od fiksnog ASIN-a koji nestane kada proizvod izađe iz prodaje),
+ * a provizija se svejedno obračunava na sve što kupac kupi u 24h.
+ * Cene se namerno ne izmišljaju — Amazon ih prikazuje tačne.
+ */
+interface BuiltinSolution {
+  /** Naslov na engleskom (i srpski prevod) — izgleda kao prava kartica. */
+  en: string;
+  sr: string;
+  query: string;
+}
+
+const BUILTIN: Record<string, BuiltinSolution[]> = {
+  burn: [
+    { en: "Hob & cooker guard", sr: "Štitnik za šporet i ringle", query: "child safety hob guard cooker" },
+    { en: "Oven door lock", sr: "Brava za vrata rerne", query: "oven door child lock" },
+    { en: "Spill-proof insulated mug", sr: "Šolja koja se ne prosipa", query: "spill proof insulated travel mug" },
+  ],
+  electric: [
+    { en: "Socket covers (24 pack)", sr: "Poklopci za utičnice (24 kom)", query: "plug socket covers uk 24 pack" },
+    { en: "Cable tidy box", sr: "Kutija za sakrivanje kablova", query: "cable management box large" },
+    { en: "Extension lead cover", sr: "Poklopac za produžni kabl", query: "power strip safety cover baby" },
+  ],
+  fall: [
+    { en: "Stair gate, pressure fit", sr: "Kapija za stepenice", query: "baby stair gate pressure fit" },
+    { en: "Window restrictor lock", sr: "Graničnik za prozor", query: "window restrictor lock child" },
+    { en: "Anti-tip furniture straps", sr: "Trake protiv prevrtanja nameštaja", query: "furniture anti tip straps wall" },
+  ],
+  choking: [
+    { en: "Small-parts choke tester", sr: "Merač sitnih delova", query: "small parts choke test cylinder" },
+    { en: "Lockable toy storage box", sr: "Kutija za igračke sa bravom", query: "toy storage box with lid lockable" },
+    { en: "Cupboard & drawer locks", sr: "Brave za ormariće i fioke", query: "cabinet safety locks adhesive" },
+  ],
+  poisoning: [
+    { en: "Lockable medicine box", sr: "Kutija za lekove sa bravom", query: "lockable medicine box home" },
+    { en: "Cupboard magnetic locks", sr: "Magnetne brave za ormariće", query: "magnetic cabinet locks child" },
+    { en: "Cleaning caddy with lid", sr: "Kutija za hemiju sa poklopcem", query: "lockable cleaning products storage box" },
+  ],
+  cutting: [
+    { en: "Corner & edge protectors", sr: "Štitnici za uglove i ivice", query: "corner edge protectors clear" },
+    { en: "Knife block with lock", sr: "Držač za noževe sa bravom", query: "knife block with lock" },
+    { en: "Drawer safety latches", sr: "Blokade za fioke", query: "drawer safety latches child" },
+  ],
+  crush: [
+    { en: "Anti-tip furniture straps", sr: "Trake protiv prevrtanja", query: "furniture anti tip straps wall anchor" },
+    { en: "Door finger guards", sr: "Štitnici za prste na vratima", query: "door finger pinch guard child" },
+    { en: "TV anti-tip strap", sr: "Traka za TV protiv prevrtanja", query: "tv anti tip safety strap" },
+  ],
+  strangulation: [
+    { en: "Blind cord winder & cleat", sr: "Namotač za kanap roletne", query: "blind cord safety winder cleat" },
+    { en: "Cord shortener for appliances", sr: "Skraćivač kabla za uređaje", query: "appliance cord shortener kitchen" },
+  ],
+  drowning: [
+    { en: "Non-slip bath mat", sr: "Neklizajuća prostirka za kadu", query: "non slip bath mat baby" },
+    { en: "Toilet seat lock", sr: "Brava za WC dasku", query: "toilet seat lock child" },
+    { en: "Tap thermometer & spout cover", sr: "Termometar i navlaka za slavinu", query: "bath tap cover thermometer baby" },
+  ],
+  other: [
+    { en: "Complete baby-proofing kit", sr: "Kompletan set za obezbeđivanje doma", query: "baby proofing kit home safety" },
+  ],
+};
+
+/** Bira ugrađena rešenja za opasnost i rangira ih po poklapanju sa upitom. */
+function builtinFor(category: string, query: string): Recommendation[] {
+  const pool = BUILTIN[category] ?? BUILTIN.other;
+  const want = new Set(tokens(query));
+  return pool
+    .map((b) => ({
+      b,
+      overlap: tokens(b.query).filter((w) => want.has(w)).length,
+    }))
+    .sort((x, y) => y.overlap - x.overlap)
+    .map(({ b }) => ({
+      key: `b:${b.query}`,
+      brand: "Amazon UK",
+      title: isSr() ? b.sr : b.en,
+      price: null,
+      url: amazonSearchUrl(b.query),
+      isSearch: false,
+      image: null,
+    }));
+}
+
 export interface Recommendation {
   key: string;
   brand: string;
@@ -249,6 +335,13 @@ export async function recommendationsFor(h: {
     productId: p.id,
     image: p.image_url ?? null,
   }));
+
+  // Ako partnerski katalog nema ništa u kontekstu, roditelj ipak mora da
+  // dobije konkretna rešenja — nikada praznu policu.
+  for (const b of builtinFor(h.category, query)) {
+    if (out.length >= 3) break;
+    out.push(b);
+  }
 
   out.push({
     key: `s:${query}`,

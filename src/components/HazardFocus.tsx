@@ -3,6 +3,8 @@ import type { AgeGroup, Hazard } from "../types";
 import { SEVERITY_META } from "../types";
 import { severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
+import { Icon } from "./Icon";
+import { Logo } from "./Logo";
 import { Burst } from "./Burst";
 import { daysSince } from "../lib/memory";
 import { factsFor, liveScore, rankHazards, stepsFor, type RankedHazard } from "../lib/priority";
@@ -150,7 +152,7 @@ function FocusCard({
           ne reklama koju treba tražiti iza dugmeta. */}
       {products.length > 0 && (
         <section className="focus-block">
-          <h3>🛡️ {t("focus.safer")}</h3>
+          <h3>{t("focus.safer")}</h3>
           <div className="alt-list snap-row">
             {products.map((p) => (
               <button
@@ -159,7 +161,7 @@ function FocusCard({
                 onClick={() => openRecommendation(p)}
               >
                 <span className="alt-thumb" aria-hidden="true">
-                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <span>{p.isSearch ? "🔎" : "🛒"}</span>}
+                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name={p.isSearch ? "search" : "cart"} size={22} />}
                 </span>
                 <span className="alt-text">
                   <span className="alt-brand">{p.brand}</span>
@@ -187,7 +189,8 @@ function FocusCard({
             onFixed();
           }}
         >
-          ✓ {t("focus.fixed")}
+          <Icon name="check" size={19} />
+          {t("focus.fixed")}
         </button>
       </div>
 
@@ -336,7 +339,7 @@ export function HazardFocus({
         </div>
       ) : (
         <div className="focus-done">
-          <div className="focus-done-emoji">🛡️</div>
+          <div className="focus-done-emoji"><Logo size={72} /></div>
           <h2>{t("focus.doneTitle")}</h2>
           <p className="muted">{t("focus.doneSub")}</p>
           <button className="btn btn-primary" onClick={onBack}>

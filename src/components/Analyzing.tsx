@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { t } from "../lib/i18n";
+import { Logo } from "./Logo";
 
 interface Props {
   /** Sličica kadra koji se analizira — korisnik vidi šta AI gleda. */
@@ -65,6 +66,10 @@ export function Analyzing({ imageDataUrl, steps, title }: Props) {
       </ul>
 
       <p className="analyzing-note">{t("analyzing.note")}</p>
+
+      <div className="analyzing-brand">
+        <Logo size={46} wordmark light />
+      </div>
     </div>
   );
 }
