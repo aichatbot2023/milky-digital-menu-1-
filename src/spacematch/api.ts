@@ -105,8 +105,8 @@ export interface Alternative {
 export const getTenant = (slug: string) =>
   call<{ tenant: Tenant }>({ action: "tenant", slug }).then((d) => d.tenant);
 
-export const analyzeSpace = (slug: string, image: string, language: string) =>
-  call<{ profile: RoomProfile }>({ action: "analyze", slug, image, language }).then((d) => d.profile);
+export const analyzeSpace = (slug: string, image: string, language: string, live = false) =>
+  call<{ profile: RoomProfile }>({ action: "analyze", slug, image, language, live }).then((d) => d.profile);
 
 export const recommend = (
   slug: string,

@@ -440,3 +440,162 @@ label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--sm-mu
 [dir="rtl"] .sm-hero h1,
 [dir="rtl"] .sm-hero p { text-align: right; }
 [dir="rtl"] .sm-badge { left: auto; right: 14px; }
+
+/* ==========================================================================
+   SKENIRANJE UŽIVO
+   Kamera preko celog ekrana, predlozi u donjoj traci. Nema dugmeta za
+   okidanje — kupac samo drži telefon mirno i predlozi se menjaju sami.
+   ========================================================================== */
+.lv {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: #000;
+  overflow: hidden;
+}
+.lv-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Uglovi kadra — vode oko ka zidu, ne prekrivaju sliku */
+.lv-frame { position: absolute; inset: 12% 9% 34%; pointer-events: none; }
+.lv-frame i {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+}
+.lv-frame i:nth-child(1) { top: 0; left: 0; border-right: none; border-bottom: none; border-top-left-radius: 14px; }
+.lv-frame i:nth-child(2) { top: 0; right: 0; border-left: none; border-bottom: none; border-top-right-radius: 14px; }
+.lv-frame i:nth-child(3) { bottom: 0; left: 0; border-right: none; border-top: none; border-bottom-left-radius: 14px; }
+.lv-frame i:nth-child(4) { bottom: 0; right: 0; border-left: none; border-top: none; border-bottom-right-radius: 14px; }
+
+.lv-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 12px) 14px 12px;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+  color: #fff;
+}
+.lv-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.92rem; }
+.lv-brand img { height: 24px; width: auto; border-radius: 6px; }
+.lv-brand b {
+  width: 24px; height: 24px; border-radius: 7px;
+  background: var(--sm-accent); display: grid; place-items: center;
+  font-size: 0.66rem; font-weight: 900;
+}
+.lv-x {
+  background: rgba(255, 255, 255, 0.16);
+  border: none; color: #fff;
+  width: 34px; height: 34px; border-radius: 50%;
+  font-size: 1rem; cursor: pointer;
+}
+
+.lv-state {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 58px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 15px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.lv-pulse { width: 8px; height: 8px; border-radius: 50%; background: #7fd8cc; }
+.lv-state.on .lv-pulse { animation: lv-beat 1s ease-in-out infinite; }
+@keyframes lv-beat { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.65); } }
+
+.lv-tags {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 100px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  animation: sm-rise 420ms var(--sm-ease) both;
+}
+.lv-tags span {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.lv-dock {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 16px 14px calc(env(safe-area-inset-bottom) + 16px);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72) 22%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lv-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.lv-row::-webkit-scrollbar { display: none; }
+.lv-card {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  width: 168px;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: none;
+  border-radius: 14px;
+  padding: 8px;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  animation: sm-rise 420ms var(--sm-ease) both;
+}
+.lv-card-lead { outline: 2px solid var(--sm-accent); }
+.lv-card img, .lv-ph {
+  width: 44px; height: 52px;
+  border-radius: 9px;
+  object-fit: cover;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+.lv-card-t { min-width: 0; }
+.lv-card-t b {
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.lv-card-t span { font-size: 0.72rem; color: var(--sm-accent); font-weight: 800; }
+
+.lv-err {
+  position: absolute;
+  inset: auto 20px 22% 20px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

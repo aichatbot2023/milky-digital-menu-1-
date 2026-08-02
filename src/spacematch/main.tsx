@@ -1,8 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "@fontsource-variable/inter";
 import "@fontsource-variable/nunito";
 import "@fontsource-variable/fraunces";
 import "./spacematch.css";
+import "./landing.css";
 import { App } from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

@@ -12,6 +12,7 @@ import {
 } from "./api";
 import { aiLanguage, getLang, setLang, t, type Lang } from "./i18n";
 import { LangPicker } from "./LangPicker";
+import { LiveScan } from "./LiveScan";
 import { WallPreview } from "./WallPreview";
 
 interface Props {
@@ -19,7 +20,7 @@ interface Props {
   onExit?: () => void;
 }
 
-type Stage = "start" | "reading" | "profile" | "match" | "error";
+type Stage = "start" | "live" | "reading" | "profile" | "match" | "error";
 
 /**
  * Ceo tok kupca na jednom mestu: slikaj → razumemo prostor → JEDNA
@@ -39,6 +40,9 @@ export function Scanner({ tenant, onExit }: Props) {
   const [ask, setAsk] = useState(false);
   const [err, setErr] = useState("");
   const [lang, setLangState] = useState<Lang>(getLang());
+  // Uživo režim traži kameru — na desktopu bez nje nudimo samo fotografiju
+  const liveCapable =
+    typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && window.isSecureContext;
   const camera = useRef<HTMLInputElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
 
@@ -146,7 +150,15 @@ export function Scanner({ tenant, onExit }: Props) {
             <h2 className="sm-display">{tenant.headline || t("s.start")}</h2>
             <p>{tenant.subline || t("s.hint")}</p>
             <div className="sm-drop-actions">
-              <button className="sm-btn sm-btn-accent sm-btn-lg" onClick={() => camera.current?.click()}>
+              {liveCapable && (
+                <button className="sm-btn sm-btn-accent sm-btn-lg" onClick={() => setStage("live")}>
+                  {t("lv.start")}
+                </button>
+              )}
+              <button
+                className={`sm-btn ${liveCapable ? "sm-btn-quiet" : "sm-btn-accent sm-btn-lg"}`}
+                onClick={() => camera.current?.click()}
+              >
                 {t("s.take")}
               </button>
               <button className="sm-btn sm-btn-quiet" onClick={() => gallery.current?.click()}>
@@ -334,6 +346,24 @@ export function Scanner({ tenant, onExit }: Props) {
           </div>
         )}
       </div>
+
+      {stage === "live" && (
+        <LiveScan
+          tenant={tenant}
+          onClose={() => setStage("start")}
+          onPick={(f, p, m, a) => {
+            // Zamrznut kadar postaje običan rezultat: isti pregled na zidu,
+            // isti upit — kupac ne uči dva različita ekrana.
+            setShot(f);
+            setProfile(p);
+            setMatches(m);
+            setAlts(a);
+            setIdx(0);
+            setPreview(false);
+            setStage("match");
+          }}
+        />
+      )}
 
       {ask && current && (
         <Inquiry

@@ -229,8 +229,18 @@ const VERTICAL_EN: Record<string, string> = {
  * jeziku prompta i ignorišu direktivu. Engleski prompt + „OUTPUT LANGUAGE"
  * daje pouzdan izlaz na bilo kom jeziku.
  */
-function buildPrompt(vertical: string, extra: string, language: string): string {
+function buildPrompt(vertical: string, extra: string, language: string, live = false): string {
   const trade = VERTICAL_EN[vertical] ?? VERTICAL_EN.art;
+  // Živi kadar: kupac drži telefon, kadar je često pod uglom i pomeren.
+  // Traži se isti oblik odgovora, ali kraće i bez nagađanja detalja.
+  const liveNote = live
+    ? `
+
+LIVE CAMERA FRAME — the customer is holding a phone and panning across the room:
+- The frame may be tilted, partly cropped or slightly blurred. Judge only what is clearly visible.
+- Keep "notes" to a single short clause and "mood" to two words.
+- If the frame shows no usable wall or surface, lower "confidence" below 0.4 rather than inventing measurements.`
+    : '';
   return `OUTPUT LANGUAGE: ${language}. Every human-readable value (style, mood, notes) MUST be written entirely in ${language}. Never mix languages.
 
 You are a senior interior designer advising a ${trade}. Look at this photo of a real customer's space and describe it the way a designer would before proposing anything.
@@ -253,10 +263,10 @@ Return ONLY valid JSON (no markdown fences), exactly this shape:
 
 SCALE: estimate real sizes by comparing with objects whose true size you know — a plug socket is ~8 cm, a door is ~200 cm tall and ~80 cm wide, a sofa seat is ~45 cm high, a skirting board ~10 cm, a standard ceiling is 240-270 cm. Never return 0 or an obviously impossible size.
 FOCAL POINT: the normalized rectangle of the largest EMPTY wall area or the surface where a new piece would go. This is where the preview will be placed, so be precise.
-HONESTY: describe only what is visible. If the photo is dark or cropped, lower "confidence" instead of inventing detail.${extra ? `\n\nSTUDIO BRIEF (follow it): ${extra}` : ''}`;
+HONESTY: describe only what is visible. If the photo is dark or cropped, lower "confidence" instead of inventing detail.${liveNote}${extra ? `\n\nSTUDIO BRIEF (follow it): ${extra}` : ''}`;
 }
 
-async function callVision(p: Provider, model: string, image: string, prompt: string, language: string): Promise<any> {
+async function callVision(p: Provider, model: string, image: string, prompt: string, language: string, live = false): Promise<any> {
   const res = await fetch(p.url, {
     method: 'POST',
     signal: AbortSignal.timeout(30000),
@@ -269,7 +279,7 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
       ...(p.extraBody ?? {}),
       ...(p.name === 'openrouter' && model.includes('reasoning') ? { reasoning: { enabled: false } } : {}),
       model,
-      max_tokens: 1600,
+      max_tokens: live ? 900 : 1600,
       messages: [
         {
           role: 'system',
@@ -960,7 +970,8 @@ Deno.serve(async (req) => {
       if (count >= limit.scans) return json({ error: 'plan_scan_limit', limit: limit.scans }, 429);
 
       const language = String(body.language ?? 'English').slice(0, 30);
-      const prompt = buildPrompt(String(t.vertical), String(t.prompt_extra ?? '').slice(0, 600), language);
+      const live = body.live === true;
+      const prompt = buildPrompt(String(t.vertical), String(t.prompt_extra ?? '').slice(0, 600), language, live);
       const active = PROVIDERS.filter((p) => p.key);
       if (!active.length) return json({ error: 'no_provider' }, 501);
 
@@ -968,8 +979,9 @@ Deno.serve(async (req) => {
       for (const p of active) {
         for (const model of p.models) {
           try {
-            const profile = await callVision(p, model, image, prompt, language);
-            await s`INSERT INTO sm_scans (tenant_id, profile) VALUES (${t.id}, ${s.json(profile)})`;
+            const profile = await callVision(p, model, image, prompt, language, live);
+            await s`INSERT INTO sm_scans (tenant_id, profile)
+              VALUES (${t.id}, ${s.json({ ...profile, _live: live })})`;
             return json({ profile });
           } catch (e: any) {
             errors.push(e?.message ?? String(e));
