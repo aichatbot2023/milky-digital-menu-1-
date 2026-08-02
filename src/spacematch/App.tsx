@@ -5,12 +5,14 @@ import { Landing } from "./Landing";
 import { Owner } from "./Owner";
 import { Scanner } from "./Scanner";
 import { Studio } from "./Studio";
+import { Paid } from "./Paid";
 
-type View = "landing" | "scanner" | "studio" | "owner";
+type View = "landing" | "scanner" | "studio" | "owner" | "paid";
 
 function initialView(): { view: View; slug: string } {
   const q = new URLSearchParams(location.search);
   const slug = q.get("t") ?? "";
+  if (q.has("paid")) return { view: "paid", slug };
   if (q.has("owner")) return { view: "owner", slug };
   if (q.has("studio")) return { view: "studio", slug };
   if (slug) return { view: "scanner", slug };
@@ -44,6 +46,7 @@ export function App() {
     };
   }, [view, slug]);
 
+  if (view === "paid") return <Paid onStudio={() => { history.pushState({}, "", "?studio=1"); setView("studio"); }} />;
   if (view === "owner") return <Owner />;
   if (view === "studio") return <Studio />;
 

@@ -486,7 +486,14 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
         </div>
       </footer>
 
-      {signup !== null && <Signup plan={signup} onClose={() => setSignup(null)} />}
+      {signup !== null && (
+        <Signup
+          plan={signup}
+          pay={signup !== "" && signup !== "enterprise"}
+          yearly={annual}
+          onClose={() => setSignup(null)}
+        />
+      )}
     </div>
   );
 }

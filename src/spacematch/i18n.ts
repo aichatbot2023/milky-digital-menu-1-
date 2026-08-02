@@ -29,6 +29,17 @@ export const LANGS: { code: Lang; label: string; ai: string; rtl?: boolean }[] =
 type Dict = Record<string, string>;
 
 const en: Dict = {
+  "pay.title": "Start your studio",
+  "pay.sub": "Fourteen days free. Cancel any time, from your own billing page.",
+  "pay.go": "Continue to payment",
+  "pay.trial": "14 days free, then",
+  "pay.secure": "Payment is handled by Stripe. We never see your card.",
+  "pay.fallback": "Card payment is not available at this moment — we have taken your details and will send you a payment link today.",
+  "paid.title": "Your studio is on the way",
+  "paid.sub": "Check your email: the studio key and your scanner link are already sent. If nothing arrives within a few minutes, write to partnership@safenessai.co.uk.",
+  "paid.open": "Open my studio",
+  "bill.manage": "Manage subscription",
+  "bill.none": "No subscription on this studio yet.",
   "pf.stores": "{n} stores or showrooms",
   "pf.storesUnl": "Unlimited stores",
   "pf.feed": "Automatic product feed sync",
@@ -246,6 +257,17 @@ const en: Dict = {
 };
 
 const sr: Dict = {
+  "pay.title": "Otvorite svoj studio",
+  "pay.sub": "Četrnaest dana besplatno. Otkazujete kad želite, sa svoje stranice za naplatu.",
+  "pay.go": "Nastavi na plaćanje",
+  "pay.trial": "14 dana besplatno, zatim",
+  "pay.secure": "Naplatu vodi Stripe. Vašu karticu nikada ne vidimo.",
+  "pay.fallback": "Plaćanje karticom trenutno nije dostupno — zabeležili smo vaše podatke i danas vam šaljemo link za plaćanje.",
+  "paid.title": "Vaš studio stiže",
+  "paid.sub": "Proverite mejl: ključ studija i link vašeg skenera su već poslati. Ako ništa ne stigne za nekoliko minuta, pišite na partnership@safenessai.co.uk.",
+  "paid.open": "Otvori moj studio",
+  "bill.manage": "Upravljanje pretplatom",
+  "bill.none": "Ovaj studio još nema pretplatu.",
   "pf.stores": "{n} prodavnica ili salona",
   "pf.storesUnl": "Neograničen broj prodavnica",
   "pf.feed": "Automatsko povlačenje kataloga",
@@ -463,6 +485,17 @@ const sr: Dict = {
 };
 
 const de: Dict = {
+  "pay.title": "Studio eröffnen",
+  "pay.sub": "Vierzehn Tage kostenlos. Jederzeit kündbar, über Ihre eigene Abrechnungsseite.",
+  "pay.go": "Weiter zur Zahlung",
+  "pay.trial": "14 Tage kostenlos, danach",
+  "pay.secure": "Die Zahlung wickelt Stripe ab. Ihre Karte sehen wir nie.",
+  "pay.fallback": "Kartenzahlung ist derzeit nicht verfügbar — wir haben Ihre Angaben aufgenommen und senden Ihnen heute einen Zahlungslink.",
+  "paid.title": "Ihr Studio ist unterwegs",
+  "paid.sub": "Prüfen Sie Ihre E-Mail: Studio-Schlüssel und Scanner-Link sind bereits unterwegs. Kommt in einigen Minuten nichts an, schreiben Sie an partnership@safenessai.co.uk.",
+  "paid.open": "Mein Studio öffnen",
+  "bill.manage": "Abo verwalten",
+  "bill.none": "Für dieses Studio besteht noch kein Abo.",
   "pf.stores": "{n} Filialen oder Ausstellungsräume",
   "pf.storesUnl": "Unbegrenzte Filialen",
   "pf.feed": "Automatischer Produktfeed-Abgleich",
@@ -680,6 +713,17 @@ const de: Dict = {
 };
 
 const fr: Dict = {
+  "pay.title": "Ouvrir votre studio",
+  "pay.sub": "Quatorze jours gratuits. Résiliation à tout moment depuis votre espace de facturation.",
+  "pay.go": "Continuer vers le paiement",
+  "pay.trial": "14 jours gratuits, puis",
+  "pay.secure": "Le paiement est géré par Stripe. Nous ne voyons jamais votre carte.",
+  "pay.fallback": "Le paiement par carte n'est pas disponible pour le moment — nous avons enregistré vos informations et vous enverrons un lien de paiement aujourd'hui.",
+  "paid.title": "Votre studio arrive",
+  "paid.sub": "Consultez votre e-mail : la clé du studio et le lien de votre scanner sont déjà partis. Si rien n'arrive d'ici quelques minutes, écrivez à partnership@safenessai.co.uk.",
+  "paid.open": "Ouvrir mon studio",
+  "bill.manage": "Gérer l'abonnement",
+  "bill.none": "Aucun abonnement sur ce studio pour l'instant.",
   "pf.stores": "{n} magasins ou showrooms",
   "pf.storesUnl": "Magasins illimités",
   "pf.feed": "Synchronisation automatique du flux produits",
@@ -897,6 +941,17 @@ const fr: Dict = {
 };
 
 const es: Dict = {
+  "pay.title": "Abra su estudio",
+  "pay.sub": "Catorce días gratis. Cancele cuando quiera desde su página de facturación.",
+  "pay.go": "Continuar al pago",
+  "pay.trial": "14 días gratis, después",
+  "pay.secure": "Del pago se encarga Stripe. Nunca vemos su tarjeta.",
+  "pay.fallback": "El pago con tarjeta no está disponible en este momento: hemos guardado sus datos y hoy le enviaremos un enlace de pago.",
+  "paid.title": "Su estudio está en camino",
+  "paid.sub": "Revise su correo: la clave del estudio y el enlace de su escáner ya están enviados. Si no llega nada en unos minutos, escriba a partnership@safenessai.co.uk.",
+  "paid.open": "Abrir mi estudio",
+  "bill.manage": "Gestionar suscripción",
+  "bill.none": "Este estudio todavía no tiene suscripción.",
   "pf.stores": "{n} tiendas o salas de exposición",
   "pf.storesUnl": "Tiendas ilimitadas",
   "pf.feed": "Sincronización automática del catálogo",
@@ -1114,6 +1169,17 @@ const es: Dict = {
 };
 
 const it: Dict = {
+  "pay.title": "Apri il tuo studio",
+  "pay.sub": "Quattordici giorni gratis. Disdici quando vuoi dalla tua pagina di fatturazione.",
+  "pay.go": "Continua al pagamento",
+  "pay.trial": "14 giorni gratis, poi",
+  "pay.secure": "Il pagamento è gestito da Stripe. La tua carta non la vediamo mai.",
+  "pay.fallback": "Il pagamento con carta non è disponibile in questo momento: abbiamo registrato i tuoi dati e oggi ti inviamo un link di pagamento.",
+  "paid.title": "Il tuo studio sta arrivando",
+  "paid.sub": "Controlla l'email: la chiave dello studio e il link del tuo scanner sono già partiti. Se non arriva nulla entro qualche minuto, scrivi a partnership@safenessai.co.uk.",
+  "paid.open": "Apri il mio studio",
+  "bill.manage": "Gestisci abbonamento",
+  "bill.none": "Questo studio non ha ancora un abbonamento.",
   "pf.stores": "{n} negozi o showroom",
   "pf.storesUnl": "Negozi illimitati",
   "pf.feed": "Sincronizzazione automatica del catalogo",
@@ -1331,6 +1397,17 @@ const it: Dict = {
 };
 
 const nl: Dict = {
+  "pay.title": "Open uw studio",
+  "pay.sub": "Veertien dagen gratis. Altijd opzegbaar via uw eigen factuurpagina.",
+  "pay.go": "Doorgaan naar betaling",
+  "pay.trial": "14 dagen gratis, daarna",
+  "pay.secure": "De betaling verloopt via Stripe. Uw kaart zien wij nooit.",
+  "pay.fallback": "Kaartbetaling is op dit moment niet beschikbaar — wij hebben uw gegevens genoteerd en sturen u vandaag een betaallink.",
+  "paid.title": "Uw studio is onderweg",
+  "paid.sub": "Kijk in uw e-mail: de studiosleutel en de link naar uw scanner zijn al verstuurd. Komt er binnen enkele minuten niets, schrijf dan naar partnership@safenessai.co.uk.",
+  "paid.open": "Mijn studio openen",
+  "bill.manage": "Abonnement beheren",
+  "bill.none": "Dit studio heeft nog geen abonnement.",
   "pf.stores": "{n} winkels of showrooms",
   "pf.storesUnl": "Onbeperkt aantal winkels",
   "pf.feed": "Automatische productfeed-synchronisatie",
@@ -1548,6 +1625,17 @@ const nl: Dict = {
 };
 
 const pt: Dict = {
+  "pay.title": "Abra o seu estúdio",
+  "pay.sub": "Catorze dias grátis. Cancela quando quiser, na sua página de faturação.",
+  "pay.go": "Continuar para pagamento",
+  "pay.trial": "14 dias grátis, depois",
+  "pay.secure": "O pagamento é tratado pela Stripe. Nunca vemos o seu cartão.",
+  "pay.fallback": "O pagamento com cartão não está disponível neste momento — registámos os seus dados e enviamos-lhe hoje um link de pagamento.",
+  "paid.title": "O seu estúdio está a caminho",
+  "paid.sub": "Veja o seu email: a chave do estúdio e o link do seu scanner já seguiram. Se nada chegar dentro de alguns minutos, escreva para partnership@safenessai.co.uk.",
+  "paid.open": "Abrir o meu estúdio",
+  "bill.manage": "Gerir subscrição",
+  "bill.none": "Este estúdio ainda não tem subscrição.",
   "pf.stores": "{n} lojas ou showrooms",
   "pf.storesUnl": "Lojas ilimitadas",
   "pf.feed": "Sincronização automática do catálogo",
@@ -1765,6 +1853,17 @@ const pt: Dict = {
 };
 
 const pl: Dict = {
+  "pay.title": "Otwórz swoje studio",
+  "pay.sub": "Czternaście dni za darmo. Rezygnacja w dowolnym momencie z własnej strony rozliczeń.",
+  "pay.go": "Przejdź do płatności",
+  "pay.trial": "14 dni za darmo, potem",
+  "pay.secure": "Płatność obsługuje Stripe. Państwa karty nigdy nie widzimy.",
+  "pay.fallback": "Płatność kartą jest w tej chwili niedostępna — zapisaliśmy Państwa dane i dziś wyślemy link do płatności.",
+  "paid.title": "Państwa studio jest w drodze",
+  "paid.sub": "Proszę sprawdzić e-mail: klucz studia i link do skanera już zostały wysłane. Jeśli nic nie dotrze w ciągu kilku minut, prosimy pisać na partnership@safenessai.co.uk.",
+  "paid.open": "Otwórz moje studio",
+  "bill.manage": "Zarządzaj subskrypcją",
+  "bill.none": "To studio nie ma jeszcze subskrypcji.",
   "pf.stores": "{n} sklepów lub salonów",
   "pf.storesUnl": "Nieograniczona liczba sklepów",
   "pf.feed": "Automatyczna synchronizacja katalogu",
@@ -1982,6 +2081,17 @@ const pl: Dict = {
 };
 
 const sv: Dict = {
+  "pay.title": "Öppna er studio",
+  "pay.sub": "Fjorton dagar gratis. Säg upp när ni vill från er egen faktureringssida.",
+  "pay.go": "Fortsätt till betalning",
+  "pay.trial": "14 dagar gratis, sedan",
+  "pay.secure": "Betalningen sköts av Stripe. Vi ser aldrig ert kort.",
+  "pay.fallback": "Kortbetalning är inte tillgänglig just nu — vi har noterat era uppgifter och skickar er en betallänk i dag.",
+  "paid.title": "Er studio är på väg",
+  "paid.sub": "Kolla e-posten: studionyckeln och länken till er skanner är redan skickade. Kommer inget inom några minuter, skriv till partnership@safenessai.co.uk.",
+  "paid.open": "Öppna min studio",
+  "bill.manage": "Hantera abonnemang",
+  "bill.none": "Den här studion har inget abonnemang än.",
   "pf.stores": "{n} butiker eller showroom",
   "pf.storesUnl": "Obegränsat antal butiker",
   "pf.feed": "Automatisk synk av produktflöde",
@@ -2199,6 +2309,17 @@ const sv: Dict = {
 };
 
 const tr: Dict = {
+  "pay.title": "Stüdyonuzu açın",
+  "pay.sub": "On dört gün ücretsiz. Kendi fatura sayfanızdan istediğiniz zaman iptal.",
+  "pay.go": "Ödemeye devam",
+  "pay.trial": "14 gün ücretsiz, sonra",
+  "pay.secure": "Ödemeyi Stripe yürütür. Kartınızı asla görmeyiz.",
+  "pay.fallback": "Kartla ödeme şu anda kullanılamıyor — bilgilerinizi aldık, bugün size bir ödeme bağlantısı göndereceğiz.",
+  "paid.title": "Stüdyonuz yolda",
+  "paid.sub": "E-postanıza bakın: stüdyo anahtarı ve tarayıcı bağlantınız gönderildi bile. Birkaç dakika içinde bir şey gelmezse partnership@safenessai.co.uk adresine yazın.",
+  "paid.open": "Stüdyomu aç",
+  "bill.manage": "Aboneliği yönet",
+  "bill.none": "Bu stüdyonun henüz aboneliği yok.",
   "pf.stores": "{n} mağaza veya showroom",
   "pf.storesUnl": "Sınırsız mağaza",
   "pf.feed": "Otomatik ürün akışı eşitleme",
@@ -2416,6 +2537,17 @@ const tr: Dict = {
 };
 
 const ru: Dict = {
+  "pay.title": "Откройте свою студию",
+  "pay.sub": "Четырнадцать дней бесплатно. Отмена в любой момент на своей странице оплаты.",
+  "pay.go": "Перейти к оплате",
+  "pay.trial": "14 дней бесплатно, затем",
+  "pay.secure": "Оплату ведёт Stripe. Вашу карту мы никогда не видим.",
+  "pay.fallback": "Оплата картой сейчас недоступна — мы записали ваши данные и сегодня пришлём ссылку для оплаты.",
+  "paid.title": "Ваша студия уже в пути",
+  "paid.sub": "Проверьте почту: ключ студии и ссылка на ваш сканер уже отправлены. Если в течение нескольких минут ничего не пришло, напишите на partnership@safenessai.co.uk.",
+  "paid.open": "Открыть мою студию",
+  "bill.manage": "Управление подпиской",
+  "bill.none": "У этой студии пока нет подписки.",
   "pf.stores": "{n} магазинов или салонов",
   "pf.storesUnl": "Неограниченное число магазинов",
   "pf.feed": "Автоматическая синхронизация каталога",
@@ -2633,6 +2765,17 @@ const ru: Dict = {
 };
 
 const ar: Dict = {
+  "pay.title": "افتحوا الاستوديو الخاص بكم",
+  "pay.sub": "أربعة عشر يوماً مجاناً. يمكنكم الإلغاء متى شئتم من صفحة الفوترة الخاصة بكم.",
+  "pay.go": "المتابعة إلى الدفع",
+  "pay.trial": "١٤ يوماً مجاناً، ثم",
+  "pay.secure": "الدفع تتولاه Stripe. لا نرى بطاقتكم أبداً.",
+  "pay.fallback": "الدفع بالبطاقة غير متاح في هذه اللحظة — سجّلنا بياناتكم وسنرسل لكم رابط دفع اليوم.",
+  "paid.title": "استوديوكم في الطريق",
+  "paid.sub": "راجعوا بريدكم: مفتاح الاستوديو ورابط الماسح أُرسلا بالفعل. إن لم يصلكم شيء خلال دقائق، راسلونا على partnership@safenessai.co.uk.",
+  "paid.open": "افتحوا استوديوي",
+  "bill.manage": "إدارة الاشتراك",
+  "bill.none": "لا يوجد اشتراك على هذا الاستوديو بعد.",
   "pf.stores": "{n} متجراً أو صالة عرض",
   "pf.storesUnl": "متاجر بلا حدود",
   "pf.feed": "مزامنة تلقائية لتغذية المنتجات",

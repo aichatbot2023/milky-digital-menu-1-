@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { call, type Tenant } from "./api";
+import { billing, call, type Tenant } from "./api";
 import { t } from "./i18n";
 
 const KEY_STORE = "spacematch.key";
@@ -75,6 +75,7 @@ export function Studio() {
       {tab === "leads" && <Leads apiKey={key} />}
       {tab === "insight" && <Insight apiKey={key} />}
       {tab === "embed" && <Embed slug={tenant.slug} />}
+      {tab === "brand" && <Billing apiKey={key} />}
     </div>
   );
 }
@@ -411,6 +412,36 @@ function Insight({ apiKey }: { apiKey: string }) {
         ))}
       </div>
     </>
+  );
+}
+
+/** Klijent sam menja karticu, plan i otkazuje — kod nas nema tiketa. */
+function Billing({ apiKey }: { apiKey: string }) {
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="sm-panel" style={{ marginTop: 14 }}>
+      <b>{t("bill.manage")}</b>
+      <button
+        className="sm-btn sm-btn-quiet"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setErr("");
+          try {
+            const d = await billing<{ url: string }>({ action: "portal", api_key: apiKey });
+            location.href = d.url;
+          } catch (e: any) {
+            setErr(e?.message === "no_subscription" ? t("bill.none") : String(e?.message ?? ""));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {t("bill.manage")}
+      </button>
+      {err && <p className="sm-muted" style={{ fontSize: "0.82rem" }}>{err}</p>}
+    </div>
   );
 }
 

@@ -88,6 +88,13 @@ async function ensureTables() {
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
   await s`CREATE INDEX IF NOT EXISTS sm_products_tenant_idx ON sm_products (tenant_id, active)`;
+  // Kolone koje uvodi naplata — ovde se osiguravaju da upiti nikad ne padnu
+  // ako naplata još nije bila pozvana na ovom projektu.
+  await s`ALTER TABLE sm_tenants ADD COLUMN IF NOT EXISTS demo boolean NOT NULL DEFAULT false`;
+  await s`ALTER TABLE sm_tenants ADD COLUMN IF NOT EXISTS source_url text`;
+  await s`ALTER TABLE sm_tenants ADD COLUMN IF NOT EXISTS stripe_customer text`;
+  await s`ALTER TABLE sm_tenants ADD COLUMN IF NOT EXISTS stripe_subscription text`;
+  await s`ALTER TABLE sm_tenants ADD COLUMN IF NOT EXISTS billing_status text`;
   await s`CREATE TABLE IF NOT EXISTS sm_scans (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tenant_id bigint NOT NULL REFERENCES sm_tenants(id) ON DELETE CASCADE,
@@ -129,8 +136,10 @@ async function ensureTables() {
     plan text,
     message text,
     status text NOT NULL DEFAULT 'new',
+    notified boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
+  await s`ALTER TABLE sm_signups ADD COLUMN IF NOT EXISTS notified boolean NOT NULL DEFAULT false`;
   // CRM: firme koje MI kontaktiramo (za razliku od sm_signups, gde se
   // firma javlja sama). Ovde živi ceo levak od hladnog kontakta do ugovora.
   await s`CREATE TABLE IF NOT EXISTS sm_prospects (
@@ -553,6 +562,135 @@ function explain(s: Scored, profile: any, lang: string): string {
   const joined =
     take.length === 1 ? take[0] : take.slice(0, -1).join(P.comma) + P.and + take[take.length - 1];
   return P.head + joined + (lang === 'ar' ? '.' : '.');
+}
+
+// ---------------------------------------------------------- obaveštenja
+/**
+ * Slanje mejla ide preko onoga što projekat već ima: Resend, pa Brevo.
+ * Nijedno obaveštenje ne sme da obori upis u bazu — upit prvo mora da
+ * bude sačuvan, pa tek onda pokušavamo da javimo. Ako mejl padne, podatak
+ * i dalje čeka u CRM-u.
+ */
+const TEAM_EMAIL = 'partnership@safenessai.co.uk';
+const FROM_NAME = 'SpaceMatch AI';
+
+function escapeHtml(s: string): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function sendResend(to: string, subject: string, html: string, replyTo?: string) {
+  const key = Deno.env.get('RESEND_API_KEY');
+  if (!key) return { ok: false, why: 'no_resend' };
+  const attempt = async (from: string) => {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      signal: AbortSignal.timeout(12000),
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [to], subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
+    });
+    return { status: r.status, body: await r.text() };
+  };
+  // Prvo sa našeg domena; ako domen još nije potvrđen u Resend nalogu,
+  // pada se na njihov opšti pošiljalac da poruka ipak stigne.
+  let res = await attempt(`${FROM_NAME} <partnership@safenessai.co.uk>`);
+  if (res.status >= 400 && /domain|verify|not verified/i.test(res.body)) {
+    res = await attempt(`${FROM_NAME} <onboarding@resend.dev>`);
+  }
+  return { ok: res.status < 300, why: res.body.slice(0, 200) };
+}
+
+async function sendBrevo(to: string, subject: string, html: string, replyTo?: string) {
+  const key = Deno.env.get('BREVO_API_KEY');
+  if (!key) return { ok: false, why: 'no_brevo' };
+  const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    signal: AbortSignal.timeout(12000),
+    headers: { 'api-key': key, 'Content-Type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sender: { name: FROM_NAME, email: 'partnership@safenessai.co.uk' },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+    }),
+  });
+  return { ok: r.status < 300, why: (await r.text()).slice(0, 200) };
+}
+
+/**
+ * SMTP preko naloga koji već imamo (aplikaciona lozinka). Radi ka bilo kom
+ * primaocu i ne traži potvrđen domen, pa je ovo najpouzdaniji put dok se
+ * safenessai.co.uk ne potvrdi kod Resend-a.
+ */
+async function sendSmtp(to: string, subject: string, html: string, replyTo?: string) {
+  const user = Deno.env.get('GMAIL_OFFICE_EMAIL');
+  const pass = Deno.env.get('GMAIL_OFFICE_APP_PASSWORD');
+  if (!user || !pass) return { ok: false, why: 'no_smtp' };
+  try {
+    const { SMTPClient } = await import('https://deno.land/x/denomailer@1.6.0/mod.ts');
+    const client = new SMTPClient({
+      connection: { hostname: 'smtp.gmail.com', port: 465, tls: true, auth: { username: user, password: pass } },
+    });
+    await client.send({
+      // Gmail traži da pošiljalac bude sam nalog; odgovor ide na klijenta.
+      from: `${FROM_NAME} <${user}>`,
+      to,
+      subject,
+      html,
+      ...(replyTo ? { replyTo } : {}),
+    });
+    await client.close();
+    return { ok: true, why: 'smtp' };
+  } catch (e: any) {
+    return { ok: false, why: String(e?.message ?? e).slice(0, 200) };
+  }
+}
+
+/** Ako nijedan put ne uspe, poruka ide na nalog vlasnika — nikad u prazno. */
+const FALLBACK_EMAIL = 'office@aichatbot.rs';
+
+async function notify(to: string, subject: string, html: string, replyTo?: string) {
+  const tried: string[] = [];
+  const paths: [string, () => Promise<{ ok: boolean; why: string }>][] = [
+    ['smtp', () => sendSmtp(to, subject, html, replyTo)],
+    ['resend', () => sendResend(to, subject, html, replyTo)],
+    ['brevo', () => sendBrevo(to, subject, html, replyTo)],
+  ];
+  for (const [name, run] of paths) {
+    try {
+      const r = await run();
+      if (r.ok) return { ok: true, via: name, why: '' };
+      tried.push(`${name}: ${r.why}`);
+    } catch (e: any) {
+      tried.push(`${name}: ${String(e?.message ?? e).slice(0, 120)}`);
+    }
+  }
+  // Poslednja odbrana: pošalji bar na nalog vlasnika, da upit ne nestane
+  if (to !== FALLBACK_EMAIL) {
+    const r = await sendResend(FALLBACK_EMAIL, `[${to}] ${subject}`, html, replyTo).catch(() => ({ ok: false, why: 'x' }));
+    if (r.ok) return { ok: true, via: 'fallback', why: tried.join(' | ') };
+  }
+  console.error('notify failed:', tried.join(' | '));
+  return { ok: false, via: '', why: tried.join(' | ') };
+}
+
+/** Jednostavan, čitljiv okvir — poslovni mejl, ne šarena razglednica. */
+function frame(title: string, rows: [string, string][], footer = ''): string {
+  const body = rows
+    .filter(([, v]) => v)
+    .map(([k, v]) =>
+      `<tr><td style="padding:6px 14px 6px 0;color:#6b7280;font-size:13px;white-space:nowrap">${escapeHtml(k)}</td>` +
+      `<td style="padding:6px 0;font-size:14px;color:#111827">${v}</td></tr>`)
+    .join('');
+  return `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px">
+  <p style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#0f766e;font-weight:700;margin:0 0 6px">SpaceMatch AI</p>
+  <h2 style="margin:0 0 16px;font-size:19px;color:#0b1a17">${escapeHtml(title)}</h2>
+  <table style="border-collapse:collapse">${body}</table>
+  ${footer ? `<p style="margin-top:18px;font-size:13px;color:#6b7280">${footer}</p>` : ''}
+  <p style="margin-top:22px;font-size:11px;color:#9ca3af">Nicholas Family LTD, London</p>
+</div>`;
 }
 
 // ------------------------------------------------- pisanje ponude (AI)
@@ -1053,6 +1191,23 @@ Deno.serve(async (req) => {
                 ${String(body.phone ?? '').slice(0, 40)}, ${String(body.message ?? '').slice(0, 600)},
                 ${String(body.product_ids ?? '').slice(0, 120)}, ${s.json(body.profile ?? {})})`;
       await s`INSERT INTO sm_events (tenant_id, type, meta) VALUES (${t.id}, 'inquiry', ${s.json({ email })})`;
+
+      // Studio dobija upit odmah; bez ovoga bi morao da otvara tablu.
+      if (t.contact_email) {
+        void notify(
+          String(t.contact_email),
+          `Novi upit sa skenera — ${String(body.name ?? email)}`,
+          frame('Kupac je poslao upit', [
+            ['Ime', escapeHtml(String(body.name ?? ''))],
+            ['Email', `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`],
+            ['Telefon', escapeHtml(String(body.phone ?? ''))],
+            ['Poruka', escapeHtml(String(body.message ?? ''))],
+            ['Prostor', escapeHtml(String((body.profile ?? {}).roomType ?? ''))],
+            ['Stil', escapeHtml(String((body.profile ?? {}).style ?? ''))],
+          ], `Svi upiti su u vašem studiju: <a href="https://safenessai.co.uk/spacematch/?studio=1">Enquiries</a>`),
+          email,
+        );
+      }
       return json({ ok: true });
     }
 
@@ -1061,12 +1216,33 @@ Deno.serve(async (req) => {
       const company = String(body.company ?? '').trim().slice(0, 120);
       if (!company) return json({ error: 'company required' }, 400);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'bad email' }, 400);
-      await s`INSERT INTO sm_signups (company, person, email, phone, website, vertical, catalogue_size, plan, message)
+      const [row] = await s`INSERT INTO sm_signups (company, person, email, phone, website, vertical, catalogue_size, plan, message)
         VALUES (${company}, ${String(body.person ?? '').slice(0, 80)}, ${email},
                 ${String(body.phone ?? '').slice(0, 40)}, ${String(body.website ?? '').slice(0, 160)},
                 ${String(body.vertical ?? '').slice(0, 30)}, ${String(body.catalogue_size ?? '').slice(0, 30)},
-                ${String(body.plan ?? '').slice(0, 30)}, ${String(body.message ?? '').slice(0, 600)})`;
-      return json({ ok: true });
+                ${String(body.plan ?? '').slice(0, 30)}, ${String(body.message ?? '').slice(0, 600)})
+        RETURNING id`;
+
+      // Upis je već siguran; mejl je dodatak koji ne sme ništa da obori.
+      const site = String(body.website ?? '');
+      const mail = await notify(
+        TEAM_EMAIL,
+        `Upit za cenu — ${company}${body.plan ? ` (${body.plan})` : ''}`,
+        frame(`${company} traži ponudu`, [
+          ['Firma', escapeHtml(company)],
+          ['Kontakt', escapeHtml(String(body.person ?? ''))],
+          ['Email', `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`],
+          ['Telefon', escapeHtml(String(body.phone ?? ''))],
+          ['Sajt', site ? `<a href="${escapeHtml(site)}">${escapeHtml(site)}</a>` : ''],
+          ['Delatnost', escapeHtml(String(body.vertical ?? ''))],
+          ['Katalog', escapeHtml(String(body.catalogue_size ?? ''))],
+          ['Plan', escapeHtml(String(body.plan ?? ''))],
+          ['Poruka', escapeHtml(String(body.message ?? ''))],
+        ], `Zahtev je i u konzoli: <a href="https://safenessai.co.uk/spacematch/?owner=1">Sales → Company requests</a>`),
+        email,
+      );
+      await s`UPDATE sm_signups SET notified = ${mail.ok} WHERE id = ${row.id}`;
+      return json({ ok: true, notified: mail.ok, why: mail.ok ? undefined : (mail as any).why });
     }
 
     if (action === 'track') {
@@ -1205,7 +1381,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'list') {
-      const rows = await s`SELECT t.id, t.slug, t.name, t.vertical, t.plan, t.api_key, t.active, t.created_at,
+      const rows = await s`SELECT t.id, t.slug, t.name, t.vertical, t.plan, t.api_key, t.active, t.created_at, t.billing_status,
         (SELECT count(*)::int FROM sm_products p WHERE p.tenant_id = t.id AND p.active) AS products,
         (SELECT count(*)::int FROM sm_scans c WHERE c.tenant_id = t.id) AS scans,
         (SELECT count(*)::int FROM sm_leads l WHERE l.tenant_id = t.id) AS leads
@@ -1317,6 +1493,24 @@ Deno.serve(async (req) => {
         outreach_body = ${written.body}, outreach_short = ${written.short}, updated_at = now()
         WHERE id = ${p.id}`;
       return json({ ok: true, ...written });
+    }
+
+    if (action === 'mail-test') {
+      // Dijagnostika slanja: vraća tačan odgovor provajdera, da se ne
+      // pogađa zašto mejl nije stigao.
+      const to = String(body.to ?? TEAM_EMAIL);
+      const html = frame('Provera slanja', [['Status', 'Ovo je test poruka.']]);
+      const smtp = await sendSmtp(to, 'SpaceMatch — provera slanja', html);
+      const resend = await sendResend(to, 'SpaceMatch — provera slanja', html);
+      const brevo = await sendBrevo(to, 'SpaceMatch — provera slanja', html);
+      return json({
+        smtp, resend, brevo,
+        has: {
+          smtp: !!Deno.env.get('GMAIL_OFFICE_EMAIL') && !!Deno.env.get('GMAIL_OFFICE_APP_PASSWORD'),
+          resend: !!Deno.env.get('RESEND_API_KEY'),
+          brevo: !!Deno.env.get('BREVO_API_KEY'),
+        },
+      });
     }
 
     if (action === 'platform-stats') {

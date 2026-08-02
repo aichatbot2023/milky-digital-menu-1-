@@ -45,6 +45,18 @@ export async function buildDemo(adminKey: string, website: string, vertical?: st
   };
 }
 
+/** Naplata ide kroz zasebnu funkciju — Stripe nikad ne dodiruje katalog. */
+export async function billing<T = any>(body: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${BASE}/spacematch-billing`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ANON}`, apikey: ANON },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+  return data as T;
+}
+
 export interface Tenant {
   slug: string;
   name: string;

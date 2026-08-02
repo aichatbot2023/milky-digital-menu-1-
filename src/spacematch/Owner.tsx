@@ -244,6 +244,7 @@ export function Owner() {
                 <th>Studio</th>
                 <th>Sector</th>
                 <th>Plan</th>
+                <th>Billing</th>
                 <th>Pieces</th>
                 <th>Scans</th>
                 <th>Leads</th>
@@ -261,6 +262,15 @@ export function Owner() {
                   </td>
                   <td>{r.vertical}</td>
                   <td>{r.plan}</td>
+                  <td>
+                    {r.billing_status ? (
+                      <span style={{ color: r.billing_status === "active" || r.billing_status === "trialing" ? "#047857" : "#b91c1c" }}>
+                        {r.billing_status}
+                      </span>
+                    ) : (
+                      <span className="sm-muted">—</span>
+                    )}
+                  </td>
                   <td>{r.products}</td>
                   <td>{r.scans}</td>
                   <td>{r.leads}</td>
