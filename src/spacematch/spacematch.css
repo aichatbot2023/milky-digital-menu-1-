@@ -399,3 +399,44 @@ label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--sm-mu
 
 .sm-err { color: #b91c1c; font-size: 0.88rem; }
 .sm-ok { color: #047857; font-size: 0.88rem; }
+
+/* ------------------------------------------------------------ jezici */
+.sm-lang { position: relative; }
+.sm-lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 40;
+  background: var(--sm-surface);
+  border: 1px solid var(--sm-line);
+  border-radius: 16px;
+  padding: 6px;
+  min-width: 168px;
+  max-height: 60vh;
+  overflow-y: auto;
+  box-shadow: 0 18px 44px rgba(17, 24, 39, 0.16);
+  animation: sm-rise 220ms var(--sm-ease) both;
+}
+.sm-lang-item {
+  display: block;
+  width: 100%;
+  text-align: start;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.92rem;
+  padding: 10px 12px;
+  border-radius: 11px;
+  cursor: pointer;
+  color: var(--sm-ink);
+}
+.sm-lang-item:hover { background: rgba(17, 24, 39, 0.05); }
+.sm-lang-item.on { font-weight: 800; color: var(--sm-accent); }
+
+/* Arapski: ceo raspored se okreće, brojke i mere ostaju čitljive */
+[dir="rtl"] .sm-steps-list,
+[dir="rtl"] .sm-alt-body,
+[dir="rtl"] .sm-text { text-align: right; }
+[dir="rtl"] .sm-hero h1,
+[dir="rtl"] .sm-hero p { text-align: right; }
+[dir="rtl"] .sm-badge { left: auto; right: 14px; }

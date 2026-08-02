@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getTenant, type Tenant } from "./api";
-import { getLang, setLang } from "./i18n";
+import { applyDir, getLang, setLang } from "./i18n";
 import { Landing } from "./Landing";
 import { Owner } from "./Owner";
 import { Scanner } from "./Scanner";
@@ -19,6 +19,7 @@ function initialView(): { view: View; slug: string } {
 
 export function App() {
   const start = initialView();
+  applyDir();
   const [view, setView] = useState<View>(start.view);
   const [slug, setSlug] = useState(start.slug);
   const [tenant, setTenant] = useState<Tenant | null>(null);

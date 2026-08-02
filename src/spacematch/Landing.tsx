@@ -1,16 +1,9 @@
 import { useState } from "react";
-import { t } from "./i18n";
+import { t, type Lang } from "./i18n";
+import { LangPicker } from "./LangPicker";
 import { Signup } from "./Signup";
 
-const SECTORS = [
-  { en: "Art galleries", sr: "Galerije" },
-  { en: "Furniture", sr: "Nameštaj" },
-  { en: "Lighting", sr: "Rasveta" },
-  { en: "Interior design", sr: "Enterijer" },
-  { en: "Kitchens", sr: "Kuhinje" },
-  { en: "Flooring & rugs", sr: "Podovi i tepisi" },
-  { en: "Real estate staging", sr: "Uređenje nekretnina" },
-];
+const SECTORS = ["d.v1", "d.v2", "d.v3", "d.v4", "d.v5", "d.v6", "d.v7"];
 
 const PLANS = [
   { name: "Starter", key: "starter", price: "£49", items: ["50 pieces", "300 scans / month", "Embed widget", "Email support"] },
@@ -20,8 +13,8 @@ const PLANS = [
 ];
 
 interface Props {
-  lang: "en" | "sr";
-  onLang: (l: "en" | "sr") => void;
+  lang: Lang;
+  onLang: (l: Lang) => void;
   onDemo: () => void;
   onStudio: () => void;
 }
@@ -42,9 +35,7 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
           <button className="sm-link" onClick={onStudio}>
             {t("d.studio")}
           </button>
-          <button className="sm-link" onClick={() => onLang(lang === "en" ? "sr" : "en")}>
-            {lang === "en" ? "SR" : "EN"}
-          </button>
+          <LangPicker lang={lang} onLang={onLang} />
           <button className="sm-btn sm-btn-accent" onClick={() => setSignup("")}>
             {t("d.talk")}
           </button>
@@ -67,9 +58,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
           <span className="sm-kicker" style={{ margin: 0, alignSelf: "center" }}>
             {t("d.for")}
           </span>
-          {SECTORS.map((s) => (
-            <span className="sm-tag" key={s.en}>
-              {lang === "sr" ? s.sr : s.en}
+          {SECTORS.map((k) => (
+            <span className="sm-tag" key={k}>
+              {t(k)}
             </span>
           ))}
         </div>

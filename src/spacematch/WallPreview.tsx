@@ -116,7 +116,7 @@ export function WallPreview({ room, piece, profile }: Props) {
       </div>
 
       <p className="sm-preview-hint">
-        {t("s.wall")}: ~{Math.round(wallW)} cm · drag to move
+        {t("s.wall")}: ~{Math.round(wallW)} cm · {t("s.drag")}
       </p>
     </div>
   );

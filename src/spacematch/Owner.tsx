@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { call } from "./api";
+import { Crm } from "./Crm";
 
 const KEY_STORE = "spacematch.owner";
 
@@ -13,6 +14,7 @@ export function Owner() {
   const [signups, setSignups] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [err, setErr] = useState("");
+  const [tab, setTab] = useState<"crm" | "studios">("crm");
   const [form, setForm] = useState({ name: "", slug: "", vertical: "art", plan: "starter", contact_email: "" });
   const [created, setCreated] = useState<{ slug: string; api_key: string } | null>(null);
 
@@ -53,11 +55,22 @@ export function Owner() {
 
   return (
     <div className="sm-wrap" style={{ padding: "26px 22px 70px" }}>
-      <h1 className="sm-display" style={{ fontSize: "1.8rem", marginBottom: 18 }}>
+      <h1 className="sm-display" style={{ fontSize: "1.8rem", marginBottom: 14 }}>
         SpaceMatch · platform
       </h1>
 
-      {stats && (
+      <div className="sm-tabs" style={{ marginTop: 0 }}>
+        <button className={`sm-chip${tab === "crm" ? " sm-chip-on" : ""}`} onClick={() => setTab("crm")}>
+          Sales
+        </button>
+        <button className={`sm-chip${tab === "studios" ? " sm-chip-on" : ""}`} onClick={() => setTab("studios")}>
+          Studios
+        </button>
+      </div>
+
+      {tab === "crm" && <Crm adminKey={key} />}
+
+      {tab === "studios" && stats && (
         <div className="sm-kpis">
           <div className="sm-kpi">
             <b>{stats.totals.tenants}</b>
@@ -82,7 +95,7 @@ export function Owner() {
         </div>
       )}
 
-      <div className="sm-panel" style={{ marginTop: 14 }}>
+      {tab === "studios" && <div className="sm-panel" style={{ marginTop: 14 }}>
         <b>Company requests · {signups.filter((x) => x.status === "new").length} new</b>
         <div style={{ overflowX: "auto" }}>
           <table className="sm-table">
@@ -166,9 +179,9 @@ export function Owner() {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
 
-      <div className="sm-panel" style={{ marginTop: 14 }}>
+      {tab === "studios" && <div className="sm-panel" style={{ marginTop: 14 }}>
         <b>New studio</b>
         <div className="sm-grid2">
           <div>
@@ -221,9 +234,9 @@ export function Owner() {
           </p>
         )}
         {err && <p className="sm-err">{err}</p>}
-      </div>
+      </div>}
 
-      <div className="sm-panel" style={{ marginTop: 14 }}>
+      {tab === "studios" && <div className="sm-panel" style={{ marginTop: 14 }}>
         <div style={{ overflowX: "auto" }}>
           <table className="sm-table">
             <thead>
@@ -271,7 +284,7 @@ export function Owner() {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

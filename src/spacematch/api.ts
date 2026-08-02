@@ -3,7 +3,8 @@
  * Klijent nikada ne drži tajne osim ključa zakupca koji sam vlasnik naloga
  * unese u svoju kontrolnu tablu — anon JWT je javan po dizajnu.
  */
-const URL_FN = "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/spacematch";
+const BASE = "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1";
+const URL_FN = `${BASE}/spacematch`;
 const ANON =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
 
@@ -20,6 +21,28 @@ export async function call<T = any>(body: Record<string, unknown>): Promise<T> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
   return data as T;
+}
+
+/**
+ * Graditelj demoa čita klijentov sajt i otvara zakupca — traje do minut,
+ * pa ide u zasebnu funkciju sa dužim strpljenjem.
+ */
+export async function buildDemo(adminKey: string, website: string, vertical?: string) {
+  const res = await fetch(`${BASE}/spacematch-demo`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ANON}`,
+      apikey: ANON,
+    },
+    body: JSON.stringify({ admin_key: adminKey, website, vertical }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+  return data as {
+    slug: string; api_key: string; demo_url: string; products: number;
+    source: string; brand: { name: string; logo: string | null; accent: string };
+  };
 }
 
 export interface Tenant {

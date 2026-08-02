@@ -10,7 +10,8 @@ import {
   type RoomProfile,
   type Tenant,
 } from "./api";
-import { aiLanguage, getLang, t } from "./i18n";
+import { aiLanguage, getLang, setLang, t, type Lang } from "./i18n";
+import { LangPicker } from "./LangPicker";
 import { WallPreview } from "./WallPreview";
 
 interface Props {
@@ -37,8 +38,25 @@ export function Scanner({ tenant, onExit }: Props) {
   const [browse, setBrowse] = useState(false);
   const [ask, setAsk] = useState(false);
   const [err, setErr] = useState("");
+  const [lang, setLangState] = useState<Lang>(getLang());
   const camera = useRef<HTMLInputElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
+
+  // Promena jezika usred pregleda: rečenice preporuke se traže ponovo,
+  // da kupac ne ostane sa pola teksta na starom jeziku.
+  const switchLang = async (l: Lang) => {
+    setLang(l);
+    setLangState(l);
+    if (!profile) return;
+    try {
+      const r = await recommend(tenant.slug, profile, {}, l);
+      setMatches(r.recommendations);
+      setAlts(r.alternatives);
+      setIdx((i) => Math.min(i, Math.max(0, r.recommendations.length - 1)));
+    } catch {
+      /* zadrži postojeće preporuke */
+    }
+  };
 
   useEffect(() => {
     track(tenant.slug, "open");
@@ -96,11 +114,14 @@ export function Scanner({ tenant, onExit }: Props) {
           )}
           {tenant.name}
         </div>
-        {onExit && (
-          <button className="sm-link" onClick={onExit}>
-            ✕
-          </button>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <LangPicker lang={lang} onLang={switchLang} compact />
+          {onExit && (
+            <button className="sm-link" onClick={onExit} aria-label="Close">
+              ✕
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="sm-scan-body sm-narrow">

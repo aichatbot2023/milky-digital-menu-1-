@@ -131,6 +131,36 @@ async function ensureTables() {
     status text NOT NULL DEFAULT 'new',
     created_at timestamptz NOT NULL DEFAULT now()
   )`;
+  // CRM: firme koje MI kontaktiramo (za razliku od sm_signups, gde se
+  // firma javlja sama). Ovde živi ceo levak od hladnog kontakta do ugovora.
+  await s`CREATE TABLE IF NOT EXISTS sm_prospects (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company text NOT NULL,
+    website text,
+    country text,
+    city text,
+    vertical text,
+    lang text NOT NULL DEFAULT 'en',
+    contact_name text,
+    email text,
+    phone text,
+    source text,
+    status text NOT NULL DEFAULT 'new',
+    demo_slug text,
+    demo_url text,
+    studio_key text,
+    products_found int,
+    demo_error text,
+    outreach_subject text,
+    outreach_body text,
+    outreach_short text,
+    notes text,
+    next_action_at date,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`;
+  await s`CREATE INDEX IF NOT EXISTS sm_prospects_status_idx ON sm_prospects (status, updated_at)`;
+  await s`CREATE UNIQUE INDEX IF NOT EXISTS sm_prospects_site_idx ON sm_prospects (lower(coalesce(website, company)))`;
   ready = true;
 }
 
@@ -454,23 +484,373 @@ function scoreProduct(p: any, profile: any, prefs: any): Scored {
   return { product: p, score: Math.round(score * 100), reasons, parts };
 }
 
-/** Rečenica koju kupac čita — bez ijedne tehničke reči o AI-u. */
+/**
+ * Rečenica koju kupac čita — na NJEGOVOM jeziku i bez ijedne tehničke reči.
+ * Delovi se sastavljaju iz prevedenih fragmenata, ne prevode se u hodu:
+ * tako je uvek gramatički ispravno i nikad se ne meša sa engleskim.
+ */
+type Frag = 'head' | 'style' | 'styleNear' | 'colour' | 'fits' | 'lifts' | 'anchors' | 'budget' | 'closest' | 'and' | 'comma';
+
+const PHRASES: Record<string, Record<Frag, string>> = {
+  en: { head: 'We suggest this because ', style: 'it follows the {s} feel of your space', styleNear: "it sits close to your room's style", colour: 'the colour works with your existing palette', fits: 'the width suits the wall you photographed', lifts: 'it brightens a room with little natural light', anchors: 'it gives weight to a bright room', budget: 'it is within your budget', closest: 'it is the closest match to what you photographed', and: ' and ', comma: ', ' },
+  sr: { head: 'Predlažemo ovo jer ', style: 'prati {s} stil vašeg prostora', styleNear: 'je blisko stilu vaše prostorije', colour: 'boja pristaje uz postojeću paletu', fits: 'širina odgovara zidu koji ste snimili', lifts: 'posvetljuje prostoriju sa malo prirodnog svetla', anchors: 'daje težinu svetloj prostoriji', budget: 'je u okviru vašeg budžeta', closest: 'je najbliže onome što ste snimili', and: ' i ', comma: ', ' },
+  de: { head: 'Wir schlagen das vor, weil ', style: 'es den {s} Charakter Ihres Raums aufnimmt', styleNear: 'es dem Stil Ihres Raums nahekommt', colour: 'die Farbe zu Ihrer vorhandenen Palette passt', fits: 'die Breite zu der fotografierten Wand passt', lifts: 'es einen Raum mit wenig Tageslicht aufhellt', anchors: 'es einem hellen Raum Gewicht gibt', budget: 'es in Ihrem Budget liegt', closest: 'es dem Fotografierten am nächsten kommt', and: ' und ', comma: ', ' },
+  fr: { head: 'Nous le proposons car ', style: 'il suit le style {s} de votre espace', styleNear: "il est proche du style de votre pièce", colour: "la couleur s'accorde à votre palette actuelle", fits: 'la largeur convient au mur photographié', lifts: 'il éclaire une pièce peu lumineuse', anchors: 'il donne du poids à une pièce lumineuse', budget: "il reste dans votre budget", closest: 'il correspond le mieux à ce que vous avez photographié', and: ' et ', comma: ', ' },
+  es: { head: 'Lo proponemos porque ', style: 'sigue el estilo {s} de su espacio', styleNear: 'se acerca al estilo de su habitación', colour: 'el color encaja con su paleta actual', fits: 'el ancho se ajusta a la pared que fotografió', lifts: 'ilumina una habitación con poca luz natural', anchors: 'da peso a una habitación luminosa', budget: 'entra en su presupuesto', closest: 'es lo más parecido a lo que fotografió', and: ' y ', comma: ', ' },
+  it: { head: 'Lo proponiamo perché ', style: 'segue lo stile {s} del tuo spazio', styleNear: 'è vicino allo stile della tua stanza', colour: 'il colore si accorda con la tua palette', fits: 'la larghezza si adatta alla parete che hai fotografato', lifts: 'illumina una stanza con poca luce naturale', anchors: 'dà peso a una stanza luminosa', budget: 'rientra nel tuo budget', closest: 'è la cosa più vicina a ciò che hai fotografato', and: ' e ', comma: ', ' },
+  nl: { head: 'Wij stellen dit voor omdat ', style: 'het aansluit bij de {s} sfeer van uw ruimte', styleNear: 'het dicht bij de stijl van uw kamer ligt', colour: 'de kleur past bij uw huidige palet', fits: 'de breedte past bij de gefotografeerde wand', lifts: 'het een kamer met weinig daglicht opfleurt', anchors: 'het gewicht geeft aan een lichte kamer', budget: 'het binnen uw budget valt', closest: 'het het dichtst komt bij wat u fotografeerde', and: ' en ', comma: ', ' },
+  pt: { head: 'Sugerimos isto porque ', style: 'segue o estilo {s} do seu espaço', styleNear: 'está próximo do estilo da sua divisão', colour: 'a cor combina com a sua paleta atual', fits: 'a largura assenta na parede que fotografou', lifts: 'ilumina uma divisão com pouca luz natural', anchors: 'dá peso a uma divisão clara', budget: 'fica dentro do seu orçamento', closest: 'é o mais próximo do que fotografou', and: ' e ', comma: ', ' },
+  pl: { head: 'Proponujemy to, ponieważ ', style: 'pasuje do {s} stylu Twojego wnętrza', styleNear: 'jest bliskie stylowi Twojego pomieszczenia', colour: 'kolor współgra z Twoją obecną paletą', fits: 'szerokość pasuje do sfotografowanej ściany', lifts: 'rozjaśnia wnętrze z niewielką ilością światła dziennego', anchors: 'dodaje ciężaru jasnemu wnętrzu', budget: 'mieści się w Twoim budżecie', closest: 'najbardziej odpowiada temu, co sfotografowałeś', and: ' i ', comma: ', ' },
+  sv: { head: 'Vi föreslår den här eftersom ', style: 'den följer rummets {s} känsla', styleNear: 'den ligger nära rummets stil', colour: 'färgen fungerar med din nuvarande palett', fits: 'bredden passar väggen du fotograferade', lifts: 'den lyfter ett rum med lite dagsljus', anchors: 'den ger tyngd åt ett ljust rum', budget: 'den ryms i din budget', closest: 'den ligger närmast det du fotograferade', and: ' och ', comma: ', ' },
+  tr: { head: 'Bunu öneriyoruz çünkü ', style: 'mekânınızın {s} havasını sürdürüyor', styleNear: 'odanızın tarzına yakın duruyor', colour: 'rengi mevcut paletinizle uyuşuyor', fits: 'genişliği fotoğrafladığınız duvara uygun', lifts: 'doğal ışığı az olan odayı aydınlatıyor', anchors: 'aydınlık odaya ağırlık katıyor', budget: 'bütçenizin içinde kalıyor', closest: 'fotoğrafladığınıza en yakın seçenek', and: ' ve ', comma: ', ' },
+  ru: { head: 'Мы предлагаем это, потому что ', style: 'это поддерживает {s} характер вашего пространства', styleNear: 'это близко к стилю вашей комнаты', colour: 'цвет сочетается с вашей нынешней палитрой', fits: 'ширина подходит к сфотографированной стене', lifts: 'это оживляет комнату с малым количеством дневного света', anchors: 'это добавляет вес светлой комнате', budget: 'это укладывается в ваш бюджет', closest: 'это ближе всего к тому, что вы сфотографировали', and: ' и ', comma: ', ' },
+  ar: { head: 'نقترح هذه القطعة لأن ', style: 'تنسجم مع الطابع {s} لمساحتك', styleNear: 'قريبة من طراز غرفتك', colour: 'لونها ينسجم مع ألوانك الحالية', fits: 'عرضها مناسب للجدار الذي صوّرته', lifts: 'تضيء غرفة قليلة الإضاءة الطبيعية', anchors: 'تمنح ثقلاً لغرفة مضيئة', budget: 'ضمن ميزانيتك', closest: 'الأقرب إلى ما صوّرته', and: ' و', comma: '، ' },
+};
+
+/** Naziv stila mora biti na kupčevom jeziku — inače je rečenica mešana. */
+const STYLE_NAMES: Record<string, Record<string, string>> = {
+  en: {},
+  sr: { modern: 'moderan', minimal: 'minimalistički', scandinavian: 'skandinavski', industrial: 'industrijski', 'mid-century': 'sredinom veka', traditional: 'tradicionalni', rustic: 'rustični', coastal: 'primorski', 'art-deco': 'art deko', eclectic: 'eklektični', japandi: 'japandi', contemporary: 'savremeni' },
+  de: { modern: 'modernen', minimal: 'minimalistischen', scandinavian: 'skandinavischen', industrial: 'industriellen', 'mid-century': 'Mid-Century-', traditional: 'klassischen', rustic: 'rustikalen', coastal: 'maritimen', 'art-deco': 'Art-déco-', eclectic: 'eklektischen', japandi: 'Japandi-', contemporary: 'zeitgenössischen' },
+  fr: { modern: 'moderne', minimal: 'minimaliste', scandinavian: 'scandinave', industrial: 'industriel', 'mid-century': 'mid-century', traditional: 'classique', rustic: 'rustique', coastal: 'bord de mer', 'art-deco': 'art déco', eclectic: 'éclectique', japandi: 'japandi', contemporary: 'contemporain' },
+  es: { modern: 'moderno', minimal: 'minimalista', scandinavian: 'escandinavo', industrial: 'industrial', 'mid-century': 'mid-century', traditional: 'clásico', rustic: 'rústico', coastal: 'costero', 'art-deco': 'art déco', eclectic: 'ecléctico', japandi: 'japandi', contemporary: 'contemporáneo' },
+  it: { modern: 'moderno', minimal: 'minimalista', scandinavian: 'scandinavo', industrial: 'industriale', 'mid-century': 'mid-century', traditional: 'classico', rustic: 'rustico', coastal: 'costiero', 'art-deco': 'art déco', eclectic: 'eclettico', japandi: 'japandi', contemporary: 'contemporaneo' },
+  nl: { modern: 'moderne', minimal: 'minimalistische', scandinavian: 'Scandinavische', industrial: 'industriële', 'mid-century': 'mid-century', traditional: 'klassieke', rustic: 'landelijke', coastal: 'kust-', 'art-deco': 'art-deco', eclectic: 'eclectische', japandi: 'japandi', contemporary: 'hedendaagse' },
+  pt: { modern: 'moderno', minimal: 'minimalista', scandinavian: 'escandinavo', industrial: 'industrial', 'mid-century': 'mid-century', traditional: 'clássico', rustic: 'rústico', coastal: 'costeiro', 'art-deco': 'art déco', eclectic: 'eclético', japandi: 'japandi', contemporary: 'contemporâneo' },
+  pl: { modern: 'nowoczesnego', minimal: 'minimalistycznego', scandinavian: 'skandynawskiego', industrial: 'industrialnego', 'mid-century': 'mid-century', traditional: 'klasycznego', rustic: 'rustykalnego', coastal: 'nadmorskiego', 'art-deco': 'art déco', eclectic: 'eklektycznego', japandi: 'japandi', contemporary: 'współczesnego' },
+  sv: { modern: 'moderna', minimal: 'minimalistiska', scandinavian: 'skandinaviska', industrial: 'industriella', 'mid-century': 'mid century-', traditional: 'klassiska', rustic: 'rustika', coastal: 'kust-', 'art-deco': 'art déco-', eclectic: 'eklektiska', japandi: 'japandi-', contemporary: 'samtida' },
+  tr: { modern: 'modern', minimal: 'minimal', scandinavian: 'İskandinav', industrial: 'endüstriyel', 'mid-century': 'mid-century', traditional: 'klasik', rustic: 'rustik', coastal: 'kıyı', 'art-deco': 'art deco', eclectic: 'eklektik', japandi: 'japandi', contemporary: 'çağdaş' },
+  ru: { modern: 'современный', minimal: 'минималистичный', scandinavian: 'скандинавский', industrial: 'индустриальный', 'mid-century': 'середины века', traditional: 'классический', rustic: 'рустикальный', coastal: 'морской', 'art-deco': 'ар-деко', eclectic: 'эклектичный', japandi: 'джапанди', contemporary: 'современный' },
+  ar: { modern: 'العصري', minimal: 'البسيط', scandinavian: 'الإسكندنافي', industrial: 'الصناعي', 'mid-century': 'منتصف القرن', traditional: 'الكلاسيكي', rustic: 'الريفي', coastal: 'الساحلي', 'art-deco': 'آرت ديكو', eclectic: 'الانتقائي', japandi: 'جاباندي', contemporary: 'المعاصر' },
+};
+
+function styleName(style: string, lang: string): string {
+  return STYLE_NAMES[lang]?.[style] ?? style;
+}
+
 function explain(s: Scored, profile: any, lang: string): string {
-  const sr = lang === 'sr';
+  const P = PHRASES[lang] ?? PHRASES.en;
   const bits: string[] = [];
-  if (s.reasons.includes('style')) bits.push(sr ? `prati ${profile.style} stil vašeg prostora` : `it follows the ${profile.style} feel of your space`);
-  else if (s.reasons.includes('style-near')) bits.push(sr ? 'blisko je stilu vašeg prostora' : 'it sits close to your room’s style');
-  if (s.reasons.includes('colour')) bits.push(sr ? 'boja se slaže sa postojećom paletom' : 'the colour works with your existing palette');
-  if (s.reasons.includes('fits')) bits.push(sr ? 'širina odgovara zidu koji ste snimili' : 'the width suits the wall you photographed');
-  if (s.reasons.includes('lifts-dark-room')) bits.push(sr ? 'posvetljuje prostor sa malo prirodnog svetla' : 'it brightens a room with little natural light');
-  if (s.reasons.includes('anchors-bright-room')) bits.push(sr ? 'daje težinu svetloj prostoriji' : 'it gives weight to a bright room');
-  if (s.reasons.includes('budget')) bits.push(sr ? 'u okviru je vašeg budžeta' : 'it is within your budget');
-  if (!bits.length) bits.push(sr ? 'najbliže je onome što ste snimili' : 'it is the closest match to what you photographed');
-  const head = sr ? 'Predlažemo ovo jer ' : 'We suggest this because ';
-  const joined = bits.length > 1
-    ? bits.slice(0, 2).join(', ') + (bits[2] ? (sr ? ' i ' : ' and ') + bits[2] : '')
-    : bits[0];
-  return head + joined + '.';
+  if (s.reasons.includes('style')) bits.push(P.style.replace('{s}', styleName(String(profile.style ?? ''), lang)));
+  else if (s.reasons.includes('style-near')) bits.push(P.styleNear);
+  if (s.reasons.includes('colour')) bits.push(P.colour);
+  if (s.reasons.includes('fits')) bits.push(P.fits);
+  if (s.reasons.includes('lifts-dark-room')) bits.push(P.lifts);
+  if (s.reasons.includes('anchors-bright-room')) bits.push(P.anchors);
+  if (s.reasons.includes('budget')) bits.push(P.budget);
+  if (!bits.length) bits.push(P.closest);
+  const take = bits.slice(0, 3);
+  const joined =
+    take.length === 1 ? take[0] : take.slice(0, -1).join(P.comma) + P.and + take[take.length - 1];
+  return P.head + joined + (lang === 'ar' ? '.' : '.');
+}
+
+// ------------------------------------------------- pisanje ponude (AI)
+const LANG_NAME: Record<string, string> = {
+  en: 'English', sr: 'Serbian', de: 'German', fr: 'French', es: 'Spanish', it: 'Italian',
+  nl: 'Dutch', pt: 'Portuguese', pl: 'Polish', sv: 'Swedish', tr: 'Turkish', ru: 'Russian', ar: 'Arabic',
+};
+
+interface Provider2 { name: string; key: string | undefined; url: string; models: string[]; extraHeaders?: Record<string, string>; extraBody?: Record<string, unknown> }
+
+const TEXT_PROVIDERS: Provider2[] = [
+  { name: 'nvidia', key: Deno.env.get('NVIDIA_NIM_API_KEY'), url: 'https://integrate.api.nvidia.com/v1/chat/completions', models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'], extraBody: { chat_template_kwargs: { enable_thinking: false } } },
+  { name: 'gemini', key: Deno.env.get('GEMINI_API_KEY'), url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', models: ['gemini-2.5-flash'] },
+  { name: 'openrouter', key: Deno.env.get('OPENROUTER_API_KEY'), url: 'https://openrouter.ai/api/v1/chat/completions', models: ['google/gemma-4-31b-it:free'], extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SpaceMatch AI' } },
+  { name: 'groq', key: Deno.env.get('GROQ_API_KEY'), url: 'https://api.groq.com/openai/v1/chat/completions', models: ['meta-llama/llama-4-scout-17b-16e-instruct'] },
+  { name: 'lovable', key: Deno.env.get('LOVABLE_API_KEY'), url: 'https://ai.gateway.lovable.dev/v1/chat/completions', models: ['google/gemini-2.5-flash'] },
+];
+
+async function askText(prompt: string): Promise<string | null> {
+  for (const p of TEXT_PROVIDERS.filter((x) => x.key)) {
+    for (const model of p.models) {
+      try {
+        const res = await fetch(p.url, {
+          method: 'POST',
+          signal: AbortSignal.timeout(35000),
+          headers: { Authorization: `Bearer ${p.key}`, 'Content-Type': 'application/json', ...(p.extraHeaders ?? {}) },
+          body: JSON.stringify({
+            ...(p.extraBody ?? {}),
+            model,
+            max_tokens: 1200,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (!res.ok) continue;
+        const d = await res.json();
+        const out = d.choices?.[0]?.message?.content?.trim();
+        if (out) return out;
+      } catch { /* sledeći */ }
+    }
+  }
+  return null;
+}
+
+/**
+ * GOTOVE PONUDE, pisane rukom na svakom jeziku.
+ *
+ * Prodajni tekst se ne generiše: besplatni modeli pišu slabu gramatiku na
+ * malim jezicima, a prva rečenica koju klijent pročita odlučuje o poslu.
+ * AI ostaje kao opcija za personalizaciju (`ai: true`), ne kao podrazumevano.
+ *
+ * Zamene: {company} {contact} {link} {products} {city}
+ */
+interface Template { subject: string; body: string; short: string }
+
+const TEMPLATES: Record<string, Template> = {
+  en: {
+    subject: '{company} — your catalogue, on your customer\'s wall',
+    body: `Hello {contact},
+
+We built a working preview for {company}. Your customer photographs their room and gets pieces from YOUR catalogue that genuinely suit the space — then sees the piece on their own wall at true size. The enquiry goes straight to you.
+
+The preview already uses {products} of your own products, taken from your website:
+{link}
+
+It runs under your name and goes on your site with a single line of code.
+
+Do you have fifteen minutes this week to see it from your customer's side?`,
+    short: 'We built {company} a working preview: your customer photographs a room and gets pieces from your own catalogue, shown on their wall at true size. {link} — worth fifteen minutes?',
+  },
+  sr: {
+    subject: '{company} — vaš katalog na zidu kupca',
+    body: `Poštovani {contact},
+
+Napravili smo radni prikaz za {company}. Kupac fotografiše svoju prostoriju i dobija komade iz VAŠEG kataloga koji zaista odgovaraju tom prostoru, a zatim odmah vidi komad na svom zidu u pravoj veličini. Upit stiže direktno vama.
+
+Prikaz već koristi {products} vaših proizvoda, preuzetih sa vašeg sajta:
+{link}
+
+Radi pod vašim imenom i postavlja se na sajt jednim redom koda.
+
+Imate li petnaest minuta ove nedelje da to vidite iz ugla kupca?`,
+    short: 'Napravili smo za {company} radni prikaz: kupac fotografiše prostoriju i dobija komade iz vašeg kataloga, prikazane na njegovom zidu u pravoj veličini. {link} — vredi li petnaest minuta?',
+  },
+  de: {
+    subject: '{company} — Ihr Sortiment an der Wand Ihrer Kunden',
+    body: `Guten Tag {contact},
+
+wir haben für {company} eine funktionierende Vorschau gebaut. Ihre Kundschaft fotografiert den eigenen Raum und erhält Stücke aus IHREM Sortiment, die wirklich dorthin passen — und sieht das Stück maßstabsgetreu an der eigenen Wand. Die Anfrage geht direkt an Sie.
+
+Die Vorschau nutzt bereits {products} Ihrer eigenen Produkte von Ihrer Website:
+{link}
+
+Sie läuft unter Ihrem Namen und wird mit einer einzigen Codezeile eingebunden.
+
+Hätten Sie diese Woche fünfzehn Minuten, um es aus Kundensicht anzusehen?`,
+    short: 'Wir haben für {company} eine funktionierende Vorschau gebaut: Ihre Kundschaft fotografiert einen Raum und bekommt Stücke aus Ihrem Sortiment, maßstabsgetreu an der eigenen Wand. {link} — fünfzehn Minuten wert?',
+  },
+  fr: {
+    subject: '{company} — votre catalogue sur le mur de vos clients',
+    body: `Bonjour {contact},
+
+Nous avons construit un aperçu fonctionnel pour {company}. Votre client photographie sa pièce et reçoit des articles de VOTRE catalogue qui conviennent réellement à cet espace, puis il les voit à l'échelle sur son propre mur. La demande vous parvient directement.
+
+L'aperçu utilise déjà {products} de vos produits, repris de votre site :
+{link}
+
+Il fonctionne sous votre nom et s'ajoute à votre site avec une seule ligne de code.
+
+Auriez-vous quinze minutes cette semaine pour le voir du côté client ?`,
+    short: 'Nous avons construit pour {company} un aperçu fonctionnel : votre client photographie une pièce et reçoit des articles de votre catalogue, affichés à l\'échelle sur son mur. {link} — quinze minutes ?',
+  },
+  es: {
+    subject: '{company} — su catálogo en la pared de sus clientes',
+    body: `Buenos días {contact}:
+
+Hemos preparado una vista previa funcional para {company}. Su cliente fotografía su habitación y recibe piezas de SU catálogo que encajan de verdad en ese espacio, y las ve a escala en su propia pared. La consulta le llega directamente a usted.
+
+La vista previa ya utiliza {products} de sus propios productos, tomados de su web:
+{link}
+
+Funciona con su nombre y se añade a su sitio con una sola línea de código.
+
+¿Tendría quince minutos esta semana para verlo desde el lado del cliente?`,
+    short: 'Hemos preparado para {company} una vista previa funcional: su cliente fotografía una habitación y recibe piezas de su catálogo, mostradas a escala en su pared. {link} — ¿quince minutos?',
+  },
+  it: {
+    subject: '{company} — il tuo catalogo sulla parete del cliente',
+    body: `Buongiorno {contact},
+
+abbiamo realizzato un'anteprima funzionante per {company}. Il cliente fotografa la propria stanza e riceve pezzi dal TUO catalogo che si adattano davvero a quello spazio, poi li vede in scala sulla propria parete. La richiesta arriva direttamente a te.
+
+L'anteprima usa già {products} dei tuoi prodotti, presi dal tuo sito:
+{link}
+
+Funziona con il tuo nome e si aggiunge al sito con una sola riga di codice.
+
+Hai quindici minuti questa settimana per vederla dal lato del cliente?`,
+    short: 'Abbiamo realizzato per {company} un\'anteprima funzionante: il cliente fotografa una stanza e riceve pezzi dal tuo catalogo, mostrati in scala sulla sua parete. {link} — quindici minuti?',
+  },
+  nl: {
+    subject: '{company} — uw collectie op de wand van uw klant',
+    body: `Goedendag {contact},
+
+Wij hebben een werkende preview gebouwd voor {company}. Uw klant fotografeert de eigen kamer en krijgt stukken uit UW collectie die echt bij die ruimte passen, en ziet het stuk op ware grootte op de eigen wand. De aanvraag komt rechtstreeks bij u binnen.
+
+De preview gebruikt al {products} van uw eigen producten, overgenomen van uw website:
+{link}
+
+Hij draait onder uw naam en komt met één regel code op uw site.
+
+Heeft u deze week vijftien minuten om het vanuit de klant te bekijken?`,
+    short: 'Wij bouwden voor {company} een werkende preview: uw klant fotografeert een kamer en krijgt stukken uit uw collectie, op ware grootte op de eigen wand. {link} — vijftien minuten waard?',
+  },
+  pt: {
+    subject: '{company} — o seu catálogo na parede do cliente',
+    body: `Bom dia {contact},
+
+Preparámos uma pré-visualização funcional para a {company}. O seu cliente fotografa a divisão e recebe peças do SEU catálogo que servem mesmo àquele espaço, vendo-as à escala na sua própria parede. O pedido chega diretamente a si.
+
+A pré-visualização já usa {products} dos seus produtos, retirados do seu site:
+{link}
+
+Funciona com o seu nome e entra no site com uma única linha de código.
+
+Tem quinze minutos esta semana para o ver do lado do cliente?`,
+    short: 'Preparámos para a {company} uma pré-visualização funcional: o cliente fotografa uma divisão e recebe peças do seu catálogo, à escala na sua parede. {link} — quinze minutos?',
+  },
+  pl: {
+    subject: '{company} — Państwa katalog na ścianie klienta',
+    body: `Dzień dobry {contact},
+
+Przygotowaliśmy działającą wersję demonstracyjną dla firmy {company}. Klient fotografuje swoje wnętrze i otrzymuje pozycje z PAŃSTWA katalogu, które naprawdę do niego pasują, a następnie widzi je w rzeczywistej skali na własnej ścianie. Zapytanie trafia bezpośrednio do Państwa.
+
+Wersja demonstracyjna korzysta już z {products} Państwa produktów, pobranych z Państwa strony:
+{link}
+
+Działa pod Państwa marką i dodaje się do strony jedną linijką kodu.
+
+Znaleźliby Państwo piętnaście minut w tym tygodniu, aby zobaczyć to oczami klienta?`,
+    short: 'Przygotowaliśmy dla {company} działające demo: klient fotografuje wnętrze i otrzymuje pozycje z Państwa katalogu, pokazane w skali na jego ścianie. {link} — piętnaście minut?',
+  },
+  sv: {
+    subject: '{company} — ert sortiment på kundens vägg',
+    body: `Hej {contact},
+
+Vi har byggt en fungerande förhandsvisning för {company}. Er kund fotograferar sitt rum och får produkter ur ERT sortiment som verkligen passar rummet, och ser dem i skala på sin egen vägg. Förfrågan går direkt till er.
+
+Förhandsvisningen använder redan {products} av era egna produkter, hämtade från er webbplats:
+{link}
+
+Den körs under ert namn och läggs på webbplatsen med en enda rad kod.
+
+Har ni femton minuter den här veckan för att se den ur kundens perspektiv?`,
+    short: 'Vi byggde en fungerande förhandsvisning åt {company}: kunden fotograferar ett rum och får produkter ur ert sortiment, i skala på sin egen vägg. {link} — femton minuter?',
+  },
+  tr: {
+    subject: '{company} — kataloğunuz müşterinizin duvarında',
+    body: `Merhaba {contact},
+
+{company} için çalışan bir önizleme hazırladık. Müşteriniz kendi odasını fotoğraflıyor ve SİZİN kataloğunuzdan o mekâna gerçekten uyan ürünleri görüyor; ardından ürünü kendi duvarında gerçek ölçeğiyle izliyor. Talep doğrudan size ulaşıyor.
+
+Önizleme şimdiden sitenizden alınan {products} kendi ürününüzü kullanıyor:
+{link}
+
+Sizin markanız altında çalışıyor ve sitenize tek satır kodla ekleniyor.
+
+Bu hafta müşteri gözünden görmek için on beş dakikanız olur mu?`,
+    short: '{company} için çalışan bir önizleme hazırladık: müşteri odayı fotoğraflıyor ve kataloğunuzdan ürünleri kendi duvarında gerçek ölçekte görüyor. {link} — on beş dakika ayırır mısınız?',
+  },
+  ru: {
+    subject: '{company} — ваш каталог на стене вашего клиента',
+    body: `Здравствуйте, {contact}!
+
+Мы собрали рабочую демонстрацию для компании {company}. Ваш клиент фотографирует свою комнату и получает позиции из ВАШЕГО каталога, которые действительно подходят этому пространству, а затем видит вещь на своей стене в реальном масштабе. Заявка приходит напрямую вам.
+
+Демонстрация уже использует {products} ваших товаров, взятых с вашего сайта:
+{link}
+
+Она работает под вашим именем и добавляется на сайт одной строкой кода.
+
+Найдётся ли у вас пятнадцать минут на этой неделе, чтобы посмотреть на это глазами клиента?`,
+    short: 'Мы собрали для {company} рабочую демонстрацию: клиент фотографирует комнату и получает позиции из вашего каталога в реальном масштабе на своей стене. {link} — пятнадцать минут?',
+  },
+  ar: {
+    subject: '{company} — كتالوجكم على جدار عميلكم',
+    body: `تحية طيبة {contact}،
+
+أعددنا نموذجاً عملياً لشركة {company}. يصوّر عميلكم غرفته فيحصل على قطع من كتالوجكم أنتم تناسب تلك المساحة فعلاً، ثم يراها بمقاسها الحقيقي على جداره. ويصلكم الطلب مباشرة.
+
+النموذج يستخدم بالفعل {products} من منتجاتكم المأخوذة من موقعكم:
+{link}
+
+يعمل باسمكم ويُضاف إلى موقعكم بسطر برمجي واحد.
+
+هل لديكم خمس عشرة دقيقة هذا الأسبوع لتروه من موقع العميل؟`,
+    short: 'أعددنا لشركة {company} نموذجاً عملياً: يصوّر العميل غرفته فيرى قطعاً من كتالوجكم بمقاسها الحقيقي على جداره. {link} — هل تستحق خمس عشرة دقيقة؟',
+  },
+};
+
+const GREETING_FALLBACK: Record<string, string> = {
+  en: 'there', sr: 'kolege', de: 'zusammen', fr: 'à vous', es: 'a todos', it: 'a voi',
+  nl: 'daar', pt: 'a todos', pl: 'Państwu', sv: 'ni', tr: 'merhaba', ru: 'коллеги', ar: 'فريق العمل',
+};
+
+function fillTemplate(p: any): Template | null {
+  const lang = String(p.lang ?? 'en');
+  const tpl = TEMPLATES[lang] ?? TEMPLATES.en;
+  const vals: Record<string, string> = {
+    '{company}': String(p.company ?? ''),
+    '{contact}': String(p.contact_name ?? GREETING_FALLBACK[lang] ?? ''),
+    '{link}': String(p.demo_url ?? 'https://safenessai.co.uk/spacematch/?t=demo'),
+    '{products}': p.products_found ? String(p.products_found) : '',
+    '{city}': String(p.city ?? ''),
+  };
+  const put = (s: string) =>
+    Object.entries(vals)
+      .reduce((acc, [k, v]) => acc.split(k).join(v), s)
+      // Bez broja proizvoda rečenica ne sme da ostane sa duplim razmakom
+      .replace(/ {2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n');
+  return { subject: put(tpl.subject), body: put(tpl.body), short: put(tpl.short) };
+}
+
+/**
+ * Personalizovana varijanta: model prepravlja gotov tekst uz podatke o
+ * firmi. Koristi se namerno — kada želimo da poruka ne liči na šablon.
+ */
+async function writeOutreach(p: any, tone: string, sender: string) {
+  const language = LANG_NAME[String(p.lang ?? 'en')] ?? 'English';
+  const link = p.demo_url ?? 'https://safenessai.co.uk/spacematch/';
+  const prompt = `Write a cold outreach email in ${language} from ${sender} to a business called "${p.company}"${p.contact_name ? `, addressed to ${p.contact_name}` : ''}${p.city || p.country ? ` in ${[p.city, p.country].filter(Boolean).join(', ')}` : ''}.
+
+WHAT WE OFFER — SpaceMatch AI:
+Their customer photographs a room with a phone. Our scanner reads the room (style, light, colours, materials, the size of the free wall) and recommends the right pieces FROM THAT COMPANY'S OWN CATALOGUE, shows the piece on the customer's own wall at true scale, and sends the enquiry straight to the company. It runs under the company's own brand and is added to their website with a single line of code.
+${p.demo_url ? `We have ALREADY built them a working demo using ${p.products_found ?? 'their'} products taken from their own website. The link is: ${link}` : `A live demo is available at: ${link}`}
+
+RULES:
+- Write ONLY in ${language}. Never mix languages.
+- Tone: ${tone === 'warm' ? 'warm, personal, respectful' : tone === 'formal' ? 'formal and businesslike' : 'direct, confident, no fluff'}.
+- Maximum 130 words in the body. Short paragraphs, no bullet lists.
+- Lead with what they get, not with who we are.
+- The demo link must appear exactly once, as plain text.
+- One clear closing question asking for a short call.
+- No emoji. No exaggerated claims. Never use the words "AI revolution" or "game changer".
+- Do not invent facts about their company beyond the name and city.
+
+Return ONLY valid JSON, no markdown:
+{"subject":"under 60 characters, in ${language}","body":"the email body in ${language}, with real line breaks","short":"a 2-sentence version for LinkedIn or WhatsApp, in ${language}, including the link"}`;
+
+  const out = await askText(prompt);
+  if (!out) return null;
+  let t = out.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  if (!t.startsWith('{')) {
+    const m = t.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    t = m[0];
+  }
+  try {
+    const d = JSON.parse(t);
+    if (!d.subject || !d.body) return null;
+    return {
+      subject: String(d.subject).slice(0, 160),
+      body: String(d.body).slice(0, 4000),
+      short: String(d.short ?? '').slice(0, 600),
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ------------------------------------------------------------ pomoćne
@@ -817,6 +1197,101 @@ Deno.serve(async (req) => {
       await s`UPDATE sm_signups SET status = ${String(body.status ?? 'new').slice(0, 20)}
         WHERE id = ${Number(body.id)}`;
       return json({ ok: true });
+    }
+
+    // ---------------------------------------------------------- CRM
+    if (action === 'prospects') {
+      const status = String(body.status ?? '');
+      const rows = status
+        ? await s`SELECT * FROM sm_prospects WHERE status = ${status} ORDER BY updated_at DESC LIMIT 500`
+        : await s`SELECT * FROM sm_prospects ORDER BY updated_at DESC LIMIT 500`;
+      const [counts] = await s`SELECT
+        count(*)::int AS total,
+        count(*) FILTER (WHERE status = 'new')::int AS new,
+        count(*) FILTER (WHERE demo_url IS NOT NULL)::int AS with_demo,
+        count(*) FILTER (WHERE status = 'contacted')::int AS contacted,
+        count(*) FILTER (WHERE status = 'replied')::int AS replied,
+        count(*) FILTER (WHERE status = 'won')::int AS won,
+        count(*) FILTER (WHERE next_action_at IS NOT NULL AND next_action_at <= current_date)::int AS due
+        FROM sm_prospects`;
+      return json({ prospects: rows, counts });
+    }
+
+    if (action === 'prospect-add') {
+      const p = body.prospect ?? {};
+      const company = String(p.company ?? '').trim().slice(0, 120);
+      if (!company) return json({ error: 'company required' }, 400);
+      const [row] = await s`INSERT INTO sm_prospects
+        (company, website, country, city, vertical, lang, contact_name, email, phone, source, notes)
+        VALUES (${company}, ${p.website || null}, ${p.country || null}, ${p.city || null},
+                ${p.vertical || null}, ${String(p.lang || 'en').slice(0, 5)}, ${p.contact_name || null},
+                ${p.email || null}, ${p.phone || null}, ${p.source || 'manual'}, ${p.notes || null})
+        ON CONFLICT (lower(coalesce(website, company))) DO UPDATE SET updated_at = now()
+        RETURNING id`;
+      return json({ ok: true, id: row?.id });
+    }
+
+    if (action === 'prospect-import') {
+      const rows = Array.isArray(body.rows) ? body.rows.slice(0, 2000) : [];
+      let added = 0;
+      for (const p of rows) {
+        const company = String(p?.company ?? '').trim().slice(0, 120);
+        if (!company) continue;
+        const r = await s`INSERT INTO sm_prospects
+          (company, website, country, city, vertical, lang, contact_name, email, phone, source, notes)
+          VALUES (${company}, ${p.website || null}, ${p.country || null}, ${p.city || null},
+                  ${p.vertical || null}, ${String(p.lang || 'en').slice(0, 5)}, ${p.contact_name || null},
+                  ${p.email || null}, ${p.phone || null}, ${p.source || 'import'}, ${p.notes || null})
+          ON CONFLICT (lower(coalesce(website, company))) DO NOTHING RETURNING id`;
+        if (r.length) added++;
+      }
+      return json({ ok: true, added, skipped: rows.length - added });
+    }
+
+    if (action === 'prospect-update') {
+      const f = body.fields ?? {};
+      await s`UPDATE sm_prospects SET
+        company = COALESCE(${f.company ?? null}, company),
+        website = COALESCE(${f.website ?? null}, website),
+        country = COALESCE(${f.country ?? null}, country),
+        city = COALESCE(${f.city ?? null}, city),
+        vertical = COALESCE(${f.vertical ?? null}, vertical),
+        lang = COALESCE(${f.lang ?? null}, lang),
+        contact_name = COALESCE(${f.contact_name ?? null}, contact_name),
+        email = COALESCE(${f.email ?? null}, email),
+        phone = COALESCE(${f.phone ?? null}, phone),
+        status = COALESCE(${f.status ?? null}, status),
+        demo_slug = COALESCE(${f.demo_slug ?? null}, demo_slug),
+        demo_url = COALESCE(${f.demo_url ?? null}, demo_url),
+        studio_key = COALESCE(${f.studio_key ?? null}, studio_key),
+        products_found = COALESCE(${f.products_found ?? null}, products_found),
+        demo_error = ${f.demo_error === undefined ? null : f.demo_error},
+        notes = COALESCE(${f.notes ?? null}, notes),
+        next_action_at = COALESCE(${f.next_action_at ?? null}, next_action_at),
+        updated_at = now()
+        WHERE id = ${Number(body.id)}`;
+      return json({ ok: true });
+    }
+
+    if (action === 'prospect-del') {
+      await s`DELETE FROM sm_prospects WHERE id = ${Number(body.id)}`;
+      return json({ ok: true });
+    }
+
+    if (action === 'outreach') {
+      const [p] = await s`SELECT * FROM sm_prospects WHERE id = ${Number(body.id)} LIMIT 1`;
+      if (!p) return json({ error: 'not found' }, 404);
+      // Podrazumevano ide ručno pisan šablon na jeziku primaoca; AI se
+      // traži izričito i, ako zakaže, tiho se vraćamo na šablon.
+      const written =
+        body.ai === true
+          ? (await writeOutreach(p, String(body.tone ?? 'direct'), String(body.sender ?? 'Nicholas Family LTD'))) ?? fillTemplate(p)
+          : fillTemplate(p);
+      if (!written) return json({ error: 'ai_unavailable' }, 502);
+      await s`UPDATE sm_prospects SET outreach_subject = ${written.subject},
+        outreach_body = ${written.body}, outreach_short = ${written.short}, updated_at = now()
+        WHERE id = ${p.id}`;
+      return json({ ok: true, ...written });
     }
 
     if (action === 'platform-stats') {
