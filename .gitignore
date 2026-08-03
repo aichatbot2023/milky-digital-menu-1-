@@ -23,3 +23,4 @@ yolo-bench.*
 vision-test.*
 tools/__pycache__/
 plane-test.mjs
+cutout-test.mjs

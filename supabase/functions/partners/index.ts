@@ -200,8 +200,14 @@ Deno.serve(async (req) => {
                coalesce(c.n, 0)::int AS clicks
         FROM sn_products p
         LEFT JOIN (
-          SELECT (meta->>'product_id')::bigint AS pid, count(*) AS n
-          FROM sn_events WHERE type = 'click' GROUP BY 1
+          -- Klik na Amazon PRETRAGU nema broj proizvoda nego reč „search".
+          -- Bez ove provere pretvaranje u broj obori ceo upit, pa konzola
+          -- ostane prazna zbog jednog jedinog takvog zapisa.
+          SELECT pid, count(*) AS n FROM (
+            SELECT CASE WHEN meta->>'product_id' ~ '^[0-9]+$'
+                        THEN (meta->>'product_id')::bigint END AS pid
+            FROM sn_events WHERE type = 'click'
+          ) k WHERE pid IS NOT NULL GROUP BY pid
         ) c ON c.pid = p.id
         ORDER BY p.active DESC, clicks DESC, p.id`;
       // Aktivnost po danima (poslednjih 14 dana)

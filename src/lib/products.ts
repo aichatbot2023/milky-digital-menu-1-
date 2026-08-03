@@ -356,8 +356,10 @@ export async function recommendationsFor(h: {
 
 /** Otvori preporuku + zabeleži klik (kontekst: proizvod ili pretraga). */
 export function openRecommendation(r: Recommendation) {
+  // Pretraga se beleži bez broja proizvoda. Ranije je tu stajala reč
+  // „search", pa je izveštaj u konzoli pokušavao da je pretvori u broj.
   track("click", getRef(), {
-    product_id: r.productId ? String(r.productId) : "search",
+    ...(r.productId ? { product_id: String(r.productId) } : { kind: "search" }),
     brand: r.brand,
     query: r.isSearch ? r.title : "",
   });

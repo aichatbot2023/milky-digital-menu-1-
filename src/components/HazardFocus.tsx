@@ -13,6 +13,7 @@ import {
   recommendationsFor,
   type Recommendation,
 } from "../lib/products";
+import { InPlace } from "./InPlace";
 
 interface Props {
   imageDataUrl: string;
@@ -145,6 +146,20 @@ function FocusCard({
               <li key={i}>{f}</li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Rešenje na svom mestu: roditelj ne mora da zamišlja kako zaštita
+          izgleda kod njega — vidi je na svojoj fotografiji, u pravoj veličini,
+          tačno tamo gde je opasnost. Prikazuje se samo kad se predmet zaista
+          da izrezati iz svoje fotografije; inače ostaje spisak ispod. */}
+      {products[0]?.image && !products[0].isSearch && (
+        <section className="focus-block">
+          <InPlace
+            photo={imageDataUrl}
+            hazard={h}
+            product={{ title: products[0].title, image_url: products[0].image }}
+          />
         </section>
       )}
 

@@ -508,6 +508,11 @@ const D: Dict = {
     sr: "U ozbiljnoj situaciji PRVO pozovite hitnu pomoć (194, iz EU 112). Ovi koraci su edukativni i ne zamenjuju profesionalnu pomoć ni kurs prve pomoći.",
   },
   // Deljenje i podsetnik
+  // Rešenje postavljeno na mesto opasnosti
+  "ip.title": { en: "See it in place", sr: "Vidite na svom mestu" },
+  "ip.hide": { en: "Hide", sr: "Sakrij" },
+  "ip.show": { en: "Show", sr: "Prikaži" },
+  "ip.note": { en: "shown at its real size, on your own photo", sr: "prikazano u pravoj veličini, na vašoj fotografiji" },
   "share.btn": { en: "📤 Share report", sr: "📤 Podeli izveštaj" },
   "share.copied": { en: "Report copied — paste it anywhere.", sr: "Izveštaj kopiran — nalepite ga bilo gde." },
   "share.title": { en: "SafeNest AI safety report", sr: "SafeNest AI izveštaj o bezbednosti" },
