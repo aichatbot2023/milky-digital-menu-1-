@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
+import { FLAT, estimatePlane, pieceTransform, planePerspective, type Plane } from "./plane";
 import type { Match, RoomProfile } from "./api";
 
 interface Props {
@@ -9,16 +10,17 @@ interface Props {
 }
 
 const FRAMES = [
-  { id: "thin", cls: "sm-piece-thin", label: "Slim white" },
-  { id: "wide", cls: "sm-piece-wide", label: "Wide white" },
-  { id: "dark", cls: "sm-piece-dark", label: "Dark" },
-  { id: "none", cls: "", label: "None" },
+  { id: "thin", cls: "sm-piece-thin", key: "fr.thin" },
+  { id: "wide", cls: "sm-piece-wide", key: "fr.wide" },
+  { id: "dark", cls: "sm-piece-dark", key: "fr.dark" },
+  { id: "none", cls: "", key: "fr.none" },
 ] as const;
 
 /**
  * Pregled komada na kupčevom zidu. Namerno bez WebXR-a i bez biblioteka:
- * fotografija + razmera izračunata iz procenjene širine zida daje realan
- * osećaj veličine na svakom telefonu, bez ijedne dozvole i bez čekanja.
+ * fotografija, razmera izračunata iz procenjene širine zida i ravan zida
+ * procenjena iz same slike daju realan osećaj veličine na svakom telefonu,
+ * bez ijedne dozvole i bez čekanja.
  */
 export function WallPreview({ room, piece, profile }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -26,6 +28,9 @@ export function WallPreview({ room, piece, profile }: Props) {
   const [scale, setScale] = useState(1);
   const [pos, setPos] = useState({ x: profile.focalPoint.x + profile.focalPoint.w / 2, y: profile.focalPoint.y + profile.focalPoint.h / 2 });
   const drag = useRef<{ active: boolean }>({ active: false });
+  // Ravan zida se računa jednom po fotografiji; komad se posle samo pomera.
+  const [plane, setPlane] = useState<Plane>(FLAT);
+  const [boxW, setBoxW] = useState(0);
 
   // Prava razmera: širina komada / procenjena širina zida u kadru.
   const pieceW = Number(piece.width_cm) || 90;
@@ -38,6 +43,28 @@ export function WallPreview({ room, piece, profile }: Props) {
     setPos({ x: profile.focalPoint.x + profile.focalPoint.w / 2, y: profile.focalPoint.y + profile.focalPoint.h / 2 });
     setScale(1);
   }, [piece.id, profile.focalPoint.x, profile.focalPoint.y, profile.focalPoint.w, profile.focalPoint.h]);
+
+  useEffect(() => {
+    setPlane(FLAT);
+    const el = new Image();
+    el.crossOrigin = "anonymous";
+    el.onload = () => setPlane(estimatePlane(el));
+    el.src = room;
+    return () => {
+      el.onload = null;
+    };
+  }, [room]);
+
+  // Perspektiva mora biti u pikselima okvira, pa pratimo njegovu širinu.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const read = () => setBoxW(el.getBoundingClientRect().width);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const move = (clientX: number, clientY: number) => {
     const el = wrapRef.current;
@@ -54,6 +81,7 @@ export function WallPreview({ room, piece, profile }: Props) {
       <div
         className="sm-preview"
         ref={wrapRef}
+        style={{ perspective: planePerspective(plane, boxW) }}
         onPointerDown={(e) => {
           drag.current.active = true;
           (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -70,7 +98,7 @@ export function WallPreview({ room, piece, profile }: Props) {
             width: `${widthPct}%`,
             left: `${pos.x * 100}%`,
             top: `${pos.y * 100}%`,
-            transform: "translate(-50%, -50%)",
+            transform: pieceTransform(plane),
           }}
         >
           {piece.image_url ? (
@@ -91,7 +119,7 @@ export function WallPreview({ room, piece, profile }: Props) {
             className={`sm-chip${frame === f.id ? " sm-chip-on" : ""}`}
             onClick={() => setFrame(f.id)}
           >
-            {f.label}
+            {t(f.key)}
           </button>
         ))}
       </div>
@@ -117,6 +145,7 @@ export function WallPreview({ room, piece, profile }: Props) {
 
       <p className="sm-preview-hint">
         {t("s.wall")}: ~{Math.round(wallW)} cm · {t("s.drag")}
+        {plane.confidence > 0 && ` · ${t("s.angled")}`}
       </p>
     </div>
   );

@@ -22,3 +22,4 @@ live-check.*
 yolo-bench.*
 vision-test.*
 tools/__pycache__/
+plane-test.mjs
