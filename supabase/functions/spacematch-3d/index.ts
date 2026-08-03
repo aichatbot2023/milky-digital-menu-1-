@@ -8,6 +8,12 @@
 // To se NE radi dok kupac čeka. Radi se jednom, pri uvozu kataloga, i model se
 // čuva; kupcu posle stiže gotov fajl. Sav posao je obavljen ranije.
 //
+// Sam poziv grafičke kartice NE ide odavde. Funkcija ima malo memorije i
+// prekine vezu posle dvadesetak sekundi, a jedan model traje minutima — pa
+// generisanje vodi `tools/spacematch-3d.py` iz GitHub Actions, gde proces sme
+// da čeka. Ovde ostaje knjigovodstvo: ko treba model, ko ga je dobio, i ko je
+// namerno preskočen.
+//
 // Ravni radovi — slike, posteri, ogledala — namerno ne prolaze ovuda. Od
 // fotografije uramljene slike TRELLIS pravi iskrivljenu ploču, što je gore od
 // same fotografije. Njima ravan zida i perspektiva rade posao.
@@ -36,220 +42,36 @@ const json = (body: unknown, status = 200) =>
   });
 
 /**
- * Vrste proizvoda koje ima smisla praviti u 3D.
+ * Kome uopšte treba 3D model.
  *
- * Sve što je u suštini ravna površina ostaje slika: model bi mu samo dodao
- * lažnu debljinu i iskrivio ivice.
+ * Prva verzija je gledala reči u naslovu i oznakama i odmah se obrukala:
+ * morski pejzaž sa oznakom „light" završio je kao kandidat za mesh. Delatnost
+ * studija je mnogo pouzdaniji signal — galerija prodaje ravne radove, salon
+ * nameštaja ne prodaje ništa ravno — pa ona odlučuje, a reči služe samo da
+ * uhvate izuzetke unutar delatnosti (skulptura u galeriji, poster u salonu).
  */
-const FLAT = /(print|poster|artwork|painting|canvas|photograph|mirror|wallpaper|tile|slika|poster|platno|ogledal|tapet|plocic|pločic)/i;
-const VOLUME = /(sofa|chair|armchair|stool|table|desk|lamp|light|pendant|rug|carpet|vase|planter|shelf|cabinet|bed|bench|kaus|stolic|stolic|fotelj|lampa|tepih|vazn|polic|orman|krevet|klupa)/i;
+const BY_VERTICAL: Record<string, boolean> = {
+  art: false,
+  interior: true,
+  furniture: true,
+  lighting: true,
+  kitchen: true,
+  flooring: true,
+  realestate: false,
+};
 
-/** Da li proizvod uopšte treba da ima 3D model. */
-function wantsModel(p: { title?: string; tags?: string; style?: string; materials?: string }) {
-  const text = [p.title, p.tags, p.style, p.materials].filter(Boolean).join(' ');
-  if (FLAT.test(text) && !VOLUME.test(text)) return false;
-  return VOLUME.test(text);
-}
+/** Izuzeci: ono što u svojoj delatnosti ide suprotno od pravila. */
+const SOLID = /\b(sculpture|statue|figurine|bust|object|vase|bowl|skulptur|statu|figur|vazn|zdel)\b/i;
+const FLAT = /\b(print|poster|artwork|painting|canvas|photograph|mirror|wallpaper|slika|poster|platno|ogledal|tapet)\b/i;
 
-/**
- * Razgovor sa Space-om ide preko reda čekanja, ne preko REST prečice.
- *
- * `/gradio_api/call/...` izgleda jednostavnije, ali ne podnosi sesijsko
- * stanje — a ovaj Space upravo tako radi: `image_to_3d` ostavlja rezultat u
- * sesiji, a `extract_glb` ga odatle uzima. Preko prečice svaki korak vrati
- * „404". Zato se posao prijavljuje u red i sluša se jedan tok događaja za
- * celu sesiju, isto kako radi i zvanični klijent.
- */
-const FN = { start_session: 2, preprocess_image: 4, image_to_3d: 7, extract_glb: 9 } as const;
-
-/** Iznad ovoga se odgovor ne čuva — funkcija ima malo memorije. */
-const MAX_PAYLOAD = 512 * 1024;
-
-async function call(
-  endpoint: keyof typeof FN,
-  data: unknown[],
-  session: string,
-  ms = 240000,
-  /**
-   * Da li nam ishod uopšte treba.
-   *
-   * `image_to_3d` uz rezultat vraća i video pregled zapakovan u sam odgovor —
-   * desetine megabajta koje funkciji sruše memoriju. Taj korak ostavlja ono
-   * što nam treba u sesiji, pa se njegov odgovor samo preskoči.
-   */
-  wantOutput = true,
-): Promise<unknown[]> {
-  const head: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (HF) head.Authorization = `Bearer ${HF}`;
-
-  const join = await fetch(`${SPACE}/gradio_api/queue/join`, {
-    method: 'POST',
-    headers: head,
-    body: JSON.stringify({
-      data,
-      event_data: null,
-      fn_index: FN[endpoint],
-      trigger_id: null,
-      session_hash: session,
-    }),
-  });
-  const joined = await join.text();
-  if (!join.ok) throw new Error(`${endpoint} prijava ${join.status}: ${joined.slice(0, 240)}`);
-  const eventId = JSON.parse(joined)?.event_id;
-  if (!eventId) throw new Error(`${endpoint}: nema event_id — ${joined.slice(0, 200)}`);
-
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), ms);
-  try {
-    const res = await fetch(`${SPACE}/gradio_api/queue/data?session_hash=${session}`, {
-      headers: HF ? { Authorization: `Bearer ${HF}`, Accept: 'text/event-stream' } : { Accept: 'text/event-stream' },
-      signal: ctl.signal,
-    });
-    if (!res.ok || !res.body) throw new Error(`${endpoint} tok ${res.status}`);
-
-    const reader = res.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    let dropped = false;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = dec.decode(value, { stream: true });
-
-      // Kad ishod ne čuvamo, dovoljno je videti da je posao gotov.
-      if (!wantOutput) {
-        buf = (buf + chunk).slice(-4096);
-        if (buf.includes('"msg": "process_completed"') || buf.includes('"msg":"process_completed"')) {
-          reader.cancel().catch(() => {});
-          if (buf.includes('"success": false') || buf.includes('"success":false')) {
-            throw new Error(`${endpoint}: posao nije uspeo`);
-          }
-          return [];
-        }
-        if (buf.includes('unexpected_error')) {
-          reader.cancel().catch(() => {});
-          throw new Error(`${endpoint}: neočekivana greška`);
-        }
-        continue;
-      }
-
-      buf += chunk;
-      if (buf.length > MAX_PAYLOAD) {
-        // Ogroman red bez prelaza znači da stiže nešto što nismo tražili.
-        buf = buf.slice(-MAX_PAYLOAD);
-        dropped = true;
-      }
-      let cut: number;
-      while ((cut = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, cut).trimEnd();
-        buf = buf.slice(cut + 1);
-        if (!line.startsWith('data:')) continue;
-        let msg: any;
-        try {
-          msg = JSON.parse(line.slice(5).trim());
-        } catch {
-          continue;
-        }
-        if (msg?.msg === 'process_completed' && (!msg.event_id || msg.event_id === eventId)) {
-          reader.cancel().catch(() => {});
-          if (msg.success === false) {
-            const why = msg.output?.error ?? msg.output?.detail ?? JSON.stringify(msg.output ?? msg).slice(0, 260);
-            throw new Error(`${endpoint}: ${String(why).slice(0, 300)}`);
-          }
-          return (msg.output?.data ?? []) as unknown[];
-        }
-        if (msg?.msg === 'unexpected_error' || msg?.msg === 'close_stream') {
-          reader.cancel().catch(() => {});
-          throw new Error(`${endpoint}: ${String(msg.message ?? msg.msg).slice(0, 240)}`);
-        }
-      }
-    }
-    throw new Error(`${endpoint}: tok se prekinuo bez ishoda${dropped ? ' (odgovor prevelik)' : ''}`);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/** Nasumičan ključ sesije — Space vezuje korake jednog posla za njega. */
-const newSession = () => crypto.randomUUID().replace(/-/g, '').slice(0, 11);
-
-/**
- * Slika se otprema Space-u, ne šalje kao link.
- *
- * Link sa našeg domena Space odbija bez objašnjenja — verovatno ga uopšte i
- * ne dohvata. Otpremanje vraća putanju na njegovom disku i posle radi svaki
- * put, pa je to jedini pouzdan put.
- */
-async function upload(imageUrl: string) {
-  const img = await fetch(imageUrl);
-  if (!img.ok) throw new Error(`slika proizvoda ${img.status}`);
-  const blob = await img.blob();
-
-  const form = new FormData();
-  form.append('files', blob, 'product.jpg');
-  const up = await fetch(`${SPACE}/gradio_api/upload`, {
-    method: 'POST',
-    headers: HF ? { Authorization: `Bearer ${HF}` } : {},
-    body: form,
-  });
-  const text = await up.text();
-  if (!up.ok) throw new Error(`otpremanje ${up.status}: ${text.slice(0, 200)}`);
-  const path = JSON.parse(text)?.[0];
-  if (!path) throw new Error(`otpremanje bez putanje: ${text.slice(0, 160)}`);
-  return { path, url: null, orig_name: 'product.jpg', mime_type: 'image/jpeg',
-           meta: { _type: 'gradio.FileData' } };
-}
-
-/**
- * Jedan proizvod: fotografija → pripremljena slika → 3D → GLB.
- *
- * Rezolucija je namerno 512: na deljenoj grafičkoj kartici veće traje minutima
- * i troši tuđu kvotu, a razlika se na telefonu ne vidi.
- */
-async function build(imageUrl: string, resolution = '512') {
-  const session = newSession();
-  await call('start_session', [], session, 30000, false);
-
-  const pre = await call('preprocess_image', [await upload(imageUrl)], session, 120000);
-  const cleaned = (pre?.[0] ?? null) as { url?: string; path?: string } | null;
-  if (!cleaned?.url && !cleaned?.path) throw new Error('priprema slike nije vratila sliku');
-
-  // Petnaest brojeva iza slike su tri grupe podešavanja koje Space traži
-  // (oblik, materijal, doterivanje). Vrednosti su njegove podrazumevane;
-  // menja se samo rezolucija, jer 1024 na deljenoj kartici traje minutima.
-  await call(
-    'image_to_3d',
-    [cleaned, 0, resolution, 7.5, 0.7, 12, 5, 7.5, 0.5, 12, 3, 1, 0, 12, 3],
-    session,
-    300000,
-    false,
-  );
-
-  // Prva vrednost je sesijsko stanje koje Space sam popunjava, pa ide null.
-  // Mreža i tekstura su na donjoj granici: model se gleda na telefonu.
-  const out = await call('extract_glb', [null, 100000, 1024], session, 180000);
-  const glb = (out?.[0] ?? null) as { url?: string } | null;
-  if (!glb?.url) throw new Error('izvlačenje GLB-a nije vratilo fajl');
-  return glb.url;
-}
-
-/** GLB se seli na naš prostor: tuđi privremeni link nestaje za koji sat. */
-async function store(url: string, name: string) {
-  const res = await fetch(url, { headers: HF ? { Authorization: `Bearer ${HF}` } : {} });
-  if (!res.ok) throw new Error(`preuzimanje GLB-a ${res.status}`);
-  const body = new Uint8Array(await res.arrayBuffer());
-
-  const up = await fetch(`${SUPA}/storage/v1/object/${BUCKET}/${name}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SERVICE}`,
-      'Content-Type': 'model/gltf-binary',
-      'x-upsert': 'true',
-    },
-    body,
-  });
-  if (!up.ok) throw new Error(`smeštanje ${up.status}: ${(await up.text()).slice(0, 200)}`);
-  return { url: `${SUPA}/storage/v1/object/public/${BUCKET}/${name}`, bytes: body.length };
+function wantsModel(p: {
+  title?: string; tags?: string; style?: string; materials?: string; vertical?: string;
+}) {
+  const text = [p.title, p.tags, p.materials].filter(Boolean).join(' ');
+  const base = BY_VERTICAL[String(p.vertical ?? '')] ?? false;
+  if (base && FLAT.test(text)) return false;
+  if (!base && SOLID.test(text)) return true;
+  return base;
 }
 
 async function ensureBucket() {
@@ -275,76 +97,90 @@ Deno.serve(async (req) => {
   if (!ADMIN || body.admin_key !== ADMIN) return json({ error: 'unauthorized' }, 401);
   const action = String(body.action ?? '');
 
-  // Provera da li nam Space uopšte da vremena na grafičkoj kartici.
+  // Da li je sve na svom mestu pre nego što alat krene.
   if (action === 'health') {
-    try {
-      const s = newSession();
-      await call('start_session', [], s, 30000);
-      return json({ ok: true, token: !!HF, space: SPACE });
-    } catch (e) {
-      return json({ ok: false, token: !!HF, error: String(e).slice(0, 400) }, 502);
-    }
+    return json({ ok: !!(DB && SUPA && SERVICE), token: !!HF, space: SPACE });
   }
 
-  // Jedna slika, bez baze — za probu i za ručne slučajeve.
-  if (action === 'one') {
-    const image = String(body.image_url ?? '');
-    if (!image) return json({ error: 'image_url je obavezan' }, 400);
-    try {
-      const glb = await build(image, String(body.resolution ?? '512'));
-      if (body.keep === false) return json({ glb });
-      await ensureBucket();
-      const saved = await store(glb, `${body.name ?? crypto.randomUUID()}.glb`);
-      return json(saved);
-    } catch (e) {
-      return json({ error: String(e).slice(0, 500) }, 502);
-    }
-  }
-
-  // Katalog jednog studija: pravi modele za proizvode kojima 3D ima smisla.
-  if (action === 'catalogue') {
+  // Šta čeka na model. Ovo zove alat iz GitHub Actions.
+  if (action === 'pending') {
     if (!DB) return json({ error: 'baza nije podešena' }, 500);
     const s = postgres(DB, { prepare: false });
     try {
       await s`ALTER TABLE sm_products ADD COLUMN IF NOT EXISTS model_url text`;
       await s`ALTER TABLE sm_products ADD COLUMN IF NOT EXISTS model_state text`;
 
-      const slug = String(body.slug ?? '');
-      const limit = Math.max(1, Math.min(20, Number(body.limit) || 3));
+      const slug = body.slug ? String(body.slug) : null;
+      const limit = Math.max(1, Math.min(60, Number(body.limit) || 12));
       const rows = await s`
-        SELECT p.id, p.title, p.image_url, p.tags, p.style, p.materials
+        SELECT p.id, p.title, p.image_url, p.tags, p.style, p.materials,
+               t.slug, t.vertical
         FROM sm_products p JOIN sm_tenants t ON t.id = p.tenant_id
-        WHERE t.slug = ${slug} AND p.active AND p.image_url IS NOT NULL
-          AND p.model_url IS NULL AND (p.model_state IS NULL OR p.model_state <> 'skip')
+        WHERE p.active AND p.image_url IS NOT NULL AND p.model_url IS NULL
+          AND (p.model_state IS NULL OR p.model_state = '')
+          AND (${slug}::text IS NULL OR t.slug = ${slug})
         ORDER BY p.popularity DESC NULLS LAST, p.id
         LIMIT ${limit}`;
 
-      await ensureBucket();
-      const done: string[] = [];
-      const skipped: string[] = [];
-      const failed: string[] = [];
-
+      // Ravni radovi se odmah obeleže kao preskočeni i ne troše tuđu karticu.
+      const work: unknown[] = [];
+      let skipped = 0;
       for (const p of rows) {
-        if (!wantsModel(p)) {
+        if (wantsModel(p)) work.push({ id: p.id, slug: p.slug, title: p.title, image_url: p.image_url });
+        else {
           await s`UPDATE sm_products SET model_state = 'skip' WHERE id = ${p.id}`;
-          skipped.push(p.title);
-          continue;
-        }
-        try {
-          const glb = await build(p.image_url, '512');
-          const saved = await store(glb, `${slug}/${p.id}.glb`);
-          await s`UPDATE sm_products SET model_url = ${saved.url}, model_state = 'ready'
-                  WHERE id = ${p.id}`;
-          done.push(p.title);
-        } catch (e) {
-          await s`UPDATE sm_products SET model_state = ${String(e).slice(0, 200)}
-                  WHERE id = ${p.id}`;
-          failed.push(`${p.title}: ${String(e).slice(0, 160)}`);
+          skipped++;
         }
       }
-      return json({ done, skipped, failed, looked_at: rows.length });
+      return json({ work, skipped, looked_at: rows.length });
     } catch (e) {
       return json({ error: String(e).slice(0, 400) }, 500);
+    } finally {
+      await s.end({ timeout: 5 });
+    }
+  }
+
+  // Gotov model: stiže kao base64 iz alata, seli se u naš prostor i veže se
+  // za proizvod. Tuđi privremeni link nestane za koji sat, naš ostaje.
+  if (action === 'save') {
+    if (!DB) return json({ error: 'baza nije podešena' }, 500);
+    const id = Number(body.id);
+    const slug = String(body.slug ?? 'x');
+    const b64 = String(body.glb ?? '');
+    if (!id || !b64) return json({ error: 'id i glb su obavezni' }, 400);
+    const s = postgres(DB, { prepare: false });
+    try {
+      const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      await ensureBucket();
+      const name = `${slug}/${id}.glb`;
+      const up = await fetch(`${SUPA}/storage/v1/object/${BUCKET}/${name}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${SERVICE}`,
+          'Content-Type': 'model/gltf-binary',
+          'x-upsert': 'true',
+        },
+        body: bin,
+      });
+      if (!up.ok) throw new Error(`smeštanje ${up.status}: ${(await up.text()).slice(0, 200)}`);
+      const url = `${SUPA}/storage/v1/object/public/${BUCKET}/${name}`;
+      await s`UPDATE sm_products SET model_url = ${url}, model_state = 'ready' WHERE id = ${id}`;
+      return json({ ok: true, url, bytes: bin.length });
+    } catch (e) {
+      return json({ error: String(e).slice(0, 400) }, 500);
+    } finally {
+      await s.end({ timeout: 5 });
+    }
+  }
+
+  // Posao koji nije uspeo — da se ne pokušava u nedogled.
+  if (action === 'fail') {
+    if (!DB) return json({ error: 'baza nije podešena' }, 500);
+    const s = postgres(DB, { prepare: false });
+    try {
+      await s`UPDATE sm_products SET model_state = ${String(body.reason ?? 'greška').slice(0, 200)}
+              WHERE id = ${Number(body.id)}`;
+      return json({ ok: true });
     } finally {
       await s.end({ timeout: 5 });
     }
