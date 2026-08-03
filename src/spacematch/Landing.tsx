@@ -240,7 +240,16 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
               eager
             />
             <div className="lp-step-mini"><i>2</i> {t("ty.analyzing")}</div>
-            <div className="lp-mini-img" style={{ background: "linear-gradient(150deg,#0d2f2a,#14857a)" }} />
+            <Art
+              className="lp-mini-img"
+              src={`${IMG}/step-2-understand.jpg`}
+              fallback={ART.sofa}
+              tint="linear-gradient(150deg,#0d2f2a,#14857a)"
+              w={1200}
+              h={750}
+              sizes="(max-width: 900px) 60vw, 210px"
+              eager
+            />
             <div className="lp-step-mini"><i>3</i> {t("ty.recfor")}</div>
             <div style={{ display: "flex", gap: 6 }}>
               {["sofa", "frame"].map((a) => (
