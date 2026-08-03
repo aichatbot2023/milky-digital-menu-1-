@@ -214,6 +214,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
                       src={`${IMG}/hero-piece-${i + 1}.jpg`}
                       fallback={ART[art]}
                       tint={tint}
+                      w={800}
+                      h={800}
+                      sizes="(max-width: 900px) 22vw, 110px"
                       eager
                     />
                     <b>{t(label)}</b>
@@ -231,6 +234,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
               src={`${IMG}/hero-room.jpg`}
               fallback={ART.house}
               tint="linear-gradient(150deg,#e7ece9,#d7e2df)"
+              w={1200}
+              h={800}
+              sizes="(max-width: 900px) 60vw, 210px"
               eager
             />
             <div className="lp-step-mini"><i>2</i> {t("ty.analyzing")}</div>
@@ -277,6 +283,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
                 src={`${IMG}/step-${n}-${["photograph", "understand", "recommend", "preview"][n - 1]}.jpg`}
                 fallback={[ART.house, ART.lamp, ART.sofa, ART.frame][n - 1]}
                 tint={["linear-gradient(150deg,#eef2f1,#dde7e4)", "linear-gradient(150deg,#0d2f2a,#17a094)", "linear-gradient(150deg,#f2efe8,#e3ddd2)", "linear-gradient(150deg,#e8f4f1,#cfe6e1)"][n - 1]}
+                w={1200}
+                h={750}
+                sizes="(max-width: 700px) 92vw, (max-width: 1100px) 46vw, 280px"
                 alt={t(`d.s${n}t`)}
               />
             </div>
@@ -308,6 +317,9 @@ export function Landing({ lang, onLang, onDemo, onStudio }: Props) {
                 src={`${IMG}/${i.file}.jpg`}
                 fallback={ART[i.art]}
                 tint={i.tint}
+                w={1000}
+                h={920}
+                sizes="(max-width: 700px) 46vw, (max-width: 1100px) 30vw, 230px"
                 alt={t(i.key)}
               />
               <b>{t(i.key)}</b>
@@ -522,6 +534,23 @@ function TryItYourself() {
   const [items, setItems] = useState<Match[]>([]);
   const file = useRef<HTMLInputElement>(null);
 
+  /**
+   * Posetilac koji nema fotografiju pri ruci ne sme da ode praznih ruku,
+   * pa mu nudimo nasu sobu — isti put, isti rezultat, jedan klik.
+   */
+  const sample = async () => {
+    setStage("busy");
+    try {
+      const blob = await fetch(`${IMG}/try-room.jpg`).then((r) => {
+        if (!r.ok) throw new Error("nema uzorka");
+        return r.blob();
+      });
+      await run(new File([blob], "try-room.jpg", { type: blob.type || "image/jpeg" }));
+    } catch {
+      setStage("fail");
+    }
+  };
+
   const run = async (f: File) => {
     setStage("busy");
     try {
@@ -552,6 +581,11 @@ function TryItYourself() {
             </svg>
             <b>{t("ty.click")}</b>
             <span>{t("ty.drag")}</span>
+          </button>
+        )}
+        {!shot && (
+          <button className="lp-sample" onClick={sample} disabled={stage === "busy"}>
+            {t("ty.sample")}
           </button>
         )}
       </div>

@@ -373,6 +373,24 @@
 }
 .lp-drop b { display: block; font-size: 0.84rem; margin-top: 8px; }
 .lp-drop span { display: block; font-size: 0.74rem; color: #93a3a0; margin-top: 3px; }
+/* Tiha ponuda ispod polja za otpremanje — ne otima pažnju pravom dugmetu. */
+.lp-sample {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--l-teal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.lp-sample:disabled { color: #9fb0ac; cursor: default; text-decoration: none; }
+
 .lp-try-shot { border-radius: 10px; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
 .lp-try-rec { display: flex; flex-direction: column; gap: 8px; }
 .lp-try-item { display: flex; gap: 9px; align-items: center; }
@@ -540,6 +558,7 @@
 /* --------------------------------------------------- fotografije ili crtež */
 .sm-art { position: relative; overflow: hidden; display: grid; place-items: center; }
 .sm-art-draw { display: block; width: 58px; color: #6b7c78; }
+.sm-art picture { display: contents; }
 .sm-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .sm-art-off { opacity: 0; }
 .sm-art-on { opacity: 1; animation: lp-fade 420ms ease both; }

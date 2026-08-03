@@ -1,5 +1,13 @@
 # SpaceMatch AI — 28 gotovih promptova
 
+> **Slike su već napravljene i stoje na sajtu.** Ovi promptovi ostaju samo
+> ako nekad zatreba da se ista slika uradi u nekom drugom alatu. Promptovi
+> po kojima su slike zaista nastale žive u `tools/spacematch-images.py` i
+> tamo se menjaju — ovaj fajl je snimak, ne izvor.
+>
+> Za novu ili prepravljenu sliku:
+> `python3 tools/spacematch-images.py --key <ADMIN_KEY> --force <ime>`
+
 Svaki prompt je celovit: stil, sadržaj i negativni deo su već unutra.
 Kopiraj ceo blok, ništa ne dodaji.
 
