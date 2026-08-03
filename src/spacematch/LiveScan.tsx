@@ -6,6 +6,7 @@ import {
   keepUseful, loadDetector, localProfile, paletteFrom, signature,
   type Seen,
 } from "./vision";
+import { recognise, remember } from "../lib/roomMemory";
 
 interface Props {
   tenant: Tenant;
@@ -62,6 +63,10 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
   const [steady, setSteady] = useState(false);
   const [deep, setDeep] = useState(false);
   const [profile, setProfile] = useState<RoomProfile | null>(null);
+  /** Otisak prostora iz poslednjeg kadra — po njemu se soba pamti i prepoznaje. */
+  const lastPrint = useRef<{ objects: string[]; palette: string[] } | null>(null);
+  /** Pre koliko dana smo ovaj prostor već videli; null = prvi put. */
+  const [seenBefore, setSeenBefore] = useState<number | null>(null);
   const [refined, setRefined] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [alts, setAlts] = useState<Alternative[]>([]);
@@ -155,6 +160,9 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
         setProfile(merged);
         setRefined(true);
         setFrame(jpeg);
+        // Ono što je oblak pročitao vredi zapamtiti: sledeći put se isti
+        // prostor prepozna iz same slike, bez ponovnog čitanja.
+        if (lastPrint.current) remember(lastPrint.current, { profile: merged });
         const r = await recommend(tenant.slug, merged, {}, getLang());
         if (stopped.current) return;
         setMatches(r.recommendations);
@@ -284,6 +292,19 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
             setProfile((old) => (old && refinedRef.current ? { ...old, focalPoint: local.focalPoint } : local));
             setRefined(false);
             void askLocal(local);
+
+            // Prostor koji smo već videli ne treba čitati iznova. Stil i
+            // raspoloženje su ostali isti — vraćaju se odmah, pa kupac koji
+            // se vratio ne čeka drugi put ono što je jednom već sačekao.
+            const print = { objects: seen.filter((x) => !x.hidden).map((x) => x.label), palette };
+            const known = recognise(print);
+            const saved = known?.room.data?.profile as RoomProfile | undefined;
+            if (saved && !refinedRef.current) {
+              setProfile({ ...saved, focalPoint: local.focalPoint, wallWidth: local.wallWidth });
+              setRefined(true);
+              setSeenBefore(known!.daysAgo);
+            }
+            lastPrint.current = print;
           }
 
           // Miran kadar → dubinski pogled koji dodaje stil i raspoloženje
@@ -351,6 +372,11 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
         </div>
       )}
 
+      {seenBefore !== null && (
+        <div className="ls-known">
+          {seenBefore === 0 ? t("mem.today") : t("mem.days").replace("{n}", String(seenBefore))}
+        </div>
+      )}
       {profile && (
         <div className="lv-tags" key={count}>
           <span>{roomName(profile.roomType)}</span>

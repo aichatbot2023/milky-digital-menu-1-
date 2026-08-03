@@ -24,3 +24,4 @@ vision-test.*
 tools/__pycache__/
 plane-test.mjs
 cutout-test.mjs
+room-test.mjs

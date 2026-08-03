@@ -17,6 +17,8 @@ import { InPlace } from "./InPlace";
 
 interface Props {
   imageDataUrl: string;
+  /** Pre koliko dana je ovaj isti prostor već skeniran; null = prvi put. */
+  roomSeen?: number | null;
   hazards: Hazard[];
   baseScore: number;
   ageGroup: AgeGroup;
@@ -236,6 +238,7 @@ function FocusCard({
  */
 export function HazardFocus({
   imageDataUrl,
+  roomSeen,
   hazards,
   baseScore,
   ageGroup,
@@ -280,6 +283,12 @@ export function HazardFocus({
   };
 
   return (
+    <>
+      {roomSeen !== null && roomSeen !== undefined && (
+        <p className="room-known">
+          {roomSeen === 0 ? t("room.today") : t("room.days").replace("{n}", String(roomSeen))}
+        </p>
+      )}
     <div className="app focus-app">
       <header className="focus-top">
         <button className="focus-back" onClick={onBack} aria-label={t("back")}>
@@ -372,5 +381,6 @@ export function HazardFocus({
         </p>
       )}
     </div>
+    </>
   );
 }

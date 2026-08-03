@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
 import { FLAT, estimatePlane, pieceTransform, planePerspective, type Plane } from "./plane";
+import { cutoutFrom, type Cutout } from "../lib/cutout";
 import type { Match, RoomProfile } from "./api";
 
 interface Props {
@@ -31,6 +32,15 @@ export function WallPreview({ room, piece, profile }: Props) {
   // Ravan zida se računa jednom po fotografiji; komad se posle samo pomera.
   const [plane, setPlane] = useState<Plane>(FLAT);
   const [boxW, setBoxW] = useState(0);
+  /**
+   * Komad izrezan iz svoje fotografije.
+   *
+   * Tepih, lampa i fotelja nemaju ram — u pravougaoniku sa belom pozadinom
+   * izgledaju kao nalepnica preko sobe. Kad se pozadina da ukloniti, predmet
+   * stoji u prostoru; kad ne može, ostaje dosadašnji prikaz sa ramom, koji
+   * je za uramljene radove ionako tačan.
+   */
+  const [cut, setCut] = useState<Cutout | null>(null);
 
   // Prava razmera: širina komada / procenjena širina zida u kadru.
   const pieceW = Number(piece.width_cm) || 90;
@@ -38,6 +48,8 @@ export function WallPreview({ room, piece, profile }: Props) {
   const wallW = profile.wallWidth || 300;
   const widthPct = Math.max(4, Math.min(96, (pieceW / wallW) * 100 * scale));
   const aspect = pieceH / pieceW;
+  /** Predmet bez rama: kad se pozadina uspešno uklonila, stoji sam u prostoru. */
+  const solid = Boolean(cut?.ok);
 
   useEffect(() => {
     setPos({ x: profile.focalPoint.x + profile.focalPoint.w / 2, y: profile.focalPoint.y + profile.focalPoint.h / 2 });
@@ -66,6 +78,15 @@ export function WallPreview({ room, piece, profile }: Props) {
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    setCut(null);
+    if (piece.image_url) cutoutFrom(piece.image_url).then((c) => alive && setCut(c));
+    return () => {
+      alive = false;
+    };
+  }, [piece.image_url]);
+
   const move = (clientX: number, clientY: number) => {
     const el = wrapRef.current;
     if (!el) return;
@@ -93,7 +114,7 @@ export function WallPreview({ room, piece, profile }: Props) {
       >
         <img src={room} alt="" className="sm-room" />
         <div
-          className={`sm-piece ${FRAMES.find((f) => f.id === frame)!.cls}`}
+          className={`sm-piece${solid ? " sm-piece-solid" : ` ${FRAMES.find((f) => f.id === frame)!.cls}`}`}
           style={{
             width: `${widthPct}%`,
             left: `${pos.x * 100}%`,
@@ -101,7 +122,19 @@ export function WallPreview({ room, piece, profile }: Props) {
             transform: pieceTransform(plane),
           }}
         >
-          {piece.image_url ? (
+          {solid ? (
+            <img
+              src={cut!.url}
+              alt=""
+              style={{
+                // Predmet retko stoji po sredini svoje fotografije, pa se
+                // centrira po svom okviru, a ne po okviru fajla.
+                aspectRatio: `${cut!.box.w} / ${cut!.box.h}`,
+                objectFit: "cover",
+                objectPosition: `${cut!.box.x * -100}% ${cut!.box.y * -100}%`,
+              }}
+            />
+          ) : piece.image_url ? (
             <img src={piece.image_url} alt="" style={{ aspectRatio: `1 / ${aspect}` }} />
           ) : (
             <div style={{ aspectRatio: `1 / ${aspect}`, background: "#cbd5e1" }} />
@@ -109,6 +142,7 @@ export function WallPreview({ room, piece, profile }: Props) {
         </div>
       </div>
 
+      {!solid && (
       <div className="sm-preview-bar">
         <span className="sm-fact" style={{ padding: "7px 12px", borderRadius: 999 }}>
           {t("s.frame")}
@@ -123,6 +157,7 @@ export function WallPreview({ room, piece, profile }: Props) {
           </button>
         ))}
       </div>
+      )}
 
       <div className="sm-preview-bar">
         <span className="sm-fact" style={{ padding: "7px 12px", borderRadius: 999 }}>

@@ -508,6 +508,9 @@ const D: Dict = {
     sr: "U ozbiljnoj situaciji PRVO pozovite hitnu pomoć (194, iz EU 112). Ovi koraci su edukativni i ne zamenjuju profesionalnu pomoć ni kurs prve pomoći.",
   },
   // Deljenje i podsetnik
+  // Pamćenje prostora — koja je ovo soba, ne kakva je
+  "room.today": { en: "We recognise this room \u2014 comparing with your last scan", sr: "Prepoznajemo ovu sobu — poredimo sa prošlim skeniranjem" },
+  "room.days": { en: "You scanned this room {n} days ago \u2014 here's what stands now", sr: "Ovu sobu ste skenirali pre {n} dana — evo kako stoji sada" },
   // Rešenje postavljeno na mesto opasnosti
   "ip.title": { en: "See it in place", sr: "Vidite na svom mestu" },
   "ip.hide": { en: "Hide", sr: "Sakrij" },

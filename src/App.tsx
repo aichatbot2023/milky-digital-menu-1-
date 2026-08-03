@@ -35,6 +35,8 @@ import {
 } from "./lib/memory";
 import { HazardFocus } from "./components/HazardFocus";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, onLocale, roomLabel, t } from "./lib/i18n";
+import { recognise, remember } from "./lib/roomMemory";
+import { roomPrint } from "./lib/roomPrint";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { Onboarding, onboardingSeen } from "./components/Onboarding";
 import { ChecklistView } from "./components/ChecklistView";
@@ -70,6 +72,8 @@ export default function App() {
   );
   const [roomType, setRoomType] = useState<RoomType>("living_room");
   const [scans, setScans] = useState<ScanRecord[]>(() => loadScans());
+  /** Pre koliko dana je ovaj isti prostor već skeniran; null = prvi put. */
+  const [roomSeen, setRoomSeen] = useState<number | null>(null);
   const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<SubStatus>(() => getStatus());
@@ -200,6 +204,16 @@ export default function App() {
       saveScan(scan);
       setScans(loadScans());
       setCurrentScan(scan);
+
+      // Pamćenje PROSTORA, ne vrste prostorije. Dve dnevne sobe više nisu
+      // jedno te isto, a roditelj koji ponovo skenira istu sobu odmah vidi
+      // da je aplikacija prepoznaje — i koliko je vremena prošlo.
+      void roomPrint(imageDataUrl, result.hazards).then((print) => {
+        if (!print) return;
+        const known = recognise(print);
+        setRoomSeen(known ? known.daysAgo : null);
+        remember(print, { roomType, lastScore: result.safety_score });
+      });
       trackScan("photo", roomType, age, result.hazards.map((h) => h.category), result.hazards.length);
       setView("result");
 
@@ -438,6 +452,7 @@ export default function App() {
     return (
       <>
         <HazardFocus
+          roomSeen={roomSeen}
           imageDataUrl={currentScan.imageDataUrl}
           hazards={currentScan.result.hazards}
           baseScore={currentScan.result.safety_score}
