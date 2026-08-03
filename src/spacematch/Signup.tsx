@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { billing, call } from "./api";
-import { t } from "./i18n";
+import { t, VERTICALS } from "./i18n";
 
 interface Props {
   onClose: () => void;
@@ -11,16 +11,6 @@ interface Props {
   /** Godišnje plaćanje izabrano u prekidaču cenovnika. */
   yearly?: boolean;
 }
-
-const VERTICALS = [
-  ["art", "Art gallery / wall art"],
-  ["furniture", "Furniture"],
-  ["lighting", "Lighting"],
-  ["interior", "Interior design"],
-  ["kitchen", "Kitchens"],
-  ["flooring", "Flooring & rugs"],
-  ["realestate", "Real estate staging"],
-];
 
 /**
  * Prijava FIRME koja želi da postane naš klijent (studio). Ovo nije upit
@@ -123,9 +113,9 @@ export function Signup({ onClose, plan = "", pay = false, yearly = false }: Prop
               <div>
                 <label htmlFor="b-vertical">{t("b.vertical")}</label>
                 <select id="b-vertical" value={f.vertical} onChange={(e) => set("vertical", e.target.value)}>
-                  {VERTICALS.map(([v, label]) => (
+                  {VERTICALS.map(([v, key]) => (
                     <option key={v} value={v}>
-                      {label}
+                      {t(key)}
                     </option>
                   ))}
                 </select>

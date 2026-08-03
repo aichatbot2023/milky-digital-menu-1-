@@ -121,7 +121,7 @@ export function Scanner({ tenant, onExit }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <LangPicker lang={lang} onLang={switchLang} compact />
           {onExit && (
-            <button className="sm-link" onClick={onExit} aria-label="Close">
+            <button className="sm-link" onClick={onExit} aria-label={t("st.close")}>
               ✕
             </button>
           )}

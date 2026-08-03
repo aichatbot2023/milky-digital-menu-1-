@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { billing, call, type Tenant } from "./api";
-import { t } from "./i18n";
+import { t, VERTICALS } from "./i18n";
 
 const KEY_STORE = "spacematch.key";
 
@@ -118,22 +118,22 @@ function Brand({ apiKey, tenant, onSaved }: { apiKey: string; tenant: Tenant; on
   return (
     <div className="sm-panel">
       <div className="sm-grid2">
-        {field("name", "Studio name")}
-        {field("logo_url", "Logo URL")}
-        {field("accent", "Accent colour", "color")}
-        {field("color", "Text colour", "color")}
+        {field("name", t("st.name"))}
+        {field("logo_url", t("st.logo"))}
+        {field("accent", t("st.accent"), "color")}
+        {field("color", t("st.textcol"), "color")}
         <div>
-          <label htmlFor="f-vertical">Sector</label>
+          <label htmlFor="f-vertical">{t("st.sector")}</label>
           <select id="f-vertical" value={f.vertical} onChange={(e) => set("vertical", e.target.value)}>
-            {["art", "furniture", "lighting", "interior", "kitchen", "flooring", "realestate"].map((v) => (
+            {VERTICALS.map(([v, key]) => (
               <option key={v} value={v}>
-                {v}
+                {t(key)}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label htmlFor="f-currency">Currency</label>
+          <label htmlFor="f-currency">{t("st.currency")}</label>
           <select id="f-currency" value={f.currency} onChange={(e) => set("currency", e.target.value)}>
             {["GBP", "EUR", "USD", "RSD"].map((c) => (
               <option key={c} value={c}>
@@ -142,21 +142,21 @@ function Brand({ apiKey, tenant, onSaved }: { apiKey: string; tenant: Tenant; on
             ))}
           </select>
         </div>
-        {field("headline", "Scanner headline")}
-        {field("subline", "Scanner subtitle")}
-        {field("contact_email", "Contact email", "email")}
-        {field("contact_phone", "Contact phone")}
-        {field("website", "Website")}
-        {field("domain", "Custom domain")}
+        {field("headline", t("st.headline"))}
+        {field("subline", t("st.subline"))}
+        {field("contact_email", t("st.cemail"), "email")}
+        {field("contact_phone", t("st.cphone"))}
+        {field("website", t("b.website"))}
+        {field("domain", t("st.domain"))}
       </div>
       <div>
-        <label htmlFor="f-prompt">Studio brief — what the AI should pay attention to</label>
+        <label htmlFor="f-prompt">{t("st.brief")}</label>
         <textarea
           id="f-prompt"
           rows={3}
           value={f.prompt_extra}
           onChange={(e) => set("prompt_extra", e.target.value)}
-          placeholder="e.g. We sell large-format canvases; always judge whether a piece over 120 cm would fit."
+          placeholder={t("st.briefPh")}
         />
       </div>
       <button className="sm-btn sm-btn-accent" onClick={save}>
@@ -231,18 +231,18 @@ function Catalogue({ apiKey, slug }: { apiKey: string; slug: string }) {
       <div className="sm-panel">
         <b>{t("a.add")}</b>
         <div className="sm-grid2">
-          {field("title", "Title")}
-          {field("price", "Price")}
-          {field("image_url", "Image URL")}
-          {field("url", "Product page URL")}
-          {field("style", "Styles (comma separated)")}
-          {field("colors", "Colours (hex, comma separated)")}
-          {field("materials", "Materials")}
-          {field("room_types", "Room types")}
-          {field("width_cm", "Width cm")}
-          {field("height_cm", "Height cm")}
-          {field("tags", "Tags")}
-          {field("description", "Description")}
+          {field("title", t("st.pTitle"))}
+          {field("price", t("st.pPrice"))}
+          {field("image_url", t("st.pImage"))}
+          {field("url", t("st.pUrl"))}
+          {field("style", t("st.pStyles"))}
+          {field("colors", t("st.pColors"))}
+          {field("materials", t("st.pMaterials"))}
+          {field("room_types", t("st.pRooms"))}
+          {field("width_cm", t("st.pWidth"))}
+          {field("height_cm", t("st.pHeight"))}
+          {field("tags", t("st.pTags"))}
+          {field("description", t("st.pDesc"))}
         </div>
         {msg && <p className="sm-ok">{msg}</p>}
         <div className="sm-secondary-row">
@@ -260,7 +260,7 @@ function Catalogue({ apiKey, slug }: { apiKey: string; slug: string }) {
           </label>
         </div>
         <p className="sm-muted" style={{ fontSize: "0.78rem" }}>
-          CSV columns: title,price,image_url,url,style,colors,materials,room_types,width_cm,height_cm,tags,description
+          {t("st.csvCols")}: title,price,image_url,url,style,colors,materials,room_types,width_cm,height_cm,tags,description
         </p>
       </div>
 
@@ -273,10 +273,10 @@ function Catalogue({ apiKey, slug }: { apiKey: string; slug: string }) {
             <thead>
               <tr>
                 <th />
-                <th>Title</th>
-                <th>Style</th>
-                <th>Size</th>
-                <th>Price</th>
+                <th>{t("st.pTitle")}</th>
+                <th>{t("s.style")}</th>
+                <th>{t("st.pSize")}</th>
+                <th>{t("st.pPrice")}</th>
                 <th />
               </tr>
             </thead>
@@ -329,11 +329,11 @@ function Leads({ apiKey }: { apiKey: string }) {
         <table className="sm-table">
           <thead>
             <tr>
-              <th>When</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Message</th>
+              <th>{t("st.when")}</th>
+              <th>{t("q.name")}</th>
+              <th>{t("q.email")}</th>
+              <th>{t("st.phone")}</th>
+              <th>{t("q.msg")}</th>
             </tr>
           </thead>
           <tbody>
@@ -457,12 +457,12 @@ function Embed({ slug }: { slug: string }) {
         className="sm-btn sm-btn-quiet"
         onClick={() => navigator.clipboard?.writeText(snippet)}
       >
-        Copy
+        {t("st.copy")}
       </button>
       <p className="sm-muted" style={{ fontSize: "0.86rem" }}>
         {t("d.embedNote")}
       </p>
-      <b style={{ marginTop: 10 }}>Direct link</b>
+      <b style={{ marginTop: 10 }}>{t("st.direct")}</b>
       <div className="sm-code">{direct}</div>
       <a className="sm-link" href={direct} target="_blank" rel="noopener">
         {t("d.try")} →
