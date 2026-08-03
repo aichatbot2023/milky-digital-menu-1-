@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import type { AnalysisResult, ChildProfile, Hazard, RoomType, ScanRecord } from "./types";
 import { ROOM_LABELS } from "./types";
 import { analyzeFood, offlineFoodGuidance, type FoodAnalysis } from "./lib/food";
@@ -34,7 +34,7 @@ import {
   type RememberedHazard,
 } from "./lib/memory";
 import { HazardFocus } from "./components/HazardFocus";
-import { LANGS, ageLabel, applyDir, getLang, langChosen, roomLabel, t } from "./lib/i18n";
+import { LANGS, ageLabel, applyDir, getLang, langChosen, onLocale, roomLabel, t } from "./lib/i18n";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { Onboarding, onboardingSeen } from "./components/Onboarding";
 import { ChecklistView } from "./components/ChecklistView";
@@ -61,6 +61,9 @@ export default function App() {
   const [langReady, setLangReady] = useState(() => langChosen());
   const [onboarded, setOnboarded] = useState(() => onboardingSeen());
   useEffect(() => applyDir(), [langReady]);
+  // Rečnik novog jezika stiže asinhrono; kad stigne, ekran se precrtava.
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => onLocale(redraw), []);
   const [profiles, setProfiles] = useState<ChildProfile[]>(() => loadProfiles());
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
     () => loadProfiles()[0]?.id ?? null,

@@ -2,13 +2,14 @@
  * Ekspertsko znanje koje KAMERA NE VIDI:
  *  - check-liste bezbednosti po prostoriji (bojler, utičnice, gajtani…)
  *  - vodiči prve pomoći (offline, korak po korak)
- * Sve dvojezično (sr + en); stanje čekiranja se čuva na uređaju.
+ * Srpski i engleski su ručno pisani i stoje ovde; ostali jezici stižu iz
+ * `locales/<kod>.ts` pod ključevima `$chk.*` i `$aid.*`. Stanje čekiranja
+ * se čuva na uređaju.
  */
 import type { RoomType } from "../types";
-import { isSr } from "./i18n";
+import { localized } from "./i18n";
 
 type Bi = { sr: string; en: string };
-const pick = (b: Bi) => (isSr() ? b.sr : b.en);
 
 // ---------- CHECK-LISTE PO PROSTORIJI ----------
 
@@ -95,7 +96,7 @@ export function getChecklist(room: RoomType): ChecklistItem[] {
   const state = loadChecks();
   return CHECKLISTS[room].map((item, i) => ({
     id: `${room}-${i}`,
-    text: pick(item),
+    text: localized(`$chk.${room}.${i}`, item),
     done: Boolean(state[`${room}-${i}`]),
   }));
 }
@@ -215,7 +216,7 @@ export function getFirstAidTopics(): FirstAidTopic[] {
   return FIRST_AID.map((topic) => ({
     id: topic.id,
     icon: topic.icon,
-    title: pick(topic.title),
-    steps: topic.steps.map(pick),
+    title: localized(`$aid.${topic.id}.t`, topic.title),
+    steps: topic.steps.map((step, i) => localized(`$aid.${topic.id}.${i}`, step)),
   }));
 }

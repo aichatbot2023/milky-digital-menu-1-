@@ -85,6 +85,7 @@ export function setLang(code: string) {
     /* ignoriši */
   }
   applyDir(code);
+  void loadLocale(code);
 }
 
 export function applyDir(code = getLang()) {
@@ -514,10 +515,74 @@ const D: Dict = {
   "nudge.days": { en: "days since your last scan — rooms change, kids grow. Time for a fresh scan!", sr: "dana od poslednjeg skena — prostor se menja, deca rastu. Vreme je za novi sken!" },
 };
 
+/**
+ * Prevod interfejsa na jezik koji nije engleski ni srpski.
+ *
+ * Engleski i srpski su ručno pisani i stoje gore u ovom fajlu. Ostala
+ * četrdeset i dva jezika žive u `locales/<kod>.ts` i učitavaju se lenjo —
+ * u pregledač stiže samo onaj koji je korisnik izabrao, a ne svih četrdeset.
+ * Dok fajl ne stigne (ili ako ga nema), tekst pada na engleski: bolje
+ * razumljivo nego prazno.
+ */
+let overlay: Record<string, string> | null = null;
+let overlayFor = "";
+
+const BUILT_IN = new Set(["", "en", "sr"]);
+
+// Rečnik stiže posle prvog crtanja kad korisnik promeni jezik u toku rada,
+// pa ekran mora da sazna da je stigao — inače bi ostao na starom jeziku do
+// sledećeg dodira.
+const watchers = new Set<() => void>();
+
+/** Prijava na promenu jezika. Vraća funkciju za odjavu. */
+export function onLocale(cb: () => void): () => void {
+  watchers.add(cb);
+  return () => {
+    watchers.delete(cb);
+  };
+}
+
+/** Učitava rečnik izabranog jezika. Pozvati pre prvog crtanja. */
+export async function loadLocale(code = getLang()): Promise<void> {
+  if (BUILT_IN.has(code)) {
+    overlay = null;
+    overlayFor = code;
+    watchers.forEach((cb) => cb());
+    return;
+  }
+  if (overlayFor === code && overlay) return;
+  try {
+    const mod = await import(`./locales/${code}.ts`);
+    overlay = mod.default as Record<string, string>;
+  } catch {
+    // Nepoznat ili neuspešno učitan jezik — ostajemo na engleskom.
+    overlay = null;
+  }
+  overlayFor = code;
+  watchers.forEach((cb) => cb());
+}
+
+/**
+ * Tekst iz rečnika izabranog jezika, pa srpski/engleski kao oslonac.
+ *
+ * Izvezeno jer ista logika treba i van ovog fajla: vodiči prve pomoći,
+ * čekliste i smernice ishrane žive u `guides.ts` i `food.ts`, a moraju da
+ * govore istim jezikom kao i dugmad iznad njih.
+ */
+export function localized(key: string, base: { en: string; sr: string }): string {
+  return pick(key, base);
+}
+
+function pick(key: string, base: { en: string; sr: string }): string {
+  const v = overlay?.[key];
+  if (typeof v === "string" && v) return v;
+  return isSr() ? base.sr : base.en;
+}
+
 export function t(key: string): string {
   const e = D[key];
   if (!e) return key;
-  return isSr() ? e.sr : e.en;
+  return pick(key, e);
 }
 
 // Lokalizovane oznake domena
@@ -559,10 +624,12 @@ const CAT: Record<HazardCategory, { en: string; sr: string }> = {
   other: { en: "Other", sr: "Ostalo" },
 };
 
-export const ageLabel = (a: AgeGroup) => (isSr() ? AGE[a].sr : AGE[a].en);
-export const roomLabel = (r: RoomType) => (isSr() ? ROOM[r].sr : ROOM[r].en);
-export const severityLabel = (s: Severity) => (isSr() ? SEV[s].sr : SEV[s].en);
-export const categoryLabel = (c: HazardCategory) => (isSr() ? CAT[c].sr : CAT[c].en);
+// Oznake domena idu kroz isti rečnik, pod svojim prefiksom, da se ne
+// sudare sa ključevima ekrana (postoji i "room.title" za naslov ekrana).
+export const ageLabel = (a: AgeGroup) => pick(`$age.${a}`, AGE[a]);
+export const roomLabel = (r: RoomType) => pick(`$room.${r}`, ROOM[r]);
+export const severityLabel = (s: Severity) => pick(`$sev.${s}`, SEV[s]);
+export const categoryLabel = (c: HazardCategory) => pick(`$cat.${c}`, CAT[c]);
 
 /** Ikona kategorije — čini markere prepoznatljivim na prvi pogled. */
 export const CATEGORY_ICONS: Record<HazardCategory, string> = {

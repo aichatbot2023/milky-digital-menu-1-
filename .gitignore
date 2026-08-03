@@ -21,3 +21,4 @@ sm-test.*
 live-check.*
 yolo-bench.*
 vision-test.*
+tools/__pycache__/

@@ -11,7 +11,7 @@
  * možda ima veće poverenje.
  */
 import type { AgeGroup, Hazard, HazardCategory } from "../types";
-import { isSr } from "./i18n";
+import { localized } from "./i18n";
 
 /** Koliko je povreda teška po sebi (1–10). */
 const SEVERITY_W: Record<Hazard["severity"], number> = {
@@ -157,12 +157,17 @@ export function factsFor(h: RankedHazard): string[] {
     );
   }
   if (reachability(h) >= 8) {
-    out.push(isSr() ? "Nadohvat je detetu" : "Within the child's reach");
+    out.push(localized("$pr.reach", {
+      sr: "Nadohvat je detetu",
+      en: "Within the child's reach",
+    }));
   }
   if (h.count > 1) {
-    out.push(
-      isSr() ? `Uočeno na ${h.count} mesta` : `Found in ${h.count} locations`,
-    );
+    // Broj se ubacuje posle prevoda, da rečenica ostane gramatična.
+    out.push(localized("$pr.count", {
+      sr: "Uočeno na {n} mesta",
+      en: "Found in {n} locations",
+    }).replace("{n}", String(h.count)));
   }
   return [...new Set(out)].slice(0, 4);
 }

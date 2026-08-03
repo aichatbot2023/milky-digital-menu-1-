@@ -4,7 +4,7 @@
  * činjenice sa izvorom — bez izmišljenih brojeva.
  */
 import type { AgeGroup, Hazard, HazardCategory, Severity } from "../types";
-import { isSr, t } from "./i18n";
+import { isSr, localized, t } from "./i18n";
 
 export interface Detection {
   label: string;
@@ -644,19 +644,21 @@ export function mapDetectionsToHazards(
     // Nesiguran nalaz se JASNO obeležava — ne tvrdimo ono što model nagađa
     // (npr. bebeća flašica ≠ čaša); roditelj ocenom 👎 uči aplikaciju.
     const uncertain = d.score < 0.55;
-    // Tekstovi na jeziku korisnika: sr/hr/bs → srpski, ostali → engleski
+    // Tekstovi na jeziku korisnika: srpski i engleski stoje u ovom fajlu,
+    // ostali jezici stižu iz rečnika pod ključem `$kn.<pravilo>.<polje>`.
     const en = RULES_EN[d.label];
-    const useEn = !isSr() && en;
-    const baseLabel = useEn ? en.label : rule.labelSr;
+    const say = (field: "label" | "why" | "stats" | "fix", sr: string) =>
+      localized(`$kn.${d.label}.${field}`, { sr, en: en?.[field] ?? sr });
+    const baseLabel = say("label", rule.labelSr);
     hazards.push({
       id: `local-${hazards.length}-${d.label.replace(/\s/g, "_")}`,
       label: uncertain ? `${t("maybe")} ${baseLabel}` : baseLabel,
       category: rule.category,
       severity,
       box: d.box,
-      why: useEn ? en.why : rule.why,
-      stats: useEn ? en.stats : rule.stats,
-      fix: useEn ? en.fix : rule.fix,
+      why: say("why", rule.why),
+      stats: say("stats", rule.stats),
+      fix: say("fix", rule.fix),
       resolved: false,
       sourceClass: d.label,
       confidence: d.score,
