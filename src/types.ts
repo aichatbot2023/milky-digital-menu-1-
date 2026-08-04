@@ -43,6 +43,18 @@ export interface Hazard {
   sourceClass?: string;
   /** Pouzdanost lokalne detekcije 0–1 (cloud nalazi je nemaju). */
   confidence?: number;
+  /**
+   * Da li je NEKO ZAISTA POGLEDAO ovu sliku i potvrdio nalaz.
+   *
+   * Nalazi iz oblaka su potvrđeni po definiciji — nastali su gledanjem
+   * fotografije. Lokalni nisu: detektor u telefonu poznaje osamdeset
+   * predmeta i mora nešto da odgovori na svaki, pa mlinove za biber nazove
+   * „flašom". Takav nalaz se NE prikazuje dok ga model koji vidi ne potvrdi.
+   *
+   * Ovo je pravilo ugrađeno u tok, ne provera koja se može zaboraviti:
+   * spajanje prihvata samo ono što nosi `verified`.
+   */
+  verified?: boolean;
   /** Kratke činjenice „zašto je opasno" (cloud) — npr. „Temperatura ~85 °C". */
   facts?: string[];
   /** Imperativni koraci „uradi odmah" (cloud). */

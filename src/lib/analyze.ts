@@ -133,3 +133,92 @@ export async function downscaleImage(dataUrl: string, maxEdge = 1568): Promise<s
     img.src = dataUrl;
   });
 }
+
+/* ------------------------------------------------ provera lokalnih nalaza */
+
+/** Koliko isečaka ide na proveru odjednom — više od ovoga niko i ne prikaže. */
+const MAX_CHECK = 6;
+/** Duža strana isečka koji se šalje. Dovoljno da se predmet prepozna. */
+const CROP_SIDE = 320;
+
+/** Isečak oko nalaza, sa malo okoline — predmet bez konteksta se teže prepozna. */
+function cropOf(img: HTMLImageElement, box: Hazard["box"]): string | null {
+  const pad = 0.25;
+  const sx = Math.max(0, (box.x - box.w * pad) * img.naturalWidth);
+  const sy = Math.max(0, (box.y - box.h * pad) * img.naturalHeight);
+  const sw = Math.min(img.naturalWidth - sx, box.w * (1 + pad * 2) * img.naturalWidth);
+  const sh = Math.min(img.naturalHeight - sy, box.h * (1 + pad * 2) * img.naturalHeight);
+  if (sw < 8 || sh < 8) return null;
+  const k = Math.min(1, CROP_SIDE / Math.max(sw, sh));
+  const c = document.createElement("canvas");
+  c.width = Math.max(8, Math.round(sw * k));
+  c.height = Math.max(8, Math.round(sh * k));
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  try {
+    return c.toDataURL("image/jpeg", 0.8);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Propusti dalje samo one lokalne nalaze koje je model koji VIDI potvrdio.
+ *
+ * Detektor u telefonu poznaje osamdeset predmeta i na svaku sliku mora nešto
+ * da odgovori. Bez ove provere su mlinovi za biber stizali roditelju kao
+ * „Flaša", sa gotovim tekstom o hemikalijama i alkoholom, i to kao PRVI
+ * nalaz. Nalaz koji niko nije pogledao ovde se prosto ne vraća.
+ *
+ * Kad provera ne uspe — mreža, provajder, bilo šta — vraća se prazan spisak.
+ * Manje nalaza je uvek bolje od izmišljenog nalaza.
+ */
+export async function verifyLocal(
+  imageDataUrl: string,
+  hazards: Hazard[],
+): Promise<Hazard[]> {
+  const wanted = hazards.filter((h) => h.sourceClass).slice(0, MAX_CHECK);
+  if (!wanted.length) return [];
+
+  const img = await new Promise<HTMLImageElement | null>((ok) => {
+    const el = new Image();
+    el.onload = () => ok(el);
+    el.onerror = () => ok(null);
+    el.src = imageDataUrl;
+  });
+  if (!img) return [];
+
+  const crops: { claim: string; image: string }[] = [];
+  const kept: Hazard[] = [];
+  for (const h of wanted) {
+    const image = cropOf(img, h.box);
+    if (!image) continue;
+    crops.push({ claim: h.sourceClass!, image });
+    kept.push(h);
+  }
+  if (!crops.length) return [];
+
+  try {
+    const res = await fetch(
+      (import.meta.env.VITE_OMNI_FUNCTION_URL as string | undefined) ?? DEFAULT_OMNI_URL,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OMNI_ANON_KEY}`,
+          apikey: OMNI_ANON_KEY,
+        },
+        body: JSON.stringify({ action: "verify", crops }),
+      },
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const verdicts: unknown[] = Array.isArray(data?.verdicts) ? data.verdicts : [];
+    return kept
+      .filter((_, i) => verdicts[i] === true)
+      .map((h) => ({ ...h, verified: true }));
+  } catch {
+    return [];
+  }
+}

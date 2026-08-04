@@ -300,6 +300,71 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
   return parsed;
 }
 
+/**
+ * Provera lokalnih nalaza: da li je to STVARNO ono što telefon misli.
+ *
+ * Detektor u telefonu poznaje osamdeset predmeta i mora nešto da odgovori na
+ * svaki. Mlinovi za biber su tako postali „flaša", a uz tu reč je išao gotov
+ * tekst o hemikalijama i alkoholu i to je roditelju bio PRVI nalaz na ekranu.
+ * Niko tu sliku nije pogledao — ni model koji vidi, ni čovek.
+ *
+ * Zato svaki lokalni nalaz mora ovde da prođe: isečak slike ide modelu koji
+ * gleda, sa pitanjem da li se na njemu zaista vidi to što telefon tvrdi.
+ * Odgovor je namerno samo da/ne. Preimenovanje bi značilo da izmišljamo novu
+ * opasnost o kojoj ništa ne znamo; ćutanje je tačnije od pogađanja.
+ */
+async function verify(
+  provider: Provider,
+  model: string,
+  crops: { claim: string; image: string }[],
+): Promise<boolean[]> {
+  const ask =
+    'For each numbered image below, decide whether it really shows the claimed object.\n' +
+    'Be strict. Answer true ONLY if the claimed object is clearly visible in that image.\n' +
+    'If it is a different object, or you are unsure, answer false.\n' +
+    crops.map((c, i) => `${i}. claimed: "${c.claim}"`).join('\n') +
+    '\n\nReturn ONLY this JSON: {"verdicts":[{"i":0,"real":true}]}';
+
+  const res = await fetch(provider.url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${provider.key}`,
+      'Content-Type': 'application/json',
+      ...(provider.extraHeaders ?? {}),
+    },
+    body: JSON.stringify({
+      ...(provider.extraBody ?? {}),
+      model,
+      max_tokens: 500,
+      messages: [
+        { role: 'system', content: 'You verify object labels in images. Answer with JSON only.' },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: ask },
+            ...crops.map((c) => ({ type: 'image_url', image_url: { url: c.image } })),
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`${provider.name}/${model}: upstream ${res.status}`);
+  const data = await res.json();
+  let out: string = data.choices?.[0]?.message?.content?.trim() ?? '';
+  out = out.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  if (!out.startsWith('{')) {
+    const m = out.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error(`${provider.name}/${model}: no JSON`);
+    out = m[0];
+  }
+  const parsed = JSON.parse(out);
+  if (!Array.isArray(parsed.verdicts)) throw new Error(`${provider.name}/${model}: bad shape`);
+  // Nedostaje li ijedan odgovor, taj nalaz PADA. Tišina nije potvrda.
+  const said = new Map<number, boolean>();
+  for (const v of parsed.verdicts) said.set(Number(v?.i), v?.real === true);
+  return crops.map((_, i) => said.get(i) === true);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
@@ -311,12 +376,34 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
   const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian', live = false } = body ?? {};
 
-  // FOTO režim (mali obim): Gemini 2.5 Flash prvi — najprecizniji besplatni
-  // vision model, najbolji jezik. ŽIVI video (veliki obim, poziv na ~10s)
-  // ostaje na NVIDIA NIM da ne potroši Gemini dnevnu kvotu.
-  if (live !== true) {
-    active = [...active.filter((p) => p.name === 'gemini'), ...active.filter((p) => p.name !== 'gemini')];
+  if (body?.action === 'verify') {
+    const crops = Array.isArray(body.crops) ? body.crops.slice(0, 6) : [];
+    const clean = crops.filter(
+      (c: any) => typeof c?.claim === 'string' && typeof c?.image === 'string'
+        && c.image.startsWith('data:image/') && c.image.length < 400_000,
+    );
+    if (!clean.length) return json({ verdicts: [] });
+    const errors: string[] = [];
+    for (const provider of active) {
+      for (const model of provider.models) {
+        try {
+          return json({ verdicts: await verify(provider, model, clean) });
+        } catch (e: any) {
+          errors.push(e?.message ?? String(e));
+        }
+      }
+    }
+    // Niko nije odgovorio: ništa se ne potvrđuje. Nepotvrđen nalaz se ne
+    // prikazuje, pa je najgori ishod da roditelj vidi samo ono što je oblak
+    // ionako već našao — a ne izmišljenu opasnost.
+    console.error('verify failed:', errors.join(' | '));
+    return json({ verdicts: clean.map(() => false) });
   }
+
+  // Redosled je već postavljen po izmerenom kvalitetu (vidi `PROVIDERS`).
+  // Ovde je ranije stajalo dodatno preslaganje koje je Gemini guralo na čelo
+  // za foto režim — sada je suvišno, jer prva dva mesta ionako drže dva puta
+  // do istog modela, a preslaganje je samo trošilo jedan prazan hod.
   if (!image || typeof image !== 'string' || !image.startsWith('data:image/'))
     return json({ error: 'Missing image (data URL)' }, 400);
   if (image.length > 2_500_000) return json({ error: 'Image too large' }, 413);

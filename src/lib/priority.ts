@@ -135,7 +135,12 @@ export function rankHazards(hazards: Hazard[], age: AgeGroup): RankedHazard[] {
       });
     }
   }
-  return [...groups.values()].sort((a, b) => b.risk - a.risk);
+  // Potvrđen nalaz uvek ide ispred nepotvrđenog kad je rizik isti.
+  // Prvo mesto na ekranu je ono što roditelj pročita — tamo ne sme da stoji
+  // nešto što niko nije pogledao.
+  return [...groups.values()].sort(
+    (a, b) => b.risk - a.risk || Number(b.verified ?? false) - Number(a.verified ?? false),
+  );
 }
 
 /**

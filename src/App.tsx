@@ -2,7 +2,7 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import type { AnalysisResult, ChildProfile, Hazard, RoomType, ScanRecord } from "./types";
 import { ROOM_LABELS } from "./types";
 import { analyzeFood, offlineFoodGuidance, type FoodAnalysis } from "./lib/food";
-import { analyzeImage, downscaleImage } from "./lib/analyze";
+import { analyzeImage, downscaleImage, verifyLocal } from "./lib/analyze";
 import { boxIou, detectLocal } from "./lib/detector";
 import { capturePhoto } from "./lib/camera";
 import {
@@ -177,6 +177,9 @@ export default function App() {
         // Cloud pao → sada stvarno čekamo lokalni model
         mergeLater = false;
         const localHazards = await localPromise.catch(() => []);
+        // Bez oblaka nema ko da potvrdi lokalne nalaze. Oni tada prolaze,
+        // ali NIJEDAN ne nosi `verified` — ekran ih obeležava kao nesigurne,
+        // a rangiranje ih ne diže na prvo mesto.
         if (localHazards.length === 0) {
           throw new Error((cloudErr as Error)?.message ?? t("scan.failed"));
         }
@@ -218,14 +221,25 @@ export default function App() {
       setView("result");
 
       // Pozadinsko dopunjavanje: sitni predmeti koje je lokalni model
-      // uhvatio a cloud propustio. Prag pouzdanosti je visok jer je cloud
-      // već dao pouzdanu listu — dodajemo samo ono u šta smo sigurni.
+      // uhvatio a cloud propustio.
+      //
+      // Ranije su ti nalazi išli pravo na ekran, samo po pouzdanosti
+      // detektora. Detektor u telefonu poznaje osamdeset predmeta i mora
+      // nešto da odgovori na svaku sliku, pa su mlinovi za biber stigli
+      // roditelju kao „Flaša", sa gotovim tekstom o hemikalijama — i to kao
+      // PRVI nalaz. Niko tu sliku nije pogledao.
+      //
+      // Sada svaki takav nalaz mora da prođe kroz `verifyLocal`: isečak ide
+      // modelu koji vidi i vraća se samo ako ga je potvrdio. Provera koja
+      // padne ne propušta ništa — manje nalaza je uvek bolje od izmišljenog.
       if (mergeLater) {
         localPromise
           .then(async (localHazards: Hazard[]) => {
-            const extras = localHazards
+            const candidates = localHazards
               .filter((lh) => (lh.confidence ?? 1) >= 0.5)
-              .filter((lh) => result.hazards.every((ch: Hazard) => boxIou(lh.box, ch.box) < 0.4))
+              .filter((lh) => result.hazards.every((ch: Hazard) => boxIou(lh.box, ch.box) < 0.4));
+            if (candidates.length === 0) return;
+            const extras = (await verifyLocal(imageDataUrl, candidates))
               .map((lh, i) => ({ ...lh, id: `merge-${i}-${lh.id}` }));
             if (extras.length === 0) return;
             const merged = await reconcileWithMemory(imageDataUrl, extras, roomType);
