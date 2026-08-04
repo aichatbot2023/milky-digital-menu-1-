@@ -3,7 +3,7 @@
  * API-ja (iOS ograničenja skladišta, privatni mod, kvota) završava običnim
  * mrežnim zahtevom. respondWith NIKAD ne dobija odbijen promise.
  */
-const CACHE = "safenest-v23";
+const CACHE = "safenest-v24";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -81,7 +81,10 @@ self.addEventListener("fetch", (e) => {
   }
   if (url.origin !== location.origin) return;
 
-  if (url.pathname.includes("/model/") || url.pathname.includes("/assets/")) {
+  // Izvršno okruženje za dubinu je veliko i nepromenljivo — u keš prvi put,
+  // posle toga ga kupac više nikad ne čeka.
+  if (url.pathname.includes("/model/") || url.pathname.includes("/assets/") ||
+      url.pathname.includes("/ort/")) {
     e.respondWith(cacheFirst(e.request));
     return;
   }

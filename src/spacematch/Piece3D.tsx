@@ -14,6 +14,13 @@ interface Props {
   pitch?: number;
   /** Zatamnjenje: soba na fotografiji je skoro uvek tamnija od studijske slike. */
   shade?: number;
+  /**
+   * Dubina sobe iza predmeta i koliko je sam predmet daleko.
+   *
+   * Sa ovim predmet ide IZA onoga što je u sobi ispred njega. Bez toga stoji
+   * preko svega, kao i do sada.
+   */
+  scene?: { grey: Uint8Array; w: number; h: number; placed: number; slack: number } | null;
   onState?: (state: "loading" | "ready" | "fail") => void;
 }
 
@@ -43,7 +50,7 @@ function fetchModel(url: string) {
  * prikazuje ništa i javlja `fail`; pozivalac tada ostaje na izrezanoj slici,
  * koja i dalje radi svuda. Nema ekrana sa greškom.
  */
-export function Piece3D({ src, x, y, widthPct, yaw, pitch = 0, shade = 0.94, onState }: Props) {
+export function Piece3D({ src, x, y, widthPct, yaw, pitch = 0, shade = 0.94, scene = null, onState }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<Stage | null>(null);
   const model = useRef<Model | null>(null);
@@ -103,13 +110,14 @@ export function Piece3D({ src, x, y, widthPct, yaw, pitch = 0, shade = 0.94, onS
         yaw: (yaw * Math.PI) / 180,
         pitch: (pitch * Math.PI) / 180,
         shade,
+        scene,
       });
     };
     paint();
     const ro = new ResizeObserver(paint);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [ready, x, y, widthPct, yaw, pitch, shade]);
+  }, [ready, x, y, widthPct, yaw, pitch, shade, scene]);
 
   return <canvas ref={canvas} className="sm-3d" aria-hidden="true" />;
 }

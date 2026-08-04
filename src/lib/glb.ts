@@ -277,13 +277,29 @@ void main() {
 const FRAG = `
 precision mediump float;
 uniform sampler2D uTex;
+uniform sampler2D uScene;
 uniform bool uHasTex;
+uniform bool uHasScene;
+uniform vec2 uSize;
+uniform float uPlaced;
+uniform float uSlack;
 uniform float uShade;
 varying vec3 vNrm;
 varying vec2 vUv;
 void main() {
   vec4 base = uHasTex ? texture2D(uTex, vUv) : vec4(0.78, 0.76, 0.72, 1.0);
   if (base.a < 0.5) discard;
+
+  // Šta je u sobi ISPRED predmeta, to predmet i zaklanja.
+  //
+  // Zazor nije ukras nego nužnost: pod tik ispred predmeta je uvek malo
+  // bliži od njega samog, pa bi bez zazora predmet ostao bez nogu. Zaklanja
+  // samo ono što je osetno bliže — fotelja, sto, dovratak.
+  if (uHasScene) {
+    vec2 look = vec2(gl_FragCoord.x / uSize.x, 1.0 - gl_FragCoord.y / uSize.y);
+    if (texture2D(uScene, look).r > uPlaced + uSlack) discard;
+  }
+
   vec3 n = normalize(vNrm);
   vec3 key = normalize(vec3(-0.35, 0.5, 0.8));
   float lit = max(dot(n, key), 0.0);
@@ -304,6 +320,11 @@ export interface Placement {
   pitch: number;
   /** Zatamnjenje, da predmet ne bude svetliji od sobe u koju se stavlja. */
   shade: number;
+  /**
+   * Mapa dubine sobe iza predmeta, sivi bajtovi, i koliko je sam predmet
+   * daleko (0–1, veće je bliže). Bez ovoga predmet stoji preko svega.
+   */
+  scene?: { grey: Uint8Array; w: number; h: number; placed: number; slack: number } | null;
 }
 
 /**
@@ -319,6 +340,8 @@ export class Stage {
   private gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
   private prog: WebGLProgram | null = null;
   private tex = new WeakMap<object, WebGLTexture>();
+  private sceneTex: WebGLTexture | null = null;
+  private sceneKey: Uint8Array | null = null;
   private bufs = new WeakMap<object, { pos: WebGLBuffer; nrm: WebGLBuffer; uv: WebGLBuffer; idx: WebGLBuffer }[]>();
   private loc: Record<string, any> = {};
   private wide = false;
@@ -365,7 +388,12 @@ export class Stage {
       uMvp: gl.getUniformLocation(prog, "uMvp"),
       uRot: gl.getUniformLocation(prog, "uRot"),
       uTex: gl.getUniformLocation(prog, "uTex"),
+      uScene: gl.getUniformLocation(prog, "uScene"),
       uHasTex: gl.getUniformLocation(prog, "uHasTex"),
+      uHasScene: gl.getUniformLocation(prog, "uHasScene"),
+      uSize: gl.getUniformLocation(prog, "uSize"),
+      uPlaced: gl.getUniformLocation(prog, "uPlaced"),
+      uSlack: gl.getUniformLocation(prog, "uSlack"),
       uShade: gl.getUniformLocation(prog, "uShade"),
     };
     gl.enable(gl.DEPTH_TEST);
@@ -440,6 +468,17 @@ export class Stage {
       gl.uniform1i(this.loc.uTex, 0);
     }
 
+    const room = at.scene ? this.depth(at.scene) : null;
+    gl.uniform1i(this.loc.uHasScene, room ? 1 : 0);
+    gl.uniform2f(this.loc.uSize, this.canvas.width, this.canvas.height);
+    if (room) {
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, room);
+      gl.uniform1i(this.loc.uScene, 1);
+      gl.uniform1f(this.loc.uPlaced, at.scene!.placed);
+      gl.uniform1f(this.loc.uSlack, at.scene!.slack);
+    }
+
     for (const [i, part] of model.parts.entries()) {
       const b = this.buffers(model)[i];
       bind(gl, b.pos, this.loc.aPos, 3);
@@ -456,6 +495,29 @@ export class Stage {
     const gl = this.gl as any;
     gl?.getExtension?.("WEBGL_lose_context")?.loseContext?.();
     this.gl = null;
+  }
+
+  /**
+   * Mapa dubine kao tekstura.
+   *
+   * Ista mapa važi dok se soba ne promeni, pa se šalje karti samo kad je
+   * zaista nova — poređenje po nizu, ne po sadržaju, jer je niz isti objekat
+   * dok god je ista fotografija.
+   */
+  private depth(scene: { grey: Uint8Array; w: number; h: number }) {
+    const gl = this.gl!;
+    if (this.sceneTex && this.sceneKey === scene.grey) return this.sceneTex;
+    if (!this.sceneTex) this.sceneTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.sceneTex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, scene.w, scene.h, 0,
+                  gl.LUMINANCE, gl.UNSIGNED_BYTE, scene.grey);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    this.sceneKey = scene.grey;
+    return this.sceneTex;
   }
 
   private buffers(model: Model) {

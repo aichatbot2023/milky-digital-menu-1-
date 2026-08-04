@@ -1564,6 +1564,10 @@ body {
 }
 .ip-stage { position: relative; border-radius: 14px; overflow: hidden; }
 .ip-photo { display: block; width: 100%; }
+/* Omotač koji nosi masku dubine: pokriva ceo kadar, pa se maska poklapa sa
+   fotografijom, a rešenje unutra i dalje stoji tamo gde je opasnost. */
+.ip-behind { position: absolute; inset: 0; pointer-events: none; }
+
 .ip-item {
   position: absolute;
   /* Dve senke: bliska drži predmet na površini, daleka ga odvaja od pozadine. */
@@ -1574,7 +1578,11 @@ body {
 .ip-item img { display: block; width: 100%; }
 .ip-note { font-size: 0.78rem; color: var(--muted, #64748b); margin: 8px 0 0; }
 @keyframes ip-in { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .ip-item { animation: none; } }
+@media (prefers-reduced-motion: reduce) { /* Omotač koji nosi masku dubine: pokriva ceo kadar, pa se maska poklapa sa
+   fotografijom, a rešenje unutra i dalje stoji tamo gde je opasnost. */
+.ip-behind { position: absolute; inset: 0; pointer-events: none; }
+
+.ip-item { animation: none; } }
 
 /* Soba koju već poznajemo — roditelj odmah vidi da se poredi sa prošlim putem. */
 .room-known {

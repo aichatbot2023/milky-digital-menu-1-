@@ -3,6 +3,7 @@ import type { Hazard } from "../types";
 import { t } from "../lib/i18n";
 import { cutoutFrom, type Cutout } from "../lib/cutout";
 import { estimatePlane, pieceTransform, planePerspective, FLAT, type Plane } from "../spacematch/plane";
+import { depthIn, estimateDepth, maskBehind } from "../lib/depth";
 
 interface Props {
   /** Fotografija koju je roditelj upravo skenirao. */
@@ -44,6 +45,15 @@ const CM_BY_WORD: [RegExp, number][] = [
   [/\b(cover|poklop)\b/i, 9],
 ];
 
+/**
+ * Koliko nešto mora biti bliže od opasnosti da bi je zaklonilo.
+ *
+ * Pod i zid tik uz samu opasnost su uvek za dlaku bliži; bez zazora bi
+ * rešenje ostalo bez ivica. Isti broj kao u pregledu prostora — merilo je
+ * ista mapa.
+ */
+const SLACK = 0.08;
+
 const realWidth = (title: string, category: string) => {
   for (const [re, cm] of CM_BY_WORD) if (re.test(title)) return cm;
   return CM_BY_CATEGORY[category] ?? 15;
@@ -61,9 +71,13 @@ const realWidth = (title: string, category: string) => {
  * ivica stola u stvarnosti i koliko zauzima u kadru; odatle se zna koliko
  * piksela ide na centimetar, pa se rešenje nacrta u svojoj pravoj širini.
  *
- * Sve se dešava u pregledaču: izrezivanje pozadine, procena ravni, senka.
- * Bez modela, bez servera, bez čekanja — pa radi i van mreže, kao i ostatak
- * aplikacije.
+ * Ono što je u sobi ispred opasnosti — noga stola, fotelja, dovratak —
+ * ostaje ispred i rešenja. Dubina prostora se meri tek kad se ovaj prikaz
+ * otvori, nikad tokom samog skeniranja: provera bezbednosti mora da ostane
+ * trenutna. Kad merenje ne uspe, zaklanjanja nema, a sve ostalo radi.
+ *
+ * Izrezivanje pozadine, procena ravni i senka rade se u pregledaču, bez
+ * servera — pa i van mreže, kao i ostatak aplikacije.
  */
 export function InPlace({ photo, hazard, product }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -71,6 +85,8 @@ export function InPlace({ photo, hazard, product }: Props) {
   const [plane, setPlane] = useState<Plane>(FLAT);
   const [boxW, setBoxW] = useState(0);
   const [on, setOn] = useState(true);
+  /** Maska koja krije ono što je bliže od opasnosti; null = nema dubine. */
+  const [mask, setMask] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -93,6 +109,25 @@ export function InPlace({ photo, hazard, product }: Props) {
       img.onload = null;
     };
   }, [photo]);
+
+  // Dubina se meri jednom po fotografiji i tek ovde, kad roditelj otvori
+  // prikaz. Skeniranje je time netaknuto.
+  useEffect(() => {
+    let alive = true;
+    setMask(null);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = async () => {
+      const map = await estimateDepth(img);
+      if (!alive || !map) return;
+      setMask(maskBehind(map, depthIn(map, hazard.box), SLACK));
+    };
+    img.src = photo;
+    return () => {
+      alive = false;
+      img.onload = null;
+    };
+  }, [photo, hazard.box.x, hazard.box.y, hazard.box.w, hazard.box.h]);
 
   useEffect(() => {
     const el = wrap.current;
@@ -131,6 +166,19 @@ export function InPlace({ photo, hazard, product }: Props) {
         <img className="ip-photo" src={photo} alt="" />
         {on && (
           <div
+            className="ip-behind"
+            style={mask
+              ? {
+                  // Maska pokriva CEO kadar, pa stoji na omotaču a ne na
+                  // samom predmetu — inače bi se pomerala zajedno s njim.
+                  WebkitMaskImage: `url(${mask})`,
+                  maskImage: `url(${mask})`,
+                  WebkitMaskSize: "100% 100%",
+                  maskSize: "100% 100%",
+                }
+              : undefined}
+          >
+          <div
             className="ip-item"
             style={{
               width: `${width}%`,
@@ -150,6 +198,7 @@ export function InPlace({ photo, hazard, product }: Props) {
                 objectPosition: `${cut.box.x * -100}% ${cut.box.y * -100}%`,
               }}
             />
+          </div>
           </div>
         )}
       </div>

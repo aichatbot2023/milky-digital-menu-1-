@@ -233,6 +233,7 @@ const en: Dict = {
   "s.drag": "drag to move",
   "s.turn": "Turn",
   "s.real3d": "real object, not a sticker",
+  "s.depth": "measured room depth",
   "lv.building": "Building the object",
   "lv.remove": "Remove from the room",
 
@@ -505,6 +506,7 @@ const sr: Dict = {
   "s.drag": "prevucite da pomerite",
   "s.turn": "Okreni",
   "s.real3d": "pravi predmet, ne nalepnica",
+  "s.depth": "izmerena dubina prostora",
   "lv.building": "Pravim predmet",
   "lv.remove": "Skloni iz prostora",
 
@@ -777,6 +779,7 @@ const de: Dict = {
   "s.drag": "zum Verschieben ziehen",
   "s.turn": "Drehen",
   "s.real3d": "echtes Objekt, kein Aufkleber",
+  "s.depth": "gemessene Raumtiefe",
   "lv.building": "Objekt entsteht",
   "lv.remove": "Aus dem Raum entfernen",
 
@@ -1049,6 +1052,7 @@ const fr: Dict = {
   "s.drag": "faites glisser pour déplacer",
   "s.turn": "Tourner",
   "s.real3d": "objet réel, pas un autocollant",
+  "s.depth": "profondeur de la pièce mesurée",
   "lv.building": "Création de l’objet",
   "lv.remove": "Retirer de la pièce",
 
@@ -1321,6 +1325,7 @@ const es: Dict = {
   "s.drag": "arrastre para mover",
   "s.turn": "Girar",
   "s.real3d": "objeto real, no una pegatina",
+  "s.depth": "profundidad de la sala medida",
   "lv.building": "Creando el objeto",
   "lv.remove": "Quitar de la sala",
 
@@ -1593,6 +1598,7 @@ const it: Dict = {
   "s.drag": "trascina per spostare",
   "s.turn": "Ruota",
   "s.real3d": "oggetto vero, non un adesivo",
+  "s.depth": "profondità della stanza misurata",
   "lv.building": "Creazione oggetto",
   "lv.remove": "Togli dalla stanza",
 
@@ -1865,6 +1871,7 @@ const nl: Dict = {
   "s.drag": "sleep om te verplaatsen",
   "s.turn": "Draaien",
   "s.real3d": "echt object, geen sticker",
+  "s.depth": "gemeten kamerdiepte",
   "lv.building": "Object wordt gemaakt",
   "lv.remove": "Uit de kamer halen",
 
@@ -2137,6 +2144,7 @@ const pt: Dict = {
   "s.drag": "arraste para mover",
   "s.turn": "Girar",
   "s.real3d": "objeto real, não um autocolante",
+  "s.depth": "profundidade da sala medida",
   "lv.building": "A criar o objeto",
   "lv.remove": "Remover da sala",
 
@@ -2409,6 +2417,7 @@ const pl: Dict = {
   "s.drag": "przeciągnij, aby przesunąć",
   "s.turn": "Obróć",
   "s.real3d": "prawdziwy przedmiot, nie naklejka",
+  "s.depth": "zmierzona głębia pomieszczenia",
   "lv.building": "Tworzę przedmiot",
   "lv.remove": "Usuń z pomieszczenia",
 
@@ -2681,6 +2690,7 @@ const sv: Dict = {
   "s.drag": "dra för att flytta",
   "s.turn": "Vrid",
   "s.real3d": "riktigt föremål, inte ett klistermärke",
+  "s.depth": "uppmätt rumsdjup",
   "lv.building": "Skapar föremålet",
   "lv.remove": "Ta bort ur rummet",
 
@@ -2953,6 +2963,7 @@ const tr: Dict = {
   "s.drag": "taşımak için sürükleyin",
   "s.turn": "Çevir",
   "s.real3d": "gerçek nesne, çıkartma değil",
+  "s.depth": "ölçülen oda derinliği",
   "lv.building": "Nesne oluşturuluyor",
   "lv.remove": "Odadan kaldır",
 
@@ -3225,6 +3236,7 @@ const ru: Dict = {
   "s.drag": "перетащите, чтобы переместить",
   "s.turn": "Повернуть",
   "s.real3d": "настоящий предмет, а не наклейка",
+  "s.depth": "измеренная глубина комнаты",
   "lv.building": "Создаём предмет",
   "lv.remove": "Убрать из комнаты",
 
@@ -3497,6 +3509,7 @@ const ar: Dict = {
   "s.drag": "اسحب للتحريك",
   "s.turn": "أدر",
   "s.real3d": "جسم حقيقي وليس ملصقًا",
+  "s.depth": "عمق الغرفة المقاس",
   "lv.building": "جارٍ إنشاء الجسم",
   "lv.remove": "إزالة من الغرفة",
 

@@ -3,6 +3,7 @@ import { t } from "./i18n";
 import { FLAT, estimatePlane, pieceTransform, planePerspective, type Plane } from "./plane";
 import { cutoutFrom, type Cutout } from "../lib/cutout";
 import { Piece3D } from "./Piece3D";
+import { estimateDepth, type DepthMap } from "../lib/depth";
 import type { Match, RoomProfile } from "./api";
 
 interface Props {
@@ -10,6 +11,15 @@ interface Props {
   piece: Match;
   profile: RoomProfile;
 }
+
+/**
+ * Koliko nešto mora biti bliže od predmeta da bi ga zaklonilo.
+ *
+ * Pod tik ispred predmeta je uvek malo bliži od njega samog; bez zazora bi
+ * predmet ostao bez nogu. Izmereno na mapi 0–1: nameštaj ispred je 0,15–0,4
+ * bliži, a pod uz samu nogu manje od 0,05.
+ */
+const SLACK = 0.08;
 
 const FRAMES = [
   { id: "thin", cls: "sm-piece-thin", key: "fr.thin" },
@@ -52,12 +62,44 @@ export function WallPreview({ room, piece, profile }: Props) {
   const [yaw, setYaw] = useState(0);
   /** Da li 3D zaista radi na ovom uređaju. Dok ne znamo, stoji izrezana slika. */
   const [space, setSpace] = useState(false);
+  /**
+   * Dubina sobe sa fotografije.
+   *
+   * Odavde dolaze dve stvari koje se odmah vide: predmet ide IZA onoga što
+   * je ispred njega, i menja veličinu kad ga kupac spusti dublje u sobu.
+   * Meri se jednom po fotografiji i tek kad se pregled otvori — na
+   * skeniranje ne pada ni bajt.
+   */
+  const [depth, setDepth] = useState<DepthMap | null>(null);
+  const [grey, setGrey] = useState<Uint8Array | null>(null);
 
   // Prava razmera: širina komada / procenjena širina zida u kadru.
   const pieceW = Number(piece.width_cm) || 90;
   const pieceH = Number(piece.height_cm) || 120;
   const wallW = profile.wallWidth || 300;
-  const widthPct = Math.max(4, Math.min(96, (pieceW / wallW) * 100 * scale));
+
+  /**
+   * Koliko je predmet daleko, i koliko se zato smanjuje.
+   *
+   * Procenjena širina zida važi na dubini žižne tačke — tamo gde je i
+   * merena. Kad kupac spusti predmet dublje u sobu, on mora da bude manji,
+   * a bliže sebi veći.
+   *
+   * Odnos blizina je tačan zakon, ali je mera iz modela relativna, pa se
+   * koren uzima kao prigušenje i množilac se drži u granicama: bolje malo
+   * premalo nego lampa visoka kao vrata. U polaznom položaju je tačno 1 —
+   * ništa se ne menja dok kupac sam ne pomeri predmet.
+   */
+  const refNear = depth
+    ? depth.at(profile.focalPoint.x + profile.focalPoint.w / 2,
+               profile.focalPoint.y + profile.focalPoint.h / 2)
+    : 0;
+  const hereNear = depth ? depth.at(pos.x, pos.y) : 0;
+  const away = depth && refNear > 0.02 && hereNear > 0.02
+    ? Math.max(0.6, Math.min(1.7, Math.sqrt(hereNear / refNear)))
+    : 1;
+
+  const widthPct = Math.max(4, Math.min(96, (pieceW / wallW) * 100 * scale * away));
   const aspect = pieceH / pieceW;
   /** Predmet bez rama: kad se pozadina uspešno uklonila, stoji sam u prostoru. */
   const solid = Boolean(cut?.ok);
@@ -69,6 +111,28 @@ export function WallPreview({ room, piece, profile }: Props) {
     setScale(1);
     setSpace(false);
   }, [piece.id, profile.focalPoint.x, profile.focalPoint.y, profile.focalPoint.w, profile.focalPoint.h]);
+
+  // Dubina se meri samo kad predmet ima svoj model — inače nema ko da je
+  // koristi, a merenje traje oko sekund.
+  useEffect(() => {
+    if (!piece.model_url) return;
+    let alive = true;
+    setDepth(null);
+    setGrey(null);
+    const el = new Image();
+    el.crossOrigin = "anonymous";
+    el.onload = async () => {
+      const map = await estimateDepth(el);
+      if (!alive || !map) return;
+      setDepth(map);
+      setGrey(map.grey());
+    };
+    el.src = room;
+    return () => {
+      alive = false;
+      el.onload = null;
+    };
+  }, [room, piece.model_url]);
 
   useEffect(() => {
     setPlane(FLAT);
@@ -144,6 +208,9 @@ export function WallPreview({ room, piece, profile }: Props) {
             widthPct={widthPct}
             yaw={yaw}
             pitch={plane.pitch}
+            scene={grey && depth
+              ? { grey, w: depth.w, h: depth.h, placed: hereNear, slack: SLACK }
+              : null}
             onState={(st) => setSpace(st === "ready")}
           />
         )}
@@ -237,6 +304,7 @@ export function WallPreview({ room, piece, profile }: Props) {
         {t("s.wall")}: ~{Math.round(wallW)} cm · {t("s.drag")}
         {plane.confidence > 0 && ` · ${t("s.angled")}`}
         {real && ` · ${t("s.real3d")}`}
+        {real && depth && ` · ${t("s.depth")}`}
       </p>
     </div>
   );
