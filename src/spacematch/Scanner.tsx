@@ -319,6 +319,8 @@ export function Scanner({ tenant, onExit }: Props) {
                           price: p.price,
                           width_cm: p.width_cm,
                           height_cm: p.height_cm,
+                          depth_cm: p.depth_cm,
+                          model_url: p.model_url,
                           match: p.match,
                           why: (p as Match).why ?? "",
                         };

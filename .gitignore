@@ -25,3 +25,6 @@ tools/__pycache__/
 plane-test.mjs
 cutout-test.mjs
 room-test.mjs
+room-3d-shot.mjs
+soba-3d-*.png
+uporedi.png

@@ -100,6 +100,9 @@ export interface Match {
   price: string | null;
   width_cm: string | null;
   height_cm: string | null;
+  depth_cm: string | null;
+  /** GLB proizvoda kad postoji — tada kupac vidi pravi predmet, ne nalepnicu. */
+  model_url: string | null;
   match: number;
   why: string;
 }
@@ -111,6 +114,8 @@ export interface Alternative {
   price: string | null;
   width_cm: string | null;
   height_cm: string | null;
+  depth_cm: string | null;
+  model_url: string | null;
   match: number;
 }
 

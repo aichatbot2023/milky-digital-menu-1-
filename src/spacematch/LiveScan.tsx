@@ -7,6 +7,7 @@ import {
   type Seen,
 } from "./vision";
 import { recognise, remember } from "../lib/roomMemory";
+import { Piece3D } from "./Piece3D";
 
 interface Props {
   tenant: Tenant;
@@ -75,6 +76,21 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
   // Dok model još ništa ne vidi, uglovi kadra vode oko; čim krenu okviri,
   // vođica se sklanja da ne bi bilo dve stvari koje traže pažnju.
   const [anySeen, setAnySeen] = useState(false);
+
+  /**
+   * Proizvod koji upravo stoji u prostoru, uživo.
+   *
+   * Ovo je ono zbog čega kupac uopšte otvara kameru: dodirne predlog i
+   * predmet se odmah nađe u njegovoj sobi, u svojoj pravoj veličini. Ne
+   * čeka se ni fotografija ni sledeći ekran.
+   */
+  const [placed, setPlaced] = useState<Match | null>(null);
+  const [yaw, setYaw] = useState(0);
+  /** Gde predmet stoji, 0–1. Dok ga kupac ne pomeri, prati prazno mesto u sobi. */
+  const [spot, setSpot] = useState({ x: 0.5, y: 0.5 });
+  const moved = useRef(false);
+  const dragging = useRef(false);
+  const [space, setSpace] = useState(false);
 
   /* ---------------------------------------------------- kamera i model */
   useEffect(() => {
@@ -334,6 +350,16 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [ready, askLocal, askCloud]);
 
+  // Dok kupac sam ne pomeri predmet, on stoji na praznom mestu koje je
+  // detektor našao — kad se kamera pomeri, predmet ide za sobom.
+  useEffect(() => {
+    if (!profile || moved.current) return;
+    setSpot({
+      x: profile.focalPoint.x + profile.focalPoint.w / 2,
+      y: profile.focalPoint.y + profile.focalPoint.h / 2,
+    });
+  }, [profile?.focalPoint.x, profile?.focalPoint.y, profile?.focalPoint.w, profile?.focalPoint.h, profile]);
+
   steadyRef.current = steady;
   refinedRef.current = refined;
   loadingRef.current = loadingModel;
@@ -345,6 +371,32 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
       <video ref={video} className="lv-video" playsInline muted autoPlay />
       <canvas ref={overlay} className="lv-overlay" />
       <canvas ref={work} hidden />
+
+      {/* Predmet uživo u sobi. Sloj hvata prst samo dok nešto stoji u
+          prostoru, da inače ne krade dodire dugmadima ispod. */}
+      {placed?.model_url && (
+        <div
+          className="lv-place"
+          onPointerDown={(e) => {
+            dragging.current = true;
+            (e.target as Element).setPointerCapture?.(e.pointerId);
+            dropAt(e.clientX, e.clientY);
+          }}
+          onPointerMove={(e) => dragging.current && dropAt(e.clientX, e.clientY)}
+          onPointerUp={() => (dragging.current = false)}
+          onPointerCancel={() => (dragging.current = false)}
+        >
+          <Piece3D
+            src={placed.model_url}
+            x={spot.x}
+            y={spot.y}
+            widthPct={realWidthPct(placed)}
+            yaw={yaw}
+            shade={0.9}
+            onState={(st) => setSpace(st === "ready")}
+          />
+        </div>
+      )}
 
       {!anySeen && (
         <div className="lv-frame" aria-hidden="true">
@@ -386,14 +438,30 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
         </div>
       )}
 
+      {placed && (
+        <div className="lv-turn">
+          <span>{space ? t("s.turn") : t("lv.building")}</span>
+          <input
+            type="range"
+            min={-180}
+            max={180}
+            step={1}
+            value={yaw}
+            onChange={(e) => setYaw(Number(e.target.value))}
+            aria-label={t("s.turn")}
+          />
+          <button className="lv-x" onClick={() => setPlaced(null)} aria-label={t("lv.remove")}>✕</button>
+        </div>
+      )}
+
       {matches.length > 0 && (
         <div className="lv-dock">
           <div className="lv-row">
             {matches.map((m, i) => (
               <button
                 key={m.id}
-                className={`lv-card${i === 0 ? " lv-card-lead" : ""}`}
-                onClick={() => pickOne(m)}
+                className={`lv-card${i === 0 ? " lv-card-lead" : ""}${placed?.id === m.id ? " lv-card-on" : ""}`}
+                onClick={() => tapOne(m)}
               >
                 {m.image_url ? <img src={m.image_url} alt="" /> : <span className="lv-ph" />}
                 <span className="lv-card-t">
@@ -410,6 +478,40 @@ export function LiveScan({ tenant, onClose, onPick }: Props) {
       )}
     </div>
   );
+
+  /**
+   * Dodir na predlog.
+   *
+   * Kad proizvod ima svoj model, ne ide se nikuda — predmet se odmah nađe u
+   * sobi i kupac ga gleda kroz kameru. Kad ga nema, ostaje dosadašnji put:
+   * kadar se zamrzne i prelazi se na pregled sa fotografijom.
+   */
+  function tapOne(m: Match) {
+    if (!m.model_url) return pickOne(m);
+    if (placed?.id === m.id) return setPlaced(null);
+    moved.current = false;
+    setYaw(0);
+    setPlaced(m);
+    track(tenant.slug, "live_place", { product_id: m.id });
+  }
+
+  /** Prava širina predmeta u kadru: njegovi centimetri prema širini zida. */
+  function realWidthPct(m: Match) {
+    const wide = Number(m.width_cm) || 90;
+    const wall = profile?.wallWidth || 300;
+    return Math.max(4, Math.min(96, (wide / wall) * 100));
+  }
+
+  function dropAt(clientX: number, clientY: number) {
+    const v = video.current;
+    if (!v) return;
+    const r = v.getBoundingClientRect();
+    moved.current = true;
+    setSpot({
+      x: Math.max(0.05, Math.min(0.95, (clientX - r.left) / r.width)),
+      y: Math.max(0.05, Math.min(0.95, (clientY - r.top) / r.height)),
+    });
+  }
 
   /** Zamrzni trenutni kadar i pređi na isti ekran rezultata kao za sliku. */
   function pickOne(m: Match) {

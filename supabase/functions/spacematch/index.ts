@@ -1099,7 +1099,7 @@ Deno.serve(async (req) => {
       const t = await tenantBySlug(String(body.slug ?? ''));
       if (!t) return json({ error: 'not found' }, 404);
       const rows = await s`SELECT id, sku, title, description, image_url, url, price, style, colors,
-        materials, room_types, width_cm, height_cm, depth_cm, tags, popularity
+        materials, room_types, width_cm, height_cm, depth_cm, tags, popularity, model_url
         FROM sm_products WHERE tenant_id = ${t.id} AND active ORDER BY popularity DESC, id DESC LIMIT 500`;
       return json({ products: rows });
     }
@@ -1163,6 +1163,10 @@ Deno.serve(async (req) => {
         price: x.product.price,
         width_cm: x.product.width_cm,
         height_cm: x.product.height_cm,
+        depth_cm: x.product.depth_cm,
+        // Kad proizvod ima gotov 3D model, kupac ga vidi kao predmet u svom
+        // prostoru; bez njega ostaje izrezana slika, koja i dalje radi.
+        model_url: x.product.model_url ?? null,
         match: x.score,
         why: explain(x, profile, lang),
         parts: x.parts,
@@ -1174,6 +1178,8 @@ Deno.serve(async (req) => {
         price: x.product.price,
         width_cm: x.product.width_cm,
         height_cm: x.product.height_cm,
+        depth_cm: x.product.depth_cm,
+        model_url: x.product.model_url ?? null,
         match: x.score,
       }));
       await s`INSERT INTO sm_events (tenant_id, type, meta)

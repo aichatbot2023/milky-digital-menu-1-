@@ -3,7 +3,7 @@
  * API-ja (iOS ograničenja skladišta, privatni mod, kvota) završava običnim
  * mrežnim zahtevom. respondWith NIKAD ne dobija odbijen promise.
  */
-const CACHE = "safenest-v22";
+const CACHE = "safenest-v23";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -70,7 +70,16 @@ self.addEventListener("fetch", (e) => {
   } catch {
     return;
   }
-  if (url.origin !== location.origin || e.request.method !== "GET") return;
+  if (e.request.method !== "GET") return;
+
+  // Trodimenzionalni modeli proizvoda stoje na Supabase skladištu i nikad se
+  // ne menjaju pod istom adresom. Kupac koji se vrati na isti proizvod ne
+  // treba ponovo da preuzima dvesta kilobajta — predmet se pojavi odmah.
+  if (url.pathname.includes("/spacematch-3d/") && url.pathname.endsWith(".glb")) {
+    e.respondWith(cacheFirst(e.request));
+    return;
+  }
+  if (url.origin !== location.origin) return;
 
   if (url.pathname.includes("/model/") || url.pathname.includes("/assets/")) {
     e.respondWith(cacheFirst(e.request));

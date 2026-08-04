@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
 import { FLAT, estimatePlane, pieceTransform, planePerspective, type Plane } from "./plane";
 import { cutoutFrom, type Cutout } from "../lib/cutout";
+import { Piece3D } from "./Piece3D";
 import type { Match, RoomProfile } from "./api";
 
 interface Props {
@@ -41,6 +42,16 @@ export function WallPreview({ room, piece, profile }: Props) {
    * je za uramljene radove ionako tačan.
    */
   const [cut, setCut] = useState<Cutout | null>(null);
+  /**
+   * Okret predmeta oko uspravne ose.
+   *
+   * Kreće od nagiba zida procenjenog iz same fotografije, pa predmet odmah
+   * stoji po istom uglu kao soba — kupac ne mora ništa da namešta da bi mu
+   * izgledalo tačno. Odatle ga dalje okreće sam.
+   */
+  const [yaw, setYaw] = useState(0);
+  /** Da li 3D zaista radi na ovom uređaju. Dok ne znamo, stoji izrezana slika. */
+  const [space, setSpace] = useState(false);
 
   // Prava razmera: širina komada / procenjena širina zida u kadru.
   const pieceW = Number(piece.width_cm) || 90;
@@ -50,17 +61,25 @@ export function WallPreview({ room, piece, profile }: Props) {
   const aspect = pieceH / pieceW;
   /** Predmet bez rama: kad se pozadina uspešno uklonila, stoji sam u prostoru. */
   const solid = Boolean(cut?.ok);
+  /** Pravi predmet: model postoji I grafika u ovom pregledaču radi. */
+  const real = Boolean(piece.model_url) && space;
 
   useEffect(() => {
     setPos({ x: profile.focalPoint.x + profile.focalPoint.w / 2, y: profile.focalPoint.y + profile.focalPoint.h / 2 });
     setScale(1);
+    setSpace(false);
   }, [piece.id, profile.focalPoint.x, profile.focalPoint.y, profile.focalPoint.w, profile.focalPoint.h]);
 
   useEffect(() => {
     setPlane(FLAT);
     const el = new Image();
     el.crossOrigin = "anonymous";
-    el.onload = () => setPlane(estimatePlane(el));
+    el.onload = () => {
+      const p = estimatePlane(el);
+      setPlane(p);
+      // Nagib zida je već u stepenima; predmet kreće od njega.
+      setYaw(Math.round(p.yaw));
+    };
     el.src = room;
     return () => {
       el.onload = null;
@@ -113,9 +132,26 @@ export function WallPreview({ room, piece, profile }: Props) {
         onPointerCancel={() => (drag.current.active = false)}
       >
         <img src={room} alt="" className="sm-room" />
+
+        {/* Model se crta iznad fotografije, van CSS perspektive okvira:
+            njegov ugao nosi sam predmet, ne omotač. Kad grafika ne radi,
+            javi `fail` i ispod ostaje izrezana slika. */}
+        {piece.model_url && (
+          <Piece3D
+            src={piece.model_url}
+            x={pos.x}
+            y={pos.y}
+            widthPct={widthPct}
+            yaw={yaw}
+            pitch={plane.pitch}
+            onState={(st) => setSpace(st === "ready")}
+          />
+        )}
+
         <div
           className={`sm-piece${solid ? " sm-piece-solid" : ` ${FRAMES.find((f) => f.id === frame)!.cls}`}`}
           style={{
+            visibility: real ? "hidden" : "visible",
             width: `${widthPct}%`,
             left: `${pos.x * 100}%`,
             top: `${pos.y * 100}%`,
@@ -142,7 +178,7 @@ export function WallPreview({ room, piece, profile }: Props) {
         </div>
       </div>
 
-      {!solid && (
+      {!solid && !real && (
       <div className="sm-preview-bar">
         <span className="sm-fact" style={{ padding: "7px 12px", borderRadius: 999 }}>
           {t("s.frame")}
@@ -157,6 +193,25 @@ export function WallPreview({ room, piece, profile }: Props) {
           </button>
         ))}
       </div>
+      )}
+
+      {real && (
+        <div className="sm-preview-bar">
+          <span className="sm-fact" style={{ padding: "7px 12px", borderRadius: 999 }}>
+            {t("s.turn")}
+          </span>
+          <input
+            type="range"
+            min={-180}
+            max={180}
+            step={1}
+            value={yaw}
+            onChange={(e) => setYaw(Number(e.target.value))}
+            style={{ flex: 1, minWidth: 140, padding: 0, border: "none", background: "none" }}
+            aria-label={t("s.turn")}
+          />
+          <b style={{ fontSize: "0.85rem" }}>{yaw}°</b>
+        </div>
       )}
 
       <div className="sm-preview-bar">
@@ -181,6 +236,7 @@ export function WallPreview({ room, piece, profile }: Props) {
       <p className="sm-preview-hint">
         {t("s.wall")}: ~{Math.round(wallW)} cm · {t("s.drag")}
         {plane.confidence > 0 && ` · ${t("s.angled")}`}
+        {real && ` · ${t("s.real3d")}`}
       </p>
     </div>
   );

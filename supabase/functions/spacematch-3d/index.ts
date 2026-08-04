@@ -978,6 +978,9 @@ async function store(body: Uint8Array, name: string) {
     headers: {
       Authorization: `Bearer ${SERVICE}`,
       'Content-Type': 'model/gltf-binary',
+      // Model se pod istom adresom ne menja svakodnevno; bez ovoga bi ga
+      // svaki kupac preuzimao iznova, jer skladište inače kaže „ne keširaj".
+      'Cache-Control': 'public, max-age=86400',
       'x-upsert': 'true',
     },
     body,
