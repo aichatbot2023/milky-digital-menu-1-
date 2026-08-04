@@ -27,7 +27,26 @@ interface Props {
   onShare: () => void;
 }
 
-/** Iseca deo fotografije oko opasnosti — fotografija je najvažniji element. */
+/**
+ * Isečak fotografije oko opasnosti.
+ *
+ * Fotografija je najvažniji element ovog ekrana: roditelj po njoj prepoznaje
+ * SVOJ predmet. Prva verzija ga je pretvarala u mrlju iz dva razloga
+ * odjednom, i oba su morala da se poprave:
+ *
+ * 1. Prozor je bio samo opasnost + 30 % okvira. Utičnica zauzima 5 % kadra,
+ *    pa je isečak bio 5 % slike razvučeno preko cele kartice — bez ijednog
+ *    prepoznatljivog detalja okolo. Sada prozor nikad nije uži od
+ *    `MIN_WINDOW` kraće strane fotografije, pa se uvek vidi i okolina.
+ * 2. Platno je bilo 420 px, a kartica ga prikazuje preko 1200 px na gustom
+ *    ekranu — dakle još tri puta uvećano posle svega. Sada platno prati
+ *    izvor, do `MAX_SIDE`.
+ */
+/** Najmanji prozor isečka, u odnosu na kraću stranu fotografije. */
+const MIN_WINDOW = 0.3;
+/** Preko ovoga isečak samo teži, ne i jasniji. */
+const MAX_SIDE = 900;
+
 function useCrop(imageDataUrl: string, box: Hazard["box"]): string | null {
   const [crop, setCrop] = useState<string | null>(null);
   const key = `${box.x},${box.y},${box.w},${box.h}`;
@@ -35,19 +54,25 @@ function useCrop(imageDataUrl: string, box: Hazard["box"]): string | null {
     let alive = true;
     const img = new Image();
     img.onload = () => {
-      // Malo šireg konteksta oko predmeta (30% margine) da se vidi okolina
-      const padX = box.w * 0.3;
-      const padY = box.h * 0.3;
-      const sx = Math.max(0, (box.x - padX) * img.width);
-      const sy = Math.max(0, (box.y - padY) * img.height);
-      const sw = Math.min(img.width - sx, (box.w + padX * 2) * img.width);
-      const sh = Math.min(img.height - sy, (box.h + padY * 2) * img.height);
+      // Kvadratni prozor oko središta opasnosti: dovoljno širok da se vidi
+      // gde je to u sobi, a nikad uži od `MIN_WINDOW` kraće strane.
+      const floor = Math.min(img.width, img.height) * MIN_WINDOW;
+      const want = Math.max(floor, box.w * img.width * 1.6, box.h * img.height * 1.6);
+      const win = Math.min(want, img.width, img.height);
+      const cxPx = (box.x + box.w / 2) * img.width;
+      const cyPx = (box.y + box.h / 2) * img.height;
+      const sx = Math.max(0, Math.min(img.width - win, cxPx - win / 2));
+      const sy = Math.max(0, Math.min(img.height - win, cyPx - win / 2));
+      const sw = win;
+      const sh = win;
       if (sw < 4 || sh < 4) {
         if (alive) setCrop(imageDataUrl);
         return;
       }
       const c = document.createElement("canvas");
-      const side = 420;
+      // Platno prati izvor: uvećavanje iznad njega ne donosi nijedan detalj,
+      // samo mutninu i veći fajl.
+      const side = Math.round(Math.max(320, Math.min(MAX_SIDE, win)));
       c.width = side;
       c.height = side;
       const ctx = c.getContext("2d");

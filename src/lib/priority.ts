@@ -147,15 +147,11 @@ export function factsFor(h: RankedHazard): string[] {
   const out: string[] = [];
   if (Array.isArray(h.facts) && h.facts.length > 0) {
     out.push(...h.facts.filter((f) => typeof f === "string" && f.trim()).slice(0, 4));
-  } else if (h.why) {
-    out.push(
-      ...h.why
-        .split(/(?<=[.!?])\s+/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .slice(0, 3),
-    );
   }
+  // Ranije se ovde, kad model ne vrati zasebne činjenice, rečenica po
+  // rečenica prepisivao sam opis — pa je „ZAŠTO JE OVO OPASNO" doslovno
+  // ponavljalo pasus iznad sebe. To nije bilo obaveštenje nego popuna.
+  // Bolje je da odeljak nestane nego da kaže istu stvar dvaput.
   if (reachability(h) >= 8) {
     out.push(localized("$pr.reach", {
       sr: "Nadohvat je detetu",

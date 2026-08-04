@@ -27,30 +27,31 @@ interface Provider {
   extraBody?: Record<string, unknown>;
 }
 
-// Lanac provajdera — freeLlmRouter obrazac (lovable-chatbot-studio):
-// svi OpenAI-kompatibilni (chat/completions + image_url), ključevi u Supabase
-// secrets, provajder bez ključa se preskače, failover na 402/429/greške.
-// FREE_MODELS env pregazi OpenRouter listu modela.
+// Lanac provajdera, poređan po IZMERENOM kvalitetu na retkim jezicima.
+//
+// Ovo je bilo naopako i skupo se videlo. NVIDIA Nemotron je stajao prvi
+// „zbog brzine", pa je roditelj na srpskom dobijao ovakav nalaz:
+//
+//   „Dizanje je niskom dužine, ali je približno na nivelu glave odrasle
+//    djece i može se lagno prevladati... rupe od stena ili šprkota."
+//
+// Naziv opasnosti „dizanje", koraci u infinitivu, izmišljene reči. Brz
+// odgovor koji ništa ne znači nije brz odgovor nego pokvaren proizvod.
+//
+// Isti redosled je već izmeren u `free-llm` i tamo primenjen; ovde je bio
+// zaboravljen. Lovable (Gemini 2.5 Flash) najbolje piše retke jezike, pa
+// Gemini direktno, pa OpenRouter; NVIDIA ostaje POSLEDNJA — bolje njen loš
+// srpski nego prazan ekran, ali samo kad nema nikog drugog.
+//
+// Svi moraju da vide sliku: lanac je multimodalan, tekstualni model ovde ne
+// može da uskoči ni kao ispomoć.
 const PROVIDERS: Provider[] = [
   {
-    // PRIMARNI: NVIDIA Nemotron OMNI — multimodalni agent za slike/video
-    name: 'nvidia',
-    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
-    // KLJUČNO ZA BRZINU: bez ovoga reasoning model "razmišlja" 40-60s po
-    // slici, pa klijent odustane. Sa isključenim razmišljanjem: par sekundi.
-    extraBody: { chat_template_kwargs: { enable_thinking: false } },
-  },
-  {
-    name: 'openrouter',
-    key: Deno.env.get('OPENROUTER_API_KEY'),
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    // Gemma modeli pre omni:free — omni nano piše loš srpski/nemački
-    models: (Deno.env.get('FREE_MODELS') ??
-      'nvidia/nemotron-nano-12b-v2-vl:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
-    ).split(',').map((m) => m.trim()).filter(Boolean),
-    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
+    // PRIMARNI: najbolji na jezicima van engleskog, i dovoljno brz.
+    name: 'lovable',
+    key: Deno.env.get('LOVABLE_API_KEY'),
+    url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+    models: ['google/gemini-2.5-flash'],
   },
   {
     name: 'gemini',
@@ -59,16 +60,35 @@ const PROVIDERS: Provider[] = [
     models: ['gemini-2.5-flash'],
   },
   {
+    name: 'openrouter',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    // Gemma pre omni-nano: omni nano piše loš srpski i nemački.
+    models: (Deno.env.get('FREE_MODELS') ??
+      'google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,nvidia/nemotron-nano-12b-v2-vl:free'
+    ).split(',').map((m) => m.trim()).filter(Boolean),
+    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
+  },
+  {
     name: 'groq',
     key: Deno.env.get('GROQ_API_KEY'),
     url: 'https://api.groq.com/openai/v1/chat/completions',
-    models: ['meta-llama/llama-4-scout-17b-16e-instruct'],
+    // Jedan jedini model ovde je vraćao 404 na ovom nalogu, pa provajder
+    // nikad nije ni odgovorio. Sada ih ima više: koji postoji, taj radi.
+    models: [
+      'meta-llama/llama-4-maverick-17b-128e-instruct',
+      'meta-llama/llama-4-scout-17b-16e-instruct',
+    ],
   },
   {
-    name: 'lovable',
-    key: Deno.env.get('LOVABLE_API_KEY'),
-    url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
-    models: ['google/gemini-2.5-flash'],
+    // POSLEDNJA: brza, ali na retkim jezicima piše besmislice.
+    name: 'nvidia',
+    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
+    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
+    // Bez ovoga reasoning model „razmišlja" 40–60 s po slici, pa klijent
+    // odustane. Sa isključenim razmišljanjem: par sekundi.
+    extraBody: { chat_template_kwargs: { enable_thinking: false } },
   },
 ];
 
