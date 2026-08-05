@@ -122,6 +122,98 @@ const SOLUTION_KEYS = [
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
+/**
+ * Spoji nalaze koji pokazuju na ISTO mesto iste vrste.
+ *
+ * Preklapanje se deli MANJOM površinom, ne unijom: lonac unutar zone šporeta
+ * jeste isto mesto iako je mnogo manji, a unija bi to sakrila.
+ *
+ * Stoji na nivou modula (a ne unutar poziva modela) zato što se isti postupak
+ * primenjuje i posle „drugog pogleda" — inače bi drugi prolaz vratio šporet
+ * koji je prvi već našao, i roditelj bi ga video dvaput.
+ */
+function mergeTwins(hazards: any[]): any[] {
+  const WEIGHT: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+  const overlap = (a: any, b: any) => {
+    const x1 = Math.max(a.box.x, b.box.x);
+    const y1 = Math.max(a.box.y, b.box.y);
+    const x2 = Math.min(a.box.x + a.box.w, b.box.x + b.box.w);
+    const y2 = Math.min(a.box.y + a.box.h, b.box.y + b.box.h);
+    const hit = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    if (hit <= 0) return 0;
+    return hit / Math.min(a.box.w * a.box.h, b.box.w * b.box.h);
+  };
+  const kept: any[] = [];
+  for (const h of hazards) {
+    const twin = kept.find((k) => k.category === h.category && overlap(k, h) > 0.5);
+    if (!twin) { kept.push(h); continue; }
+    if ((WEIGHT[h.severity] ?? 0) > (WEIGHT[twin.severity] ?? 0)) {
+      twin.label = h.label;
+      twin.severity = h.severity;
+      twin.why = h.why;
+      twin.box = h.box;
+      // Sigurnost prati naziv: ako ozbiljnije viđenje zna šta gleda, nalaz
+      // prestaje da bude nagađanje.
+      twin.uncertain = h.uncertain;
+    }
+    if (!twin.solution && h.solution) twin.solution = h.solution;
+    twin.facts = [...new Set([...(twin.facts ?? []), ...(h.facts ?? [])])].slice(0, 4);
+    twin.steps = [...new Set([...(twin.steps ?? []), ...(h.steps ?? [])])].slice(0, 3);
+  }
+  return kept;
+}
+
+/**
+ * DRUGI POGLED — pitanje „šta si propustio?", postavljeno istom modelu.
+ *
+ * Merenje na fotografiji cele kuhinje: model prijavi pet opasnosti i stane.
+ * Nije da ih nema više — soba u kojoj živi dvogodišnjak ih ima znatno više —
+ * nego što model, kad jednom sastavi spisak, smatra posao završenim. To se
+ * ne popravlja strožim uputstvom u prvom prolazu; probano je, i dalje staje.
+ *
+ * Popravlja se PITANJEM. Kad mu se kaže šta je već našao i traži se samo
+ * ono što nije, model gleda na druga mesta umesto da prepisuje svoj spisak.
+ * Košta jedan poziv, a pozivi su besplatni — pa se plaća sekundama, i to
+ * samo kod fotografije, gde roditelj ionako svesno čeka nalaz. Uživo režim
+ * ovo ne radi, tamo je brzina važnija.
+ *
+ * Ako drugi pogled padne iz bilo kog razloga, vraća se prvi nalaz nepromenjen.
+ * Ovo je dodatak, nikad uslov.
+ */
+async function secondLook(
+  p: Provider, model: string, image: string, language: string,
+  first: any, roomType: string, ageGroup: string,
+): Promise<any> {
+  const already = (first.hazards ?? [])
+    .map((h: any) => `- ${h.label}`).join('\n') || '- (ništa)';
+  const room = ROOM_EN[roomType] ?? 'room';
+  const age = AGE_EN[ageGroup] ?? ageGroup;
+  const prompt = `OUTPUT LANGUAGE: ${language}. Write every human-readable value entirely in ${language}.
+
+You have already examined this photo of a "${room}" for a child aged ${age} and reported these hazards:
+${already}
+
+Those are done. Do NOT repeat any of them, and do not report the same physical object again under a different name.
+
+Now LOOK AGAIN, at the parts of the photo you did not examine the first time. Work through this list and check each one against the photo:
+floor level and anything a crawling child reaches · low drawers and cabinet doors · electrical sockets, cables, extension leads, chargers · appliance cords that hang down (kettle, toaster, iron) · table and worktop edges and corners · tablecloths or runners that can be pulled down · chairs, stools or boxes a child can climb · heat: hob, oven door, radiator, hot drinks · water: sink, bucket, bath, pet bowl · cleaning products, medicines, cosmetics, alcohol · bins · plastic bags, cling film, foil · small swallowable items (coins, batteries, magnets, caps, buttons, nuts) · blind and curtain cords · doors and hinges that trap fingers · windows and balconies · houseplants · anything glass or ceramic within reach · pet food or litter.
+
+Report ONLY hazards that are genuinely VISIBLE in this photo and are NOT already in the list above. Never invent anything. If you honestly find nothing new, return an empty array — but check the whole list first.
+
+Return ONLY valid JSON, same shape as before:
+{"hazards":[{"label":"...","category":"fall|choking|poisoning|burn|electric|cutting|drowning|crush|strangulation|other","severity":"critical|high|medium|low","box":{"x":0,"y":0,"w":0.1,"h":0.1},"why":"...","facts":["..."],"steps":["..."],"certain":true,"reach":5,"size_cm":10,"solution":"${SOLUTION_KEYS.join(' | ')}","stats":"...","fix":"..."}]}`;
+
+  const more = await callVision(p, model, image, prompt, language);
+  const extra = Array.isArray(more?.hazards) ? more.hazards : [];
+  if (!extra.length) return first;
+  return {
+    ...first,
+    hazards: mergeTwins([...(first.hazards ?? []), ...extra]),
+    _found: (first._found ?? 0) + (more._found ?? extra.length),
+    _second: extra.length,
+  };
+}
+
 function buildPrompt(roomType: string, ageGroup: string, childName?: string, language = 'Serbian', live = false): string {
   const room = ROOM_EN[roomType] ?? 'room';
   const age = AGE_EN[ageGroup] ?? ageGroup;
@@ -132,10 +224,9 @@ function buildPrompt(roomType: string, ageGroup: string, childName?: string, lan
     ? `
 
 LIVE CAMERA MODE — THIS IS A SINGLE FRAME FROM A LIVE VIDEO FEED (may be blurry or partial):
-- Report AT MOST 4 hazards — only the most serious ones you are ABSOLUTELY CERTAIN about.
-- NEVER guess. If you cannot confidently name an object, DO NOT report it at all.
-- An empty "hazards" array is a perfectly good answer when nothing hazardous is clearly visible.
-- Do NOT use the "unsure → severity low" rule here: in live mode uncertain objects are OMITTED, not reported.
+- The frame may be soft or partial. That lowers your CONFIDENCE, not the number of hazards you report. Report everything you can see, and mark the shaky ones with "certain": false.
+- NEVER invent an object that is not in the frame. But "I can see it and I am not fully sure what it is" is reported with "certain": false — it is NOT dropped.
+- An empty "hazards" array is correct only when the frame genuinely shows nothing hazardous.
 - Do NOT report the person holding the camera, their body, clothes, or furniture that is merely present (sofa, wall art, radiator) unless it poses a concrete, visible risk.
 - "label" must be 1–3 simple everyday words in ${language}; "why" must be ONE short, grammatically correct sentence. No complicated phrasing.`
     : '';
@@ -155,7 +246,9 @@ Before you output each label, re-read it and ask: would a parent actually say th
 
 ONE HAZARD PER OBJECT OR ZONE. Do not report the same physical thing twice under different names. A cooker with hot pots on it is ONE hazard, not "cooker" plus "pots" plus "hot plates". If two findings would point at overlapping parts of the photo, merge them into the more serious one.
 
-CERTAINTY: report ONLY objects you can clearly see and confidently identify. NEVER invent objects, hazards, or details that are not visibly present in the photo. A shorter, accurate list is always better than a longer, invented one.
+CERTAINTY IS A FIELD, NOT A FILTER. Never invent an object, hazard or detail that is not visibly present — that rule is absolute. But do not stay silent about something you can actually see just because you are not certain what it is: report it and set "certain": false. Inventing and reporting-with-doubt are opposite things, and only the first is forbidden.
+
+BE THOROUGH. Go across the whole photo systematically — floor, low furniture, worktops, table edges, sockets and cords, doors and drawers, windows and blinds, heat sources, water, bins, plants, anything small enough to swallow. A normal family kitchen or living room with a toddler in it usually holds EIGHT OR MORE real hazards. If you have found only three or four, you have not finished looking. Missing a real danger is the worst outcome this app can produce.
 
 SCALE FIRST — ESTIMATE REAL-WORLD SIZE BEFORE JUDGING RISK:
 Before you call anything a hazard, work out how BIG it really is. Compare it to reference objects in the same photo whose true size you know: a standard plug socket is ~8 cm wide, a shelf board is ~2 cm thick, a shelf compartment is ~30 cm tall, a mug ~9 cm, a door handle ~12 cm, a floor tile ~30-60 cm, a skirting board ~10 cm, an adult hand ~19 cm. Use the object's share of the frame together with those references.
@@ -178,6 +271,7 @@ Return ONLY valid JSON (no markdown fences) of this exact shape:
     "why": "2-3 sentences in ${language} explaining why it is dangerous for this exact age",
     "facts": ["REQUIRED, 2-4 items. Each is a NEW fact about this object in ${language}, max 6 words, e.g. \\"Estimated temperature: 78-85°C\\", \\"Within the child's reach\\", \\"Tips over easily\\". Never repeat sentences from \\"why\\" — the app shows both, and repeating looks like filler."],
     "steps": ["1-3 imperative actions in ${language}, max 10 words each, e.g. \\"Move the cup 30 cm from the edge\\""],
+    "certain": true or false (true = you clearly see it AND you know what it is; false = you see something that looks dangerous but the frame is soft, partial or ambiguous). Report both kinds; the app shows uncertain findings lower down and marks them, so doubt costs nothing and silence costs a child.
     "reach": 1-10 (how easily THIS child can reach it: 10 = on the floor or at child height, 1 = high on a ceiling),
     "size_cm": estimated longest real-world dimension of the object in centimetres, derived from reference objects in the photo (a number, e.g. 3 for a coin, 22 for a large rubber duck),
     "solution": "EXACTLY ONE key copied from this list, nothing else: ${SOLUTION_KEYS.join(' | ')}. Pick the key for the product that fixes THIS object. Never invent a key, never translate it, never write a sentence here. If no product fixes it, write none.",
@@ -297,6 +391,10 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
   // Ograniči box vrednosti na 0-1
   parsed.hazards = parsed.hazards.map((h: any) => ({
     ...h,
+    // Sumnja se PAMTI, ne briše. Ranije je nesiguran nalaz jednostavno
+    // izostajao, pa se nije znalo ni da je model nešto video. Stoji POSLE
+    // raširenog objekta da ga sirovi odgovor ne bi pregazio.
+    uncertain: h?.certain === false,
     box: {
       x: Math.max(0, Math.min(1, Number(h.box?.x) || 0)),
       y: Math.max(0, Math.min(1, Number(h.box?.y) || 0)),
@@ -321,33 +419,8 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
   // Zato se preklapanje rešava merom, ne molbom: nalazi iste vrste čiji se
   // okviri poklapaju spajaju se u onaj ozbiljniji, a ključ rešenja se nasledi
   // od onoga koji ga ima.
-  const WEIGHT: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
-  const overlap = (a: any, b: any) => {
-    const x1 = Math.max(a.box.x, b.box.x);
-    const y1 = Math.max(a.box.y, b.box.y);
-    const x2 = Math.min(a.box.x + a.box.w, b.box.x + b.box.w);
-    const y2 = Math.min(a.box.y + a.box.h, b.box.y + b.box.h);
-    const hit = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
-    if (hit <= 0) return 0;
-    // Deli se MANJOM površinom, ne unijom: lonac unutar zone šporeta je isto
-    // mesto iako je mnogo manji, a unija bi to sakrila.
-    return hit / Math.min(a.box.w * a.box.h, b.box.w * b.box.h);
-  };
-  const kept: any[] = [];
-  for (const h of parsed.hazards) {
-    const twin = kept.find((k) => k.category === h.category && overlap(k, h) > 0.5);
-    if (!twin) { kept.push(h); continue; }
-    if ((WEIGHT[h.severity] ?? 0) > (WEIGHT[twin.severity] ?? 0)) {
-      twin.label = h.label;
-      twin.severity = h.severity;
-      twin.why = h.why;
-      twin.box = h.box;
-    }
-    if (!twin.solution && h.solution) twin.solution = h.solution;
-    twin.facts = [...new Set([...(twin.facts ?? []), ...(h.facts ?? [])])].slice(0, 4);
-    twin.steps = [...new Set([...(twin.steps ?? []), ...(h.steps ?? [])])].slice(0, 3);
-  }
-  parsed.hazards = kept;
+  const foundByModel = parsed.hazards.length;
+  parsed.hazards = mergeTwins(parsed.hazards);
 
   // Ključ rešenja mora biti sa spiska. Model ume da napiše rečenicu i pored
   // izričitog uputstva; tada se nalaz zadržava, ali bez proizvoda — pogrešan
@@ -360,6 +433,7 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
 
   parsed.safety_score = Math.max(0, Math.min(100, Number(parsed.safety_score) || 0));
   parsed._v = 4;
+  parsed._found = foundByModel;
   parsed._provider = p.name;
   parsed._model = model;
   return parsed;
@@ -680,10 +754,24 @@ const CANDIDATES: Provider[] = [
     if (isAsleep(provider.name)) continue;
     for (const model of provider.models) {
       try {
-        return json(await Promise.race([
+        const first = await Promise.race([
           callVision(provider, model, image, prompt, String(language).slice(0, 30)),
           new Promise((_, no) => setTimeout(() => no(new Error(`${provider.name}: predugo`)), TRY_MS)),
-        ]) as any);
+        ]) as any;
+        // Fotografija dobija i drugi pogled; uživo ne, tamo je brzina važnija.
+        // Pad drugog pogleda ne sme da odnese prvi nalaz — zato `catch` koji
+        // vraća ono što već imamo.
+        if (live === true) return json(first);
+        try {
+          return json(await Promise.race([
+            secondLook(provider, model, image, String(language).slice(0, 30), first,
+              String(roomType), String(ageGroup)),
+            new Promise((_, no) => setTimeout(() => no(new Error('drugi pogled: predugo')), TRY_MS)),
+          ]) as any);
+        } catch (e: any) {
+          console.error('drugi pogled pao:', e?.message ?? String(e));
+          return json(first);
+        }
       } catch (e: any) {
         const why = e?.message ?? String(e);
         errors.push(why);

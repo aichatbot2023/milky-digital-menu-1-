@@ -34,6 +34,8 @@ import {
   type RememberedHazard,
 } from "./lib/memory";
 import { HazardFocus } from "./components/HazardFocus";
+import { RoomReveal } from "./components/RoomReveal";
+import { AmazonPartner } from "./components/AmazonPartner";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, onLocale, roomLabel, t } from "./lib/i18n";
 import { recognise, remember } from "./lib/roomMemory";
 import { roomPrint } from "./lib/roomPrint";
@@ -75,6 +77,14 @@ export default function App() {
   /** Pre koliko dana je ovaj isti prostor već skeniran; null = prvi put. */
   const [roomSeen, setRoomSeen] = useState<number | null>(null);
   const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
+  /**
+   * Sken za koji trenutak otkrivanja još nije odigran.
+   *
+   * Vezuje se za ID skena, a ne za običnu zastavicu: roditelj se sa nalaza
+   * vraća na spisak i nazad više puta, i otkrivanje sme da se pusti samo
+   * jednom — prvi put, kad je zaista novost.
+   */
+  const [revealFor, setRevealFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<SubStatus>(() => getStatus());
   const [showPaywall, setShowPaywall] = useState(false);
@@ -207,6 +217,7 @@ export default function App() {
       saveScan(scan);
       setScans(loadScans());
       setCurrentScan(scan);
+      setRevealFor(scan.id);
 
       // Pamćenje PROSTORA, ne vrste prostorije. Dve dnevne sobe više nisu
       // jedno te isto, a roditelj koji ponovo skenira istu sobu odmah vidi
@@ -408,7 +419,10 @@ export default function App() {
           saveScan(scan);
           setScans(loadScans());
           setCurrentScan(scan);
-              trackScan(
+          // I uživo sesija završava otkrivanjem: sve što je nađeno tokom
+          // skeniranja skupljeno na jednoj slici.
+          setRevealFor(scan.id);
+          trackScan(
             "live",
             roomType,
             selectedChild?.age ?? "1-2y",
@@ -463,6 +477,20 @@ export default function App() {
   // Rezultat: JEDNA opasnost u fokusu, po stvarnom riziku za dete —
   // ne lista svih detekcija (to je debug prikaz, ne korisničko iskustvo)
   if (view === "result" && currentScan) {
+    // Prvo SOBA, pa tek onda spisak. Nalaz koji se ne vidi kao celina ne
+    // ostavlja utisak da je aplikacija uopšte nešto uradila — a upravo je
+    // to bio prigovor: postala je temeljnija, a delovala slabije.
+    if (revealFor === currentScan.id && currentScan.result.hazards.length > 0) {
+      return (
+        <RoomReveal
+          imageUrl={currentScan.imageDataUrl}
+          hazards={currentScan.result.hazards}
+          ageGroup={selectedChild?.age ?? "1-2y"}
+          safetyScore={currentScan.result.safety_score}
+          onContinue={() => setRevealFor(null)}
+        />
+      );
+    }
     return (
       <>
         <HazardFocus
@@ -725,7 +753,7 @@ export default function App() {
         {t("footer.disclaimer")}
         <br />
         {t("footer.company")}
-        <br />
+        <AmazonPartner />
         <a href="/privacy.html">Privacy (GDPR)</a> · <a href="/terms.html">Terms</a> ·{" "}
         <button className="lang-switch" onClick={() => setLangReady(false)}>
           🌐 Language

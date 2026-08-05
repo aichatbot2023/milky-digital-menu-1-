@@ -247,6 +247,11 @@ const D: Dict = {
   "live.moving": { en: "Hold still to look closely", sr: "Zastanite da bolje pogledam" },
   "live.looking": { en: "Looking…", sr: "Gledam…" },
   "live.closer": { en: "Looking closer…", sr: "Gledam izbliza…" },
+  // Trenutak otkrivanja: soba sa svim nalazima
+  "reveal.one": { en: "hazard found in your room", sr: "opasnost u vašoj sobi" },
+  "reveal.many": { en: "hazards found in your room", sr: "opasnosti u vašoj sobi" },
+  "reveal.looking": { en: "Marking what I found…", sr: "Označavam šta sam našao…" },
+  "reveal.go": { en: "Go through them one by one", sr: "Kreni redom, jednu po jednu" },
   "live.one": { en: "hazard in frame", sr: "opasnost u kadru" },
   "live.many": { en: "hazards in frame", sr: "opasnosti u kadru" },
   "live.retry": { en: "↻ Try again", sr: "↻ Pokušaj ponovo" },
@@ -471,6 +476,12 @@ const D: Dict = {
   "shop.note": {
     en: "Products from our partner brands that solve this hazard. As an Amazon Associate, SafeNest AI earns from qualifying purchases.",
     sr: "Proizvodi partnerskih brendova koji rešavaju ovu opasnost. Kao Amazon Associate, SafeNest AI zarađuje od kvalifikovanih kupovina.",
+  },
+  // Obavezna oznaka Amazon Associates programa — mora da stoji svuda gde
+  // ima partnerskih linkova, ne samo na ulaznoj strani.
+  "amzn.note": {
+    en: "SafeNest AI is a participant in the Amazon Associates Programme. As an Amazon Associate we earn from qualifying purchases.",
+    sr: "SafeNest AI je učesnik Amazon Associates programa. Kao Amazon Associate partner, zarađujemo od kvalifikovanih kupovina.",
   },
   "shop.view": { en: "View", sr: "Pogledaj" },
   "shop.hide": { en: "Hide recommendations", sr: "Sakrij preporuke" },

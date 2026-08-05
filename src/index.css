@@ -1624,3 +1624,119 @@ body {
   font-weight: 700;
   text-align: center;
 }
+
+/* ── Trenutak otkrivanja ───────────────────────────────────────────────
+   Roditelj vidi svoju sobu i sve što je u njoj nađeno. Do sada je prvo
+   video isečak jednog predmeta, pa se sav posao aplikacije nije nigde
+   VIDEO — otud utisak da je oslabila baš kad je postala temeljnija. */
+.reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #0b1220;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: calc(env(safe-area-inset-top) + 16px) 14px
+    calc(env(safe-area-inset-bottom) + 16px);
+}
+.reveal-photo { position: relative; border-radius: 16px; overflow: hidden; }
+.reveal-img { display: block; width: 100%; }
+
+/* Nalaz ISKAČE — kratko prebaci preko svoje veličine pa se smiri. Pokret je
+   ono što oko pročita kao „evo, našao sam još jednu". */
+.reveal-box {
+  position: absolute;
+  border: 3px solid;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.8),
+    0 0 20px 4px color-mix(in srgb, var(--sev) 45%, transparent);
+  animation: reveal-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.reveal-box-maybe { border-style: dashed; opacity: 0.85; }
+@keyframes reveal-pop {
+  from { opacity: 0; transform: scale(1.35); }
+  60% { opacity: 1; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+.reveal-pin {
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  min-width: 23px;
+  height: 23px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+/* Naziv nosi SAMO poslednji iskočeni — inače se natpisi preklope u kašu. */
+.reveal-name {
+  position: absolute;
+  left: 50%;
+  bottom: -30px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(9, 14, 26, 0.9);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.reveal-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.reveal-count { display: flex; align-items: baseline; gap: 7px; color: #fff; }
+.reveal-count b { font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.reveal-count span { font-size: 13.5px; opacity: 0.8; }
+.reveal-legend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.reveal-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.reveal-chip i { width: 8px; height: 8px; border-radius: 999px; }
+.reveal-actions { display: flex; align-items: center; gap: 12px; }
+.reveal-go { flex: 1; }
+.reveal-hint { flex: 1; color: rgba(255, 255, 255, 0.7); font-size: 13.5px; margin: 0; }
+.reveal-score {
+  font-weight: 800;
+  font-size: 14px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.reveal-score[data-level="ok"] { background: #10b981; }
+.reveal-score[data-level="mid"] { background: #f59e0b; }
+.reveal-score[data-level="bad"] { background: #ef4444; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal-box { animation: none; }
+}
+
+/* Oznaka Amazon partnerstva. Sličica se pojavljuje samo ako vlasnik snimi
+   zvanični baner iz svog Associates naloga u `public/amazon-associate.png`;
+   sam znak se ne crta, jer Amazon njegovu upotrebu drži pod pravilima o žigu. */
+.amzn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+.amzn-badge { height: 22px; width: auto; flex: none; }
+.amzn-compact { margin: 8px 0 0; font-size: 11px; justify-content: flex-start; }
