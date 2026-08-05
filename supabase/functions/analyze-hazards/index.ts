@@ -49,8 +49,25 @@ interface Provider {
 // može da uskoči ni kao ispomoć.
 const PROVIDERS: Provider[] = [
   {
-    // PRVI: najbolji jezik među onima koji su ZAISTA živi. Gemma piše
-    // pristojan srpski; Nemotron ne. Mereno, ne pretpostavljeno.
+    // PRVI: Cerebras, besplatan nivo. Isti model kao kod OpenRoutera
+    // (Gemma, koja jedina od besplatnih piše pristojan srpski), ali na
+    // hardverskom ubrzivaču: 1,3 s naspram 29 s. Mereno na istoj kuhinji.
+    name: 'cerebras',
+    key: Deno.env.get('CEREBRAS_API_KEY'),
+    url: 'https://api.cerebras.ai/v1/chat/completions',
+    models: ['gemma-4-31b'],
+  },
+  {
+    // Isti servis, drugi ključ — dakle druga dnevna kvota. Ključ stoji pod
+    // imenom za OpenAI, ali počinje sa `csk-` i pripada Cerebrasu; nije
+    // vredno seliti tajnu, vredno je iskoristiti je.
+    name: 'cerebras-2',
+    key: Deno.env.get('OPENAI_API_KEY'),
+    url: 'https://api.cerebras.ai/v1/chat/completions',
+    models: ['gemma-4-31b'],
+  },
+  {
+    // Ista porodica modela, drugi put do njih — kad Cerebras potroši kvotu.
     name: 'openrouter',
     key: Deno.env.get('OPENROUTER_API_KEY'),
     url: 'https://openrouter.ai/api/v1/chat/completions',
@@ -60,29 +77,26 @@ const PROVIDERS: Provider[] = [
     extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
   },
   {
-    // Uvek dostupan i brz (oko 350 ms), ali na retkim jezicima piše slabo.
-    // Zato je iza Gemme, a ispred mrtvih — bolje slabiji srpski nego ništa.
-    name: 'nvidia',
-    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
-    // Bez ovoga reasoning model „razmišlja" 40–60 s po slici.
-    extraBody: { chat_template_kwargs: { enable_thinking: false } },
-  },
-  {
-    // Najbolji od svih na jeziku, ali je nalog na nuli (403, credit limit).
-    // Ostaje u lancu iza živih: čim se dopuni, sam se vraća u igru.
+    // Najbolji na jeziku, ali nalog na nuli (403). Čim se dopuni, sam ulazi.
     name: 'lovable',
     key: Deno.env.get('LOVABLE_API_KEY'),
     url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
     models: ['google/gemini-2.5-flash'],
   },
   {
-    // Isto: 429, potrošen predujam. Stoji radi dana kada bude dopunjen.
     name: 'gemini',
     key: Deno.env.get('GEMINI_API_KEY'),
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     models: ['gemini-2.5-flash', 'gemini-2.0-flash'],
+  },
+  {
+    // POSLEDNJA: uvek odgovori, ali na srpskom piše besmislice
+    // („red pot na gasnoj konaci"). Bolje to nego prazan ekran — i ništa više.
+    name: 'nvidia',
+    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
+    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
+    extraBody: { chat_template_kwargs: { enable_thinking: false } },
   },
 ];
 
@@ -410,6 +424,21 @@ Deno.serve(async (req) => {
  */
 const CANDIDATES: Provider[] = [
   {
+    // Cerebras: besplatan nivo, hardverski ubrzan, i u spisku ima gemma-4-31b
+    // koja ume da gleda sliku i pristojno piše srpski. Ako ovo prođe na
+    // pravoj fotografiji, rešen je i kvalitet i brzina — bez ijedne uplate.
+    name: 'cerebras',
+    key: Deno.env.get('CEREBRAS_API_KEY'),
+    url: 'https://api.cerebras.ai/v1/chat/completions',
+    models: ['gemma-4-31b'],
+  },
+  {
+    name: 'cerebras-alt',
+    key: Deno.env.get('OPENAI_API_KEY'),
+    url: 'https://api.cerebras.ai/v1/chat/completions',
+    models: ['gemma-4-31b'],
+  },
+  {
     name: 'ai-studio-20',
     key: Deno.env.get('GOOGLE_AI_STUDIO_API_KEY'),
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
@@ -474,6 +503,46 @@ const CANDIDATES: Provider[] = [
     extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
   },
 ];
+
+  // Šta nam koji servis STVARNO nudi, pitano njega samog.
+  //
+  // Dvaput sam ovde upisao ime modela po sećanju i dvaput dobio 404. Spisak
+  // se ne pamti nego se traži: ovo vraća modele koje ključ sme da zove.
+  if (body?.action === 'models') {
+    if (!ADMIN || body.admin_key !== ADMIN) return json({ error: 'unauthorized' }, 401);
+    const where: Record<string, string> = {
+      groq: 'https://api.groq.com/openai/v1/models',
+      cerebras: 'https://api.cerebras.ai/v1/models',
+      // Ključ je greškom smešten pod imenom za OpenAI, ali počinje sa `csk-`
+      // što je Cerebras. Proba se i tako, da se vidi šta je zaista unutra.
+      'cerebras-alt': 'https://api.cerebras.ai/v1/models',
+      together: 'https://api.together.xyz/v1/models',
+    };
+    const keys: Record<string, string | undefined> = {
+      groq: Deno.env.get('GROQ_API_KEY'),
+      cerebras: Deno.env.get('CEREBRAS_API_KEY'),
+      'cerebras-alt': Deno.env.get('OPENAI_API_KEY'),
+      together: Deno.env.get('TOGETHER_API_KEY'),
+    };
+    const out: Record<string, unknown> = {};
+    for (const [name, url] of Object.entries(where)) {
+      const key = keys[name];
+      if (!key) { out[name] = 'nema ključa'; continue; }
+      try {
+        const r = await fetch(url, {
+          headers: { Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(20000),
+        });
+        const t = await r.text();
+        if (!r.ok) { out[name] = `${r.status} ${t.slice(0, 120)}`; continue; }
+        const list = JSON.parse(t).data ?? [];
+        out[name] = list.map((m: any) => m.id).slice(0, 60);
+      } catch (e: any) {
+        out[name] = `pad: ${String(e?.message ?? e).slice(0, 100)}`;
+      }
+    }
+    return json({ models: out });
+  }
 
   if (body?.action === 'providers') {
     if (!ADMIN || body.admin_key !== ADMIN) return json({ error: 'unauthorized' }, 401);

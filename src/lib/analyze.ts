@@ -110,19 +110,20 @@ async function doAnalyze(
 
 // Smanjuje sliku pre slanja (štedi tokene i ubrzava analizu)
 /**
- * Slika za analizu — namerno mala.
+ * Slika za analizu — puna, jer sada ima ko da je pročita.
  *
- * Bilo je 1568 px i to je bio pravi razlog zašto aplikacija „ne vidi
- * očiglednu opasnost". Besplatnim modelima na toliki kadar treba preko
- * trideset sekundi, telefon odustane posle trideset pet, i roditelj ostane
- * na onome što je lokalni detektor sam video — saksija i tri činije u kuhinji
- * sa vrelim šporetom.
+ * Ovaj broj je putovao gore-dole i vredi zapisati zašto. Sa starim lancem je
+ * 1568 px značilo da nijedan besplatni model ne stigne u rok od 35 s, pa je
+ * roditelj ostajao na onome što je telefon sam video. Spuštanje na 768 px je
+ * to rešilo, ali je odsekло sitne opasnosti — utičnica se prosto više nije
+ * videla.
  *
- * Izmereno na istoj kuhinji: 1568 px → niko ne stigne; 640 px → odgovor za
- * 16 s. 768 px je sredina koja staje u rok, a zadržava dovoljno sitnih
- * detalja (utičnica, ivica) da ih model uopšte vidi.
+ * Sa Cerebrasom na čelu lanca merenje na istoj kuhinji izgleda ovako:
+ *   1024 px → 1,6 s, 3 nalaza, bez utičnice
+ *   1568 px → 3,2 s, 3 nalaza, UKLJUČUJUĆI „utičnica bez zaštite"
+ * Dakle puna slika ne košta ništa, a donosi ono najsitnije. Zato 1568.
  */
-export async function downscaleImage(dataUrl: string, maxEdge = 768): Promise<string> {
+export async function downscaleImage(dataUrl: string, maxEdge = 1568): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
