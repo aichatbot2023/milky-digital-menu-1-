@@ -4,7 +4,7 @@
  * činjenice sa izvorom — bez izmišljenih brojeva.
  */
 import type { AgeGroup, Hazard, HazardCategory, Severity } from "../types";
-import { isSr, localized, t } from "./i18n";
+import { isSr, localized } from "./i18n";
 
 export interface Detection {
   label: string;
@@ -652,7 +652,10 @@ export function mapDetectionsToHazards(
     const baseLabel = say("label", rule.labelSr);
     hazards.push({
       id: `local-${hazards.length}-${d.label.replace(/\s/g, "_")}`,
-      label: uncertain ? `${t("maybe")} ${baseLabel}` : baseLabel,
+      // Naziv imenuje predmet i ništa više. Ograda „Moguće:" je zastavica
+      // koju dodaje prikaz — inače isti predmet postoji pod dva imena.
+      label: baseLabel,
+      uncertain,
       category: rule.category,
       severity,
       box: d.box,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Hazard } from "../types";
 import { SEVERITY_META } from "../types";
-import { categoryLabel, severityLabel, t } from "../lib/i18n";
+import { categoryLabel, hazardName, severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
 import {
   openProduct,
@@ -59,7 +59,7 @@ export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) 
           </span>
           <span className="badge badge-cat">{categoryLabel(hazard.category)}</span>
         </div>
-        <h2>{hazard.label}</h2>
+        <h2>{hazardName(hazard)}</h2>
         <p className="sheet-source">
           {hazard.sourceClass
             ? `${t("sheet.srcLocal")}${

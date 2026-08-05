@@ -308,6 +308,29 @@ body {
 }
 .live-frozen { z-index: 1; }
 .live-box { z-index: 2; }
+/* Okvir KLIZI do novog mesta umesto da se teleportuje.
+   Prolaz modela traje između pola sekunde i nekoliko sekundi, pa je svaki
+   novi položaj bio skok. Oko skok čita kao grešku, a klizanje kao praćenje —
+   isti podatak, potpuno drugačiji osećaj. Uz to i traje kraće od razmaka
+   između dva prolaza, pa nikad ne kasni za nalazom. */
+.live-box {
+  transition:
+    left 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+    top 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+    width 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+    height 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.25s ease;
+}
+/* Nov nalaz se pojavljuje mekano, ne bljeskom. */
+@keyframes live-box-in {
+  from { opacity: 0; transform: scale(1.06); }
+  to { opacity: 1; transform: scale(1); }
+}
+.live-box { animation: live-box-in 0.25s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .live-box { transition: none; animation: none; }
+  .live-dot[data-busy] { animation: none; }
+}
 .live-topbar {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 12px);
@@ -333,11 +356,18 @@ body {
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.2);
 }
+/* Tačka kuca SAMO dok model zaista gleda. Dok stalno kuca, ne znači ništa;
+   ovako je jedini pokret na ekranu ujedno i jedina istinita poruka. */
 .live-dot {
   width: 9px;
   height: 9px;
   border-radius: 999px;
   background: #10b981;
+  opacity: 0.55;
+  transition: opacity 0.25s ease;
+}
+.live-dot[data-busy] {
+  opacity: 1;
   animation: pulse 1s ease-in-out infinite;
 }
 @keyframes pulse {

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
 import { SEVERITY_META } from "../types";
-import { CATEGORY_ICONS, severityLabel, t } from "../lib/i18n";
+import { CATEGORY_ICONS, hazardName, severityLabel, t } from "../lib/i18n";
 import { analyzeImage } from "../lib/analyze";
 import { rankHazards } from "../lib/priority";
 import { boxIou, detectLocal, modelError, preloadDetector, retryDetector } from "../lib/detector";
 import { primeTts, speak, stopSpeaking } from "../lib/voice";
+import { HazardTracker } from "../lib/tracker";
 import { HazardDetailSheet } from "./HazardDetailSheet";
 
 interface Props {
@@ -17,23 +18,55 @@ interface Props {
   onFinish: (imageDataUrl: string, result: AnalysisResult) => void;
 }
 
-// Dvoslojna detekcija (isti sistem kao omni):
-//  1. LOKALNI YOLO u browseru — svake ~1.2s, besplatno i neograničeno
+// Dvoslojna detekcija:
+//  1. LOKALNI YOLO u browseru — besplatno i neograničeno
 //  2. CLOUD vision AI — svakih 10s, bogata analiza (zašto/statistika/rešenje)
-const LOCAL_INTERVAL_MS = 1200;
 const CLOUD_INTERVAL_MS = 10000;
 const CLOUD_EDGE = 1024;
 const SPEAK_GAP_MS = 4000;
-// Kratkoročna memorija detekcija: kvadranti se dubinski skeniraju naizmenično,
-// pa nalaz ostaje na ekranu dok rotacija ne stigne ponovo do njega (bez treperenja)
-const MEMORY_TTL_MS = 5500;
+
+/**
+ * PETLJA GLEDA KAD I RODITELJ GLEDA.
+ *
+ * Ranije je ovde stajao `setInterval` na 1200 ms, uz zastavicu „zauzet".
+ * Interval je bio čista fikcija: izmereno je da jedan prolaz traje 3,3 s
+ * samo za ceo kadar, a 6,9 s kad se doda i rotirajući kvadrant. Tajmer je
+ * dakle otkucavao u prazno, a model je radio bez prestanka — telefon se
+ * grejao, baterija je curila, a slika na ekranu je i dalje kasnila.
+ *
+ * Sada se ne kuca po satu nego po onome što kamera radi. Dok roditelj
+ * prelazi pogledom po sobi, nalaz ionako zastari pre nego što stigne, pa
+ * se model ne gnjavi bez potrebe — kadar se samo poredi sa prethodnim, što
+ * košta oko jedne milisekunde. Čim ruka stane, model kreće ODMAH, a ako
+ * roditelj i dalje drži mirno, ide i dublji prolaz sa uveličanim delom
+ * kadra. To je i brže i tačnije od otkucavanja u prazno, a usput je i
+ * jedina stvar u ovome koju roditelj svesno primeti: aplikacija reaguje
+ * na to što se zaustavio.
+ */
+const MOTION_SAMPLE_MS = 120;
+/**
+ * Prosečna razlika piksela (0–255) iznad koje se kadar smatra pokretnim.
+ *
+ * Broj je IZMEREN, ne procenjen. Na istom kadru: nepomična kamera daje 0,
+ * sporo prevlačenje (60 px/s) daje ~5, sweep preko sobe (240 px/s) daje ~14.
+ * Prva napisana vrednost je bila 5,5 — tačno iznad sporog prevlačenja, pa je
+ * pomeranje kamere prolazilo kao mirovanje i cela zamisao nije radila.
+ *
+ * Prag je namerno nisko: greška na stranu „pokreće se" ništa ne kvari, jer
+ * se i tada gleda na svakih MAX_GAP_MS. Šum senzora u mračnoj sobi tako
+ * najviše znači da se dubinski prolaz ređe pali — ne i da se prestaje gledati.
+ */
+const MOTION_LEVEL = 3;
+/** Koliko kadar mora da miruje da bi krenuo dubinski prolaz. */
+const STILL_FOR_DEEP_MS = 900;
+/** I dok se kamera pomera, presek stanja se pravi bar ovoliko često. */
+const MAX_GAP_MS = 2200;
 
 const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 } as const;
 
 export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const localBusy = useRef(false);
   const cloudBusy = useRef(false);
   const cloudFails = useRef(0);
   const cloudSkip = useRef(0);
@@ -44,7 +77,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const lastSpokeRef = useRef(0);
   const soundRef = useRef(false);
   const tickRef = useRef(0);
-  const memoryRef = useRef<Map<string, { h: Hazard; ts: number }>>(new Map());
+  const trackerRef = useRef(new HazardTracker());
 
   const [localHazards, setLocalHazards] = useState<Hazard[]>([]);
   const [cloudResult, setCloudResult] = useState<AnalysisResult | null>(null);
@@ -52,8 +85,21 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const [modelFail, setModelFail] = useState<string | null>(null);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
-  /** Koja opasnost je trenutno u fokusu (listanje strelicama). */
-  const [focusIdx, setFocusIdx] = useState(0);
+  /** Šta petlja upravo radi — status traka bez ovoga ćuti sekundama. */
+  const [phase, setPhase] = useState<"idle" | "moving" | "looking" | "closer">("idle");
+  /**
+   * Koja je opasnost u fokusu — po IDENTITETU PREDMETA, ne po mestu u listi.
+   *
+   * Ranije je ovde stajao redni broj. Lista se preuređuje pri svakom nalazu
+   * (rangira se po riziku), pa je broj 0 posle sekunde pokazivao na nešto
+   * drugo: kartica bi se zamenila dok je roditelj čita, a reflektor bi
+   * odskočio preko pola ekrana. Izmereno na nepokretnoj kameri: dva skoka
+   * u 24 sekunde, najdalji preko 69 % širine ekrana.
+   *
+   * Uz identitet predmeta fokus se pomera samo kad ga roditelj pomeri —
+   * ili kad predmet zaista izađe iz kadra.
+   */
+  const [focusId, setFocusId] = useState<string | null>(null);
   /** Režim prikaza: jedna po jedna (fokus) ili sve odjednom (pregled). */
   const [showAll, setShowAll] = useState(() => {
     try {
@@ -126,49 +172,113 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
     };
   }, [stopStream]);
 
-  // Lokalna detekcija — brza petlja (video element ide direktno u model)
+  // Lokalna detekcija — petlja koja se sama odmerava prema kretanju kamere
   useEffect(() => {
-    const tick = async () => {
-      if (localBusy.current || pausedRef.current) return;
-      const video = videoRef.current;
-      if (!video || video.videoWidth === 0) return;
-      localBusy.current = true;
+    let stopped = false;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    // Poređenje kadrova na sličici 32×24: dovoljno da se razlikuje mirna
+    // ruka od pomeranja, a dovoljno jeftino da sme da se radi non-stop.
+    const probe = document.createElement("canvas");
+    probe.width = 32;
+    probe.height = 24;
+    const pctx = probe.getContext("2d", { willReadFrequently: true });
+    let prev: Uint8ClampedArray | null = null;
+
+    /** Zapamti trenutni kadar kao polaznu tačku, bez ocene kretanja. */
+    const reprime = (video: HTMLVideoElement) => {
+      if (!pctx) return;
+      pctx.drawImage(video, 0, 0, probe.width, probe.height);
+      prev = new Uint8ClampedArray(
+        pctx.getImageData(0, 0, probe.width, probe.height).data,
+      );
+    };
+
+    const motion = (video: HTMLVideoElement): number => {
+      if (!pctx) return 0;
+      pctx.drawImage(video, 0, 0, probe.width, probe.height);
+      const now = pctx.getImageData(0, 0, probe.width, probe.height).data;
+      if (!prev) {
+        prev = new Uint8ClampedArray(now);
+        return 999; // prvi kadar: nema sa čim da se poredi
+      }
+      let sum = 0;
+      for (let i = 0; i < now.length; i += 4) {
+        sum += Math.abs(now[i] - prev[i]) + Math.abs(now[i + 1] - prev[i + 1]) +
+          Math.abs(now[i + 2] - prev[i + 2]);
+      }
+      prev = new Uint8ClampedArray(now);
+      return sum / (now.length / 4) / 3;
+    };
+
+    const pass = async (video: HTMLVideoElement, deep: boolean) => {
+      setPhase(deep ? "closer" : "looking");
       try {
-        // Ceo kadar + jedan "zumirani" kvadrant (rotira se → precizna
-        // pokrivenost cele slike na svakih ~5 sekundi, hvata i sitne predmete)
-        const hazards = await detectLocal(
-          video,
-          video.videoWidth,
-          video.videoHeight,
-          ageGroup,
-          { quadrant: tickRef.current++ % 4 },
+        const found = await detectLocal(
+          video, video.videoWidth, video.videoHeight, ageGroup,
+          // Kvadrant SAMO kad ruka miruje: izmereno je da udvostručuje
+          // trajanje prolaza (3,3 s → 6,9 s). Dok se kamera kreće to je
+          // čist gubitak — kadar se ionako promeni pre nego što se vrati.
+          deep ? { quadrant: tickRef.current++ % 4 } : {},
         );
         setModelReady(true);
         setModelFail(null);
-        // Upis u kratkoročnu memoriju (stabilan prikaz bez treperenja)
-        const now = Date.now();
-        for (const h of hazards) {
-          const cx = h.box.x + h.box.w / 2;
-          const cy = h.box.y + h.box.h / 2;
-          const key = `${h.sourceClass ?? h.label}@${Math.round(cx * 6)},${Math.round(cy * 6)}`;
-          memoryRef.current.set(key, { h: { ...h, id: key }, ts: now });
-        }
-        for (const [k, v] of memoryRef.current) {
-          if (now - v.ts > MEMORY_TTL_MS) memoryRef.current.delete(k);
-        }
-        if (!pausedRef.current) {
-          setLocalHazards([...memoryRef.current.values()].map((v) => v.h));
+        if (!pausedRef.current && !stopped) {
+          setLocalHazards(trackerRef.current.update(found, Date.now()));
         }
       } catch (e: any) {
         // Učitavanje modela palo — prikaži razlog umesto večnog "Učitavam…"
         if (modelError) setModelFail(modelError);
         else if (e?.message) setModelFail(e.message);
-      } finally {
-        localBusy.current = false;
       }
     };
-    const id = setInterval(tick, LOCAL_INTERVAL_MS);
-    return () => clearInterval(id);
+
+    (async () => {
+      let stillSince = 0;
+      let lastPass = 0;
+      let deepDone = false;
+      while (!stopped) {
+        const video = videoRef.current;
+        if (!video || video.videoWidth === 0 || pausedRef.current) {
+          setPhase("idle");
+          await sleep(MOTION_SAMPLE_MS);
+          continue;
+        }
+        const now = Date.now();
+        const moving = motion(video) > MOTION_LEVEL;
+        if (moving) {
+          stillSince = 0;
+          deepDone = false;
+          setPhase("moving");
+        } else if (!stillSince) {
+          stillSince = now;
+        }
+
+        // Presek stanja: čim ruka stane, pa dublje ako i dalje stoji.
+        // Dok se kamera pomera i dalje se povremeno gleda, da roditelj koji
+        // stalno šeta kamerom ne ostane bez ijednog nalaza.
+        const still = !moving;
+        const wantDeep = still && !deepDone && now - stillSince >= STILL_FOR_DEEP_MS;
+        const wantQuick = still && now - lastPass >= MOTION_SAMPLE_MS && stillSince === now;
+        if (wantDeep || wantQuick || now - lastPass >= MAX_GAP_MS) {
+          lastPass = Date.now();
+          if (wantDeep) deepDone = true;
+          await pass(video, wantDeep);
+          lastPass = Date.now();
+          // Polazna tačka se OSVEŽAVA, ne briše. Brisanje bi sledeće merenje
+          // proglasilo kretanjem, pa bi na potpuno mirnoj slici svaki prolaz
+          // odmah pokretao sledeći — model bi radio bez prestanka, a dubinski
+          // prolaz nikad ne bi došao na red.
+          if (videoRef.current) reprime(videoRef.current);
+          continue;
+        }
+        await sleep(MOTION_SAMPLE_MS);
+      }
+    })();
+
+    return () => {
+      stopped = true;
+    };
   }, [ageGroup]);
 
   // Cloud AI — spora petlja (bogata analiza)
@@ -231,13 +341,20 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   // preklopljenih okvira je debug prikaz, ne korisničko iskustvo.
   const ranked = rankHazards(hazards, ageGroup);
   const count = ranked.length;
-  const active = ranked[Math.min(focusIdx, Math.max(0, ranked.length - 1))] ?? null;
+  // Fokus prati PREDMET. Ako je predmet izašao iz kadra, pređi na najveći
+  // rizik — ali tek tada, ne pri svakom preuređivanju liste.
+  const focusIdx = Math.max(0, ranked.findIndex((h) => h.id === focusId));
+  const active = ranked[focusIdx] ?? null;
   const topHazard = active;
 
   // Sesija + glasovna upozorenja na SVAKU novu opasnost
   useEffect(() => {
     for (const h of hazards) {
-      const prev = sessionRef.current.get(h.label);
+      // Ključ je PREDMET (kategorija + naziv), ne ispisani naziv. Dok je
+      // ograda „Moguće:" stajala u nazivu, ista činija je u izveštaj ulazila
+      // dvaput — kao „Činija" i kao „Moguće: Činija".
+      const key = `${h.category}|${h.label}`;
+      const prev = sessionRef.current.get(key);
       if (!prev && (h.severity === "critical" || h.severity === "high")) {
         // Vibracija na novu ozbiljnu opasnost (Android; iOS ignoriše)
         try {
@@ -247,7 +364,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         }
       }
       if (!prev || SEV_ORDER[h.severity] < SEV_ORDER[prev.severity]) {
-        sessionRef.current.set(h.label, h);
+        sessionRef.current.set(key, h);
       }
     }
     setSessionCount(sessionRef.current.size);
@@ -263,7 +380,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         spokenRef.current.add(fresh.label);
         lastSpokeRef.current = now;
         speak(
-          `${t("live.alert")} ${fresh.label}. ${severityLabel(fresh.severity)} ${t("live.risk")}. ${fresh.fix}`,
+          `${t("live.alert")} ${hazardName(fresh)}. ${severityLabel(fresh.severity)} ${t("live.risk")}. ${fresh.fix}`,
         );
       }
     }
@@ -282,7 +399,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const goto = (delta: number) => {
     if (count < 2) return;
     setPagerTouched(true);
-    setFocusIdx((i) => (i + delta + count) % count);
+    setFocusId(ranked[(focusIdx + delta + count) % count].id);
     try {
       (navigator as any).vibrate?.(12);
     } catch {
@@ -353,10 +470,16 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         ? t("live.loading")
         : count > 0
           ? `${count} ${count === 1 ? t("live.one") : t("live.many")}`
-          : t("live.scanning");
+          : phase === "moving"
+            ? t("live.moving")
+            : phase === "closer"
+              ? t("live.closer")
+              : phase === "looking"
+                ? t("live.looking")
+                : t("live.scanning");
 
   return (
-    <div className="live-wrap">
+    <div className="live-wrap" data-phase={phase}>
       <video ref={videoRef} className="live-video" playsInline muted autoPlay />
       {paused && frozenFrame && (
         <img src={frozenFrame} alt="" className="live-video live-frozen" />
@@ -393,10 +516,10 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
               ["--sev-glow" as string]: `${SEVERITY_META[h.severity].color}66`,
             }}
             onClick={() => {
-              setFocusIdx(i);
+              setFocusId(h.id);
               setPagerTouched(true);
             }}
-            aria-label={h.label}
+            aria-label={hazardName(h)}
           >
             <span
               className="live-pin"
@@ -407,7 +530,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
             {i === focusIdx && (
               <span className="live-tag live-tag-float">
                 <span className="live-tag-name">
-                  {CATEGORY_ICONS[h.category]} {h.label}
+                  {CATEGORY_ICONS[h.category]} {hazardName(h)}
                   {h.count > 1 && ` ×${h.count}`}
                 </span>
               </span>
@@ -429,7 +552,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
             ["--sev-glow" as string]: `${SEVERITY_META[active.severity].color}66`,
           }}
           onClick={() => pauseOn(active)}
-          aria-label={active.label}
+          aria-label={hazardName(active)}
         >
           <span className="live-tag">
             <span
@@ -439,7 +562,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
               {focusIdx + 1}
             </span>
             <span className="live-tag-name">
-              {CATEGORY_ICONS[active.category]} {active.label}
+              {CATEGORY_ICONS[active.category]} {hazardName(active)}
               {active.count > 1 && ` ×${active.count}`}
             </span>
             <b
@@ -454,7 +577,12 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
 
       <div className="live-topbar">
         <span className="live-status">
-          {!cameraError && !paused && <span className="live-dot" />}
+          {!cameraError && !paused && (
+            <span
+              className="live-dot"
+              data-busy={phase === "looking" || phase === "closer" ? "1" : undefined}
+            />
+          )}
           {status}
         </span>
         <div className="live-topbtns">
@@ -513,7 +641,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
                         : undefined
                     }
                     onClick={() => {
-                      setFocusIdx(i);
+                      setFocusId(h.id);
                       setPagerTouched(true);
                     }}
                     aria-label={`${i + 1}`}
@@ -538,7 +666,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
               {CATEGORY_ICONS[topHazard.category]} {severityLabel(topHazard.severity)}
             </span>
             <span className="live-strip-body">
-              <strong>{topHazard.label}</strong>
+              <strong>{hazardName(topHazard)}</strong>
               <span className="live-strip-why">{topHazard.why}</span>
               <span className="live-strip-hint">{t("live.tapMore")}</span>
             </span>

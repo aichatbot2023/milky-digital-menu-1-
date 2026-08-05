@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgeGroup, Hazard } from "../types";
 import { SEVERITY_META } from "../types";
-import { severityLabel, t } from "../lib/i18n";
+import { hazardName, severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
 import { Icon } from "./Icon";
 import { Logo } from "./Logo";
@@ -128,7 +128,7 @@ function FocusCard({
   return (
     <article className="focus-card stagger">
       <div className="focus-photo">
-        {crop ? <img src={crop} alt={h.label} /> : <div className="focus-photo-skel" />}
+        {crop ? <img src={crop} alt={hazardName(h)} /> : <div className="focus-photo-skel" />}
         <span className="focus-risk" style={{ background: meta.color }}>
           {severityLabel(h.severity)}
         </span>
@@ -149,7 +149,7 @@ function FocusCard({
         </p>
       )}
       <h2 className="focus-title">
-        {h.label}
+        {hazardName(h)}
         {h.count > 1 && <span className="focus-count">×{h.count}</span>}
       </h2>
       <p className="focus-desc">{h.why}</p>
@@ -364,7 +364,7 @@ export function HazardFocus({
               </span>
               <span className="fl-body">
                 <span className="fl-top">
-                  <b>{h.label}</b>
+                  <b>{hazardName(h)}</b>
                   {h.count > 1 && <span className="fl-count">×{h.count}</span>}
                   <span className="fl-sev" style={{ color: SEVERITY_META[h.severity].color }}>
                     {severityLabel(h.severity)}
@@ -402,7 +402,7 @@ export function HazardFocus({
 
       {open.length > 1 && (
         <p className="focus-next">
-          {t("focus.next")}: <b>{open[1].label}</b>
+          {t("focus.next")}: <b>{hazardName(open[1])}</b>
         </p>
       )}
     </div>

@@ -241,6 +241,12 @@ const D: Dict = {
   // Live
   "live.loading": { en: "Loading AI model… (a few seconds, one-time)", sr: "Učitavam AI model… (par sekundi, jednokratno)" },
   "live.scanning": { en: "Scanning — move the camera slowly around the room", sr: "Skeniram — polako pomerajte kameru kroz prostor" },
+  // Stanja petlje: roditelj u svakom trenutku zna šta aplikacija radi.
+  // Prolaz modela na telefonu traje i po nekoliko sekundi; bez ovoga taj
+  // period izgleda kao da se aplikacija zaglavila.
+  "live.moving": { en: "Hold still to look closely", sr: "Zastanite da bolje pogledam" },
+  "live.looking": { en: "Looking…", sr: "Gledam…" },
+  "live.closer": { en: "Looking closer…", sr: "Gledam izbliza…" },
   "live.one": { en: "hazard in frame", sr: "opasnost u kadru" },
   "live.many": { en: "hazards in frame", sr: "opasnosti u kadru" },
   "live.retry": { en: "↻ Try again", sr: "↻ Pokušaj ponovo" },
@@ -638,6 +644,16 @@ export const ageLabel = (a: AgeGroup) => pick(`$age.${a}`, AGE[a]);
 export const roomLabel = (r: RoomType) => pick(`$room.${r}`, ROOM[r]);
 export const severityLabel = (s: Severity) => pick(`$sev.${s}`, SEV[s]);
 export const categoryLabel = (c: HazardCategory) => pick(`$cat.${c}`, CAT[c]);
+
+/**
+ * Naziv opasnosti onako kako se ISPISUJE, sa ogradom ako model nagađa.
+ *
+ * Jedino mesto koje sme da doda „Moguće:". Sam `label` ostaje čist naziv
+ * predmeta, pa se isti predmet svuda prepoznaje kao jedan — i u brojanju,
+ * i u grupisanju, i u pamćenju kroz skenove.
+ */
+export const hazardName = (h: { label: string; uncertain?: boolean }): string =>
+  h.uncertain ? `${t("maybe")} ${h.label}` : h.label;
 
 /** Ikona kategorije — čini markere prepoznatljivim na prvi pogled. */
 export const CATEGORY_ICONS: Record<HazardCategory, string> = {

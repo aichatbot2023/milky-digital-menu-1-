@@ -1,5 +1,6 @@
 import type { Hazard } from "../types";
 import { SEVERITY_META } from "../types";
+import { hazardName } from "../lib/i18n";
 
 interface Props {
   imageUrl: string;
@@ -28,7 +29,7 @@ export function HazardOverlay({ imageUrl, hazards, selectedId, onSelect }: Props
               borderColor: meta.color,
             }}
             onClick={() => onSelect(h.id)}
-            aria-label={`${meta.label}: ${h.label}`}
+            aria-label={`${meta.label}: ${hazardName(h)}`}
           >
             <span className="hazard-pin" style={{ background: meta.color }}>
               {h.resolved ? "✓" : i + 1}

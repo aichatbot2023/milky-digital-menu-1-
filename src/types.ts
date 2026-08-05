@@ -44,6 +44,16 @@ export interface Hazard {
   /** Pouzdanost lokalne detekcije 0–1 (cloud nalazi je nemaju). */
   confidence?: number;
   /**
+   * Model nagađa — naziv nije potvrđen (npr. bebeća flašica ≠ „čaša").
+   *
+   * Ovo je ZASTAVICA, ne deo naziva. Ranije se „Moguće:" lepilo u sam
+   * `label`, pa je isti predmet ulazio u spiskove pod dva imena i brojao
+   * se dvaput, a mesta koja i sama dodaju prefiks ispisivala su
+   * „Sledeće: Moguće: Flaša". Naziv sada uvek imenuje predmet, a ogradu
+   * dodaje prikaz, na jednom mestu — `hazardName()`.
+   */
+  uncertain?: boolean;
+  /**
    * Da li je NEKO ZAISTA POGLEDAO ovu sliku i potvrdio nalaz.
    *
    * Nalazi iz oblaka su potvrđeni po definiciji — nastali su gledanjem
