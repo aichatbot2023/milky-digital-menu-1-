@@ -19,6 +19,14 @@ export interface PartnerProduct {
   keywords?: string | null;
   /** URL slike proizvoda (opciono) — kartica izgleda kao prava prodavnica. */
   image_url?: string | null;
+  /**
+   * Sve vrste opasnosti koje ovaj proizvod rešava, razdvojene zarezom.
+   *
+   * Jedna kategorija nije dovoljna: brava za ormarić čuva i od gutanja sitnih
+   * delova i od sredstava za čišćenje ispod sudopere. Dok je proizvod imao
+   * samo jednu kategoriju, kod trovanja se nije ni pojavljivao.
+   */
+  solves?: string | null;
 }
 
 const PRODUCTS_URL =
@@ -312,16 +320,27 @@ export async function recommendationsFor(h: {
   const want = new Set(tokens(query));
   const all = await fetchCatalog();
 
+  // KATEGORIJA JE KAPIJA, NE SITAN DODATAK.
+  //
+  // Ranije je bilo obrnuto: svaka zajednička reč nosila je deset poena, a
+  // ista kategorija samo jedan. Ishod se video na ekranu — za vrelo posuđe na
+  // šporetu prva preporuka su bili POKLOPCI ZA UTIČNICE, jer je upit glasio
+  // „stovetop knob covers", a u nazivu utičnog poklopca stoji reč „covers".
+  // Štitnik za šporet je pritom ISPAO iz izbora, jer sa tim upitom nije delio
+  // nijednu reč.
+  //
+  // Zato sada kategorija odlučuje ko uopšte ulazi u izbor, a reči samo
+  // ređaju unutar nje. Proizvod iz druge kategorije mora da ima najmanje dve
+  // zajedničke reči da bi se uopšte pojavio — jedna slučajna reč nije veza.
   const scored = all
     .map((p) => {
       const hay = tokens(`${p.keywords ?? ""} ${p.title_en ?? ""} ${p.title}`);
       const overlap = hay.filter((w) => want.has(w)).length;
-      // Kategorija je slab signal — sama po sebi ne kvalifikuje proizvod
-      const score = overlap * 10 + (p.category === h.category ? 1 : 0);
-      return { p, score, overlap };
+      const solves = String(p.solves ?? p.category).split(",").map((c) => c.trim());
+      const sameKind = p.category === h.category || solves.includes(h.category);
+      return { p, overlap, sameKind, score: (sameKind ? 100 : 0) + overlap * 10 };
     })
-    // Bez ijedne zajedničke reči proizvod NIJE u kontekstu → ne prikazuj ga
-    .filter((x) => x.overlap > 0)
+    .filter((x) => x.sameKind || x.overlap >= 2)
     .sort((a, b) => b.score - a.score)
     .slice(0, 2);
 

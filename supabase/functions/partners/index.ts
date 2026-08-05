@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 
     if (action === 'products') {
       const products = await s`
-        SELECT id, category, brand, title, title_en, url, price, keywords, image_url
+        SELECT id, category, brand, title, title_en, url, price, keywords, image_url, solves
         FROM sn_products WHERE active ORDER BY category, id`;
       return json({ products });
     }
