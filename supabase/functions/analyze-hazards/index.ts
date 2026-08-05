@@ -12,6 +12,8 @@
  * Vraća: { hazards: [...], safety_score, summary, _provider, _model }
  */
 
+const ADMIN = Deno.env.get('ADMIN_KEY') ?? '';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -47,50 +49,67 @@ interface Provider {
 // može da uskoči ni kao ispomoć.
 const PROVIDERS: Provider[] = [
   {
-    // PRIMARNI: najbolji na jezicima van engleskog, i dovoljno brz.
+    // PRVI: najbolji jezik među onima koji su ZAISTA živi. Gemma piše
+    // pristojan srpski; Nemotron ne. Mereno, ne pretpostavljeno.
+    name: 'openrouter',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: (Deno.env.get('FREE_MODELS') ??
+      'google/gemma-4-26b-a4b-it:free,google/gemma-4-31b-it:free,nvidia/nemotron-nano-12b-v2-vl:free'
+    ).split(',').map((m) => m.trim()).filter(Boolean),
+    extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
+  },
+  {
+    // Uvek dostupan i brz (oko 350 ms), ali na retkim jezicima piše slabo.
+    // Zato je iza Gemme, a ispred mrtvih — bolje slabiji srpski nego ništa.
+    name: 'nvidia',
+    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
+    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
+    // Bez ovoga reasoning model „razmišlja" 40–60 s po slici.
+    extraBody: { chat_template_kwargs: { enable_thinking: false } },
+  },
+  {
+    // Najbolji od svih na jeziku, ali je nalog na nuli (403, credit limit).
+    // Ostaje u lancu iza živih: čim se dopuni, sam se vraća u igru.
     name: 'lovable',
     key: Deno.env.get('LOVABLE_API_KEY'),
     url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
     models: ['google/gemini-2.5-flash'],
   },
   {
+    // Isto: 429, potrošen predujam. Stoji radi dana kada bude dopunjen.
     name: 'gemini',
     key: Deno.env.get('GEMINI_API_KEY'),
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    models: ['gemini-2.5-flash'],
-  },
-  {
-    name: 'openrouter',
-    key: Deno.env.get('OPENROUTER_API_KEY'),
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    // Gemma pre omni-nano: omni nano piše loš srpski i nemački.
-    models: (Deno.env.get('FREE_MODELS') ??
-      'google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,nvidia/nemotron-nano-12b-v2-vl:free'
-    ).split(',').map((m) => m.trim()).filter(Boolean),
-    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
-  },
-  {
-    name: 'groq',
-    key: Deno.env.get('GROQ_API_KEY'),
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    // Jedan jedini model ovde je vraćao 404 na ovom nalogu, pa provajder
-    // nikad nije ni odgovorio. Sada ih ima više: koji postoji, taj radi.
-    models: [
-      'meta-llama/llama-4-maverick-17b-128e-instruct',
-      'meta-llama/llama-4-scout-17b-16e-instruct',
-    ],
-  },
-  {
-    // POSLEDNJA: brza, ali na retkim jezicima piše besmislice.
-    name: 'nvidia',
-    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
-    // Bez ovoga reasoning model „razmišlja" 40–60 s po slici, pa klijent
-    // odustane. Sa isključenim razmišljanjem: par sekundi.
-    extraBody: { chat_template_kwargs: { enable_thinking: false } },
+    models: ['gemini-2.5-flash', 'gemini-2.0-flash'],
   },
 ];
+
+/**
+ * Provajder koji je upravo rekao „nemam kvotu" ne pitamo ponovo odmah.
+ *
+ * Ovo je bio pravi uzrok toga što aplikacija „ne vidi očiglednu opasnost":
+ * četiri od pet provajdera su mrtva (potrošeni krediti), lanac je na njima
+ * trošio preko sedamdeset sekundi, a telefon odustaje posle trideset pet.
+ * Do živog provajdera se prosto nikad nije stiglo, pa je roditelj ostajao na
+ * onome što je telefon sam video — saksija i tri činije u kuhinji sa vrelim
+ * šporetom.
+ *
+ * Odgovori koji znače „nema kvote" ili „nema modela" ne menjaju se za minut,
+ * pa se pamte i preskaču. Sve ostalo je prolazno i ne pamti se.
+ */
+const asleep = new Map<string, number>();
+const SLEEP_MS = 10 * 60 * 1000;
+const DEAD = /^(401|402|403|404|429)\b/;
+
+/**
+ * Jedan pokušaj ne sme da pojede ceo budžet telefona, ali ni da ubije onoga
+ * ko radi. Izmereno: Gemmi na kadar od 768 px treba oko 16–20 s. Prvi put
+ * sam ovde stavio 12 s po tome koliko je provajder odgovarao na sličicu od
+ * osam piksela — i time pogasio jedina dva koja rade.
+ */
+const TRY_MS = 26000;
 
 // Prompt je NAMERNO ceo na engleskom: slabiji fallback modeli odgovaraju na
 // jeziku samog prompta i ignorišu direktivu. Engleski prompt + "OUTPUT
@@ -376,6 +395,150 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
   const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian', live = false } = body ?? {};
 
+  // Stanje svakog provajdera ponaosob.
+  //
+  // Poruka o grešci nosi samo POSLEDNJI neuspeh, pa se iz nje ne vidi da li
+  // je pao jedan ili svih pet. Bez ovoga se lanac ne može održavati — a kad
+  // ceo lanac padne, roditelj ostaje na onome što je telefon sam video, i to
+  // je tačno slučaj u kome aplikacija propusti očiglednu opasnost.
+/**
+ * Provajderi koje tek treba izmeriti pre nego što uđu u lanac.
+ *
+ * Projekat već drži gomilu ključeva; koji od njih ume da gleda sliku i koji
+ * je zaista živ — to se ne pretpostavlja nego proba. Ova lista postoji samo
+ * radi provere i ne učestvuje u analizi.
+ */
+const CANDIDATES: Provider[] = [
+  {
+    name: 'ai-studio-20',
+    key: Deno.env.get('GOOGLE_AI_STUDIO_API_KEY'),
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    models: ['gemini-2.0-flash'],
+  },
+  {
+    name: 'ai-studio-lite',
+    key: Deno.env.get('GOOGLE_AI_STUDIO_API_KEY'),
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    models: ['gemini-2.0-flash-lite'],
+  },
+  {
+    name: 'gemini-20',
+    key: Deno.env.get('GEMINI_API_KEY'),
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    models: ['gemini-2.0-flash'],
+  },
+  {
+    name: 'or-gemma-26b',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: ['google/gemma-4-26b-a4b-it:free'],
+    extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
+  },
+  {
+    name: 'or-nemotron-vl',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: ['nvidia/nemotron-nano-12b-v2-vl:free'],
+    extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
+  },
+  {
+    name: 'openai',
+    key: Deno.env.get('OPENAI_API_KEY'),
+    url: 'https://api.openai.com/v1/chat/completions',
+    models: ['gpt-4o-mini'],
+  },
+  {
+    name: 'mulerouter',
+    key: Deno.env.get('MULEROUTER_API_KEY'),
+    url: 'https://api.mulerouter.com/v1/chat/completions',
+    models: ['gemini-2.5-flash'],
+  },
+  {
+    name: 'groq-scout',
+    key: Deno.env.get('GROQ_API_KEY'),
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    models: ['meta-llama/llama-4-scout-17b-16e-instruct'],
+  },
+  {
+    name: 'openrouter-qwen',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: ['qwen/qwen2.5-vl-72b-instruct:free'],
+    extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
+  },
+  {
+    name: 'openrouter-llama',
+    key: Deno.env.get('OPENROUTER_API_KEY'),
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: ['meta-llama/llama-3.2-11b-vision-instruct:free'],
+    extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
+  },
+];
+
+  if (body?.action === 'providers') {
+    if (!ADMIN || body.admin_key !== ADMIN) return json({ error: 'unauthorized' }, 401);
+    const dot =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAHElEQVQoz2NgGAWjYBSMglEwCkbBKBgFo2AUAAAGmgABr0EPFwAAAABJRU5ErkJggg==';
+    const out: Record<string, string> = {};
+    const probe = body.candidates === true ? [...PROVIDERS, ...CANDIDATES] : PROVIDERS;
+
+    // Sa pravom slikom se meri ono što se zaista dešava: ceo upit, ceo
+    // odgovor, i vreme koje na to stvarno ode. Tačkica od osam piksela je
+    // ranije pokazala da provajder „radi" za 350 ms, a na pravoj fotografiji
+    // mu treba višestruko više — pa sam po toj laži postavio prekratak rok i
+    // sam pogasio one koji rade.
+    if (typeof image === 'string' && image.startsWith('data:image/')) {
+      const real = buildPrompt(String(roomType), String(ageGroup), undefined, String(language).slice(0, 30), false);
+      for (const p of probe) {
+        if (!p.key) { out[p.name] = 'nema ključa'; continue; }
+        const t0 = Date.now();
+        try {
+          const r = await callVision(p, p.models[0], image, real, String(language).slice(0, 30));
+          out[p.name] = `radi ${Date.now() - t0} ms · ${r.hazards.length} nalaza · ${p.models[0]}`;
+        } catch (e: any) {
+          out[p.name] = `${Date.now() - t0} ms · ${String(e?.message ?? e).slice(0, 120)}`;
+        }
+      }
+      return json({ providers: out });
+    }
+
+    for (const p of probe) {
+      if (!p.key) { out[p.name] = 'nema ključa'; continue; }
+      const model = p.models[0];
+      const t0 = Date.now();
+      try {
+        const res = await fetch(p.url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${p.key}`,
+            'Content-Type': 'application/json',
+            ...(p.extraHeaders ?? {}),
+          },
+          body: JSON.stringify({
+            ...(p.extraBody ?? {}),
+            model,
+            max_tokens: 16,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: 'Reply with the single word OK.' },
+                { type: 'image_url', image_url: { url: dot } },
+              ],
+            }],
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        const text = await res.text();
+        out[p.name] = res.ok
+          ? `radi (${Date.now() - t0} ms) ${model}`
+          : `${res.status} ${text.slice(0, 160)}`;
+      } catch (e: any) {
+        out[p.name] = `pad: ${String(e?.message ?? e).slice(0, 160)}`;
+      }
+    }
+    return json({ providers: out });
+  }
+
   if (body?.action === 'verify') {
     const crops = Array.isArray(body.crops) ? body.crops.slice(0, 6) : [];
     const clean = crops.filter(
@@ -411,12 +574,25 @@ Deno.serve(async (req) => {
   const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30), live === true);
 
   const errors: string[] = [];
+  const now = Date.now();
   for (const provider of active) {
+    if ((asleep.get(provider.name) ?? 0) > now) continue;
     for (const model of provider.models) {
       try {
-        return json(await callVision(provider, model, image, prompt, String(language).slice(0, 30)));
+        return json(await Promise.race([
+          callVision(provider, model, image, prompt, String(language).slice(0, 30)),
+          new Promise((_, no) => setTimeout(() => no(new Error(`${provider.name}: predugo`)), TRY_MS)),
+        ]) as any);
       } catch (e: any) {
-        errors.push(e?.message ?? String(e));
+        const why = e?.message ?? String(e);
+        errors.push(why);
+        // „upstream 429" i slično — nalog nema kvotu, ne vredi dalje ni sa
+        // drugim modelom istog provajdera.
+        const code = why.match(/upstream (\d{3})/)?.[1];
+        if (code && DEAD.test(code)) {
+          asleep.set(provider.name, Date.now() + SLEEP_MS);
+          break;
+        }
       }
     }
   }

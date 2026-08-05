@@ -109,7 +109,20 @@ async function doAnalyze(
 }
 
 // Smanjuje sliku pre slanja (štedi tokene i ubrzava analizu)
-export async function downscaleImage(dataUrl: string, maxEdge = 1568): Promise<string> {
+/**
+ * Slika za analizu — namerno mala.
+ *
+ * Bilo je 1568 px i to je bio pravi razlog zašto aplikacija „ne vidi
+ * očiglednu opasnost". Besplatnim modelima na toliki kadar treba preko
+ * trideset sekundi, telefon odustane posle trideset pet, i roditelj ostane
+ * na onome što je lokalni detektor sam video — saksija i tri činije u kuhinji
+ * sa vrelim šporetom.
+ *
+ * Izmereno na istoj kuhinji: 1568 px → niko ne stigne; 640 px → odgovor za
+ * 16 s. 768 px je sredina koja staje u rok, a zadržava dovoljno sitnih
+ * detalja (utičnica, ivica) da ih model uopšte vidi.
+ */
+export async function downscaleImage(dataUrl: string, maxEdge = 768): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
