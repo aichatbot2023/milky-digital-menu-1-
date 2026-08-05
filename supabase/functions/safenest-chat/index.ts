@@ -1,3 +1,4 @@
+import { providers, languageRules, isAsleep, noteFailure, TRY_MS, type Provider } from '../_shared/ai.ts';
 /**
  * safenest-chat — glasovni/tekstualni asistent za bezbednost dece.
  * Pitanje roditelja + kontekst skena (prostor, uzrast, nađene opasnosti)
@@ -13,47 +14,10 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface Provider {
-  name: string;
-  key: string | undefined;
-  url: string;
-  models: string[];
-  extraHeaders?: Record<string, string>;
-  extraBody?: Record<string, unknown>;
-}
-
 // Redosled po KVALITETU JEZIKA: mali :free modeli (nano-30b) pišu loš
 // srpski/nemački, pa idu poslednji. NVIDIA NIM Nemotron je primaran (dobar
 // višejezični izlaz, brz za tekst), zatim veći free modeli.
-const PROVIDERS: Provider[] = [
-  {
-    name: 'nvidia',
-    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
-    // Bez reasoning-a: glasovni odgovor mora da stigne za par sekundi
-    extraBody: { chat_template_kwargs: { enable_thinking: false } },
-  },
-  {
-    name: 'openrouter',
-    key: Deno.env.get('OPENROUTER_API_KEY'),
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    models: ['nvidia/nemotron-3-super-120b-a12b:free', 'google/gemma-4-31b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'],
-    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
-  },
-  {
-    name: 'groq',
-    key: Deno.env.get('GROQ_API_KEY'),
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    models: ['llama-3.3-70b-versatile'],
-  },
-  {
-    name: 'gemini',
-    key: Deno.env.get('GEMINI_API_KEY'),
-    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    models: ['gemini-2.5-flash'],
-  },
-];
+const PROVIDERS: Provider[] = providers();
 
 // Prompt je ceo na engleskom: slabiji modeli odgovaraju na jeziku prompta,
 // pa engleski prompt + "OUTPUT LANGUAGE: X" daje pouzdan izlaz na 42 jezika.
@@ -85,6 +49,8 @@ Deno.serve(async (req) => {
 
   const system = `OUTPUT LANGUAGE: ${language}. Respond ENTIRELY in ${language} — never mix languages. If any source knowledge is in another language, translate it into ${language}.
 
+${languageRules(language)}
+
 You are the SafeNest voice assistant — an expert in child safety at home (childproofing, pediatric injury prevention; WHO/CDC/EU sources).
 Context: child aged ${age}. ${hazardCtx}
 Answer rules:
@@ -96,6 +62,9 @@ Answer rules:
 
   const errors: string[] = [];
   for (const p of PROVIDERS.filter((x) => x.key)) {
+    // Mrtav nalog se ne pita ponovo; bez ovoga lanac potroši ceo
+    // budžet telefona na provajdere koji nemaju kvotu.
+    if (isAsleep(p.name)) continue;
     for (const model of p.models) {
       try {
         const res = await fetch(p.url, {

@@ -1,3 +1,4 @@
+import { providers, isAsleep, noteFailure, TRY_MS, type Provider } from '../_shared/ai.ts';
 /**
  * analyze-hazards — AI detekcija opasnosti po decu na fotografiji prostora.
  *
@@ -19,16 +20,6 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface Provider {
-  name: string;
-  key: string | undefined;
-  url: string;
-  models: string[];
-  extraHeaders?: Record<string, string>;
-  /** Dodatna polja u telu zahteva (npr. isključenje reasoning-a). */
-  extraBody?: Record<string, unknown>;
-}
-
 // Lanac provajdera, poređan po IZMERENOM kvalitetu na retkim jezicima.
 //
 // Ovo je bilo naopako i skupo se videlo. NVIDIA Nemotron je stajao prvi
@@ -47,58 +38,7 @@ interface Provider {
 //
 // Svi moraju da vide sliku: lanac je multimodalan, tekstualni model ovde ne
 // može da uskoči ni kao ispomoć.
-const PROVIDERS: Provider[] = [
-  {
-    // PRVI: Cerebras, besplatan nivo. Isti model kao kod OpenRoutera
-    // (Gemma, koja jedina od besplatnih piše pristojan srpski), ali na
-    // hardverskom ubrzivaču: 1,3 s naspram 29 s. Mereno na istoj kuhinji.
-    name: 'cerebras',
-    key: Deno.env.get('CEREBRAS_API_KEY'),
-    url: 'https://api.cerebras.ai/v1/chat/completions',
-    models: ['gemma-4-31b'],
-  },
-  {
-    // Isti servis, drugi ključ — dakle druga dnevna kvota. Ključ stoji pod
-    // imenom za OpenAI, ali počinje sa `csk-` i pripada Cerebrasu; nije
-    // vredno seliti tajnu, vredno je iskoristiti je.
-    name: 'cerebras-2',
-    key: Deno.env.get('OPENAI_API_KEY'),
-    url: 'https://api.cerebras.ai/v1/chat/completions',
-    models: ['gemma-4-31b'],
-  },
-  {
-    // Ista porodica modela, drugi put do njih — kad Cerebras potroši kvotu.
-    name: 'openrouter',
-    key: Deno.env.get('OPENROUTER_API_KEY'),
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    models: (Deno.env.get('FREE_MODELS') ??
-      'google/gemma-4-26b-a4b-it:free,google/gemma-4-31b-it:free,nvidia/nemotron-nano-12b-v2-vl:free'
-    ).split(',').map((m) => m.trim()).filter(Boolean),
-    extraHeaders: { 'HTTP-Referer': 'https://safenessai.co.uk', 'X-Title': 'SafeNest AI' },
-  },
-  {
-    // Najbolji na jeziku, ali nalog na nuli (403). Čim se dopuni, sam ulazi.
-    name: 'lovable',
-    key: Deno.env.get('LOVABLE_API_KEY'),
-    url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
-    models: ['google/gemini-2.5-flash'],
-  },
-  {
-    name: 'gemini',
-    key: Deno.env.get('GEMINI_API_KEY'),
-    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    models: ['gemini-2.5-flash', 'gemini-2.0-flash'],
-  },
-  {
-    // POSLEDNJA: uvek odgovori, ali na srpskom piše besmislice
-    // („red pot na gasnoj konaci"). Bolje to nego prazan ekran — i ništa više.
-    name: 'nvidia',
-    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
-    extraBody: { chat_template_kwargs: { enable_thinking: false } },
-  },
-];
+const PROVIDERS: Provider[] = providers();
 
 /**
  * Provajder koji je upravo rekao „nemam kvotu" ne pitamo ponovo odmah.
@@ -113,9 +53,6 @@ const PROVIDERS: Provider[] = [
  * Odgovori koji znače „nema kvote" ili „nema modela" ne menjaju se za minut,
  * pa se pamte i preskaču. Sve ostalo je prolazno i ne pamti se.
  */
-const asleep = new Map<string, number>();
-const SLEEP_MS = 10 * 60 * 1000;
-const DEAD = /^(401|402|403|404|429)\b/;
 
 /**
  * Jedan pokušaj ne sme da pojede ceo budžet telefona, ali ni da ubije onoga
@@ -123,7 +60,6 @@ const DEAD = /^(401|402|403|404|429)\b/;
  * sam ovde stavio 12 s po tome koliko je provajder odgovarao na sličicu od
  * osam piksela — i time pogasio jedina dva koja rade.
  */
-const TRY_MS = 26000;
 
 // Prompt je NAMERNO ceo na engleskom: slabiji fallback modeli odgovaraju na
 // jeziku samog prompta i ignorišu direktivu. Engleski prompt + "OUTPUT
@@ -145,6 +81,43 @@ const AGE_EN: Record<string, string> = {
   '4-7y': '4–7 years (uses scissors and devices, imitates adults)',
   '7y+': '7+ years (independent; risks: electricity, chemicals, heights)',
 };
+
+/**
+ * Zatvoren rečnik rešenja.
+ *
+ * Model je ranije sam pisao ime proizvoda („stovetop knob covers"), a mi smo
+ * ga posle upoređivali sa katalogom po zajedničkim rečima. Tako su poklopci
+ * za utičnice postali prvo rešenje za vreo šporet — jer im se poklopila reč
+ * „covers". Slobodan tekst se ne da pouzdano spojiti sa policom.
+ *
+ * Zato model bira KLJUČ sa spiska. Spisak je kratak i pokriva ono što se u
+ * domu sa detetom zaista kupuje; kad ništa ne odgovara, ključ je `none` i
+ * roditelj dobija samo savet, bez proizvoda.
+ */
+const SOLUTION_KEYS = [
+  'socket_cover',        // otvorena utičnica
+  'corner_guard',        // oštra ivica stola, police, radne ploče
+  'stair_gate',          // stepenice, prolaz, vrata sobe
+  'cabinet_lock',        // ormarić, vitrina
+  'drawer_lock',         // fioka
+  'oven_lock',           // vrata rerne
+  'hob_guard',           // ringle, šporet, vrelo posuđe
+  'anti_tip_strap',      // komoda, polica, TV koji se prevrće
+  'blind_cord_winder',   // kabl roletne ili zavese
+  'medicine_box',        // lekovi, vitamini
+  'chemical_lock',       // sredstva za čišćenje, deterdžent, kapsule
+  'bath_mat',            // klizava kada ili tuš
+  'toilet_lock',         // WC šolja
+  'spill_proof_cup',     // vrelo piće nadohvat
+  'door_stopper',        // vrata koja prikleštaju prste
+  'window_lock',         // prozor, balkonska vrata
+  'cord_cover',          // slobodni kablovi, produžni
+  'fireplace_guard',     // kamin, peć, radijator
+  'knife_lock',          // noževi, makaze, oštri pribor
+  'small_parts_bin',     // sitni delovi, baterije, magneti
+  'furniture_edge_film', // staklo, ogledalo, staklena vrata
+  'none',                // nema proizvoda — samo postupak
+] as const;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
@@ -170,6 +143,18 @@ LIVE CAMERA MODE — THIS IS A SINGLE FRAME FROM A LIVE VIDEO FEED (may be blurr
 
 VOCABULARY: use natural, correct, everyday words that a native ${language} speaker would use, with correct grammar in every sentence. NEVER invent words, never transliterate from other languages, never use made-up terms. If you do not know the exact word for an object in ${language}, use a simple common description instead. For Serbian: standard ekavian Serbian ("sto" not "stol", "sveća", "utičnica"); write simply, like a children's doctor talking to a parent.
 
+NAMING THE OBJECT — this is where models fail most often, so read it twice.
+"label" is the ordinary name a parent would say out loud, 1-3 words, singular unless there really are several. It is NOT a technical term, NOT a description of a surface, NOT a translation of an English word you happen to know.
+These are real bad outputs from earlier runs — never produce anything like them:
+  "Reljefi šporeta"  -> correct: "Ringle"           (the word for a cooker's hot plates)
+  "Vruća posuđa"     -> correct: "Vreo lonac"        (agreement, singular)
+  "Mala dete"        -> correct: "Malo dete"         (agreement)
+  "dizanje"          -> a verb is never an object name
+  "Ruke posuđa"      -> correct: "Ručke lonca"
+Before you output each label, re-read it and ask: would a parent actually say this out loud? If not, replace it with the simplest common word.
+
+ONE HAZARD PER OBJECT OR ZONE. Do not report the same physical thing twice under different names. A cooker with hot pots on it is ONE hazard, not "cooker" plus "pots" plus "hot plates". If two findings would point at overlapping parts of the photo, merge them into the more serious one.
+
 CERTAINTY: report ONLY objects you can clearly see and confidently identify. NEVER invent objects, hazards, or details that are not visibly present in the photo. A shorter, accurate list is always better than a longer, invented one.
 
 SCALE FIRST — ESTIMATE REAL-WORLD SIZE BEFORE JUDGING RISK:
@@ -189,13 +174,13 @@ Return ONLY valid JSON (no markdown fences) of this exact shape:
     "label": "short name of the object/zone, in ${language}",
     "category": "fall|choking|poisoning|burn|electric|cutting|drowning|crush|strangulation|other",
     "severity": "critical|high|medium|low",
-    "box": {"x": 0.1, "y": 0.2, "w": 0.15, "h": 0.1},
+    "box": {"x": 0.1, "y": 0.2, "w": 0.15, "h": 0.1} (tight around THIS object only, values 0-1 relative to the whole image; the app zooms into this box and shows it to the parent, so a box covering half the room is useless),
     "why": "2-3 sentences in ${language} explaining why it is dangerous for this exact age",
-    "facts": ["2-4 VERY short factual bullets in ${language}, max 6 words each, e.g. \\"Estimated temperature: 78-85°C\\", \\"Within the child's reach\\", \\"Tips over easily\\""],
+    "facts": ["REQUIRED, 2-4 items. Each is a NEW fact about this object in ${language}, max 6 words, e.g. \\"Estimated temperature: 78-85°C\\", \\"Within the child's reach\\", \\"Tips over easily\\". Never repeat sentences from \\"why\\" — the app shows both, and repeating looks like filler."],
     "steps": ["1-3 imperative actions in ${language}, max 10 words each, e.g. \\"Move the cup 30 cm from the edge\\""],
     "reach": 1-10 (how easily THIS child can reach it: 10 = on the floor or at child height, 1 = high on a ceiling),
     "size_cm": estimated longest real-world dimension of the object in centimetres, derived from reference objects in the photo (a number, e.g. 3 for a coin, 22 for a large rubber duck),
-    "solution": "ALWAYS IN ENGLISH, 2-5 words naming the PRODUCT that fixes THIS EXACT hazard, as a shopper would search for it. It must solve the specific object, not the broad category. Examples: hot coffee cup -> \\"spill proof insulated mug\\"; blind cord -> \\"blind cord safety winder\\"; sharp table corner -> \\"corner edge protectors\\"; open socket -> \\"plug socket covers\\"; unsecured dresser -> \\"furniture anti tip straps\\"; stairs -> \\"baby stair gate\\"; medicines within reach -> \\"lockable medicine box\\". If no product can fix it, use an empty string.",
+    "solution": "EXACTLY ONE key copied from this list, nothing else: ${SOLUTION_KEYS.join(' | ')}. Pick the key for the product that fixes THIS object. Never invent a key, never translate it, never write a sentence here. If no product fixes it, write none.",
     "stats": "real injury statistics with source (WHO/CDC/EU), written in ${language}; never invented numbers",
     "fix": "one concrete step doable right now, in ${language}"
   }],
@@ -326,6 +311,53 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
     const cm = Number(h.size_cm);
     return !(h.category === 'choking' && Number.isFinite(cm) && cm > 6);
   });
+  // ISTI PREDMET SE NE PRIJAVLJUJE DVAPUT.
+  //
+  // Uputstvo u promptu to traži, ali manji modeli ga ne poštuju pouzdano: na
+  // istoj kuhinji se u jednom prolazu pojave „Ringle šporeta", „Vreo lonac" i
+  // „Srebrni lonac" — tri kartice za jedno isto mesto. Roditelju to izgleda
+  // kao da aplikacija ne zna šta gleda.
+  //
+  // Zato se preklapanje rešava merom, ne molbom: nalazi iste vrste čiji se
+  // okviri poklapaju spajaju se u onaj ozbiljniji, a ključ rešenja se nasledi
+  // od onoga koji ga ima.
+  const WEIGHT: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+  const overlap = (a: any, b: any) => {
+    const x1 = Math.max(a.box.x, b.box.x);
+    const y1 = Math.max(a.box.y, b.box.y);
+    const x2 = Math.min(a.box.x + a.box.w, b.box.x + b.box.w);
+    const y2 = Math.min(a.box.y + a.box.h, b.box.y + b.box.h);
+    const hit = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    if (hit <= 0) return 0;
+    // Deli se MANJOM površinom, ne unijom: lonac unutar zone šporeta je isto
+    // mesto iako je mnogo manji, a unija bi to sakrila.
+    return hit / Math.min(a.box.w * a.box.h, b.box.w * b.box.h);
+  };
+  const kept: any[] = [];
+  for (const h of parsed.hazards) {
+    const twin = kept.find((k) => k.category === h.category && overlap(k, h) > 0.5);
+    if (!twin) { kept.push(h); continue; }
+    if ((WEIGHT[h.severity] ?? 0) > (WEIGHT[twin.severity] ?? 0)) {
+      twin.label = h.label;
+      twin.severity = h.severity;
+      twin.why = h.why;
+      twin.box = h.box;
+    }
+    if (!twin.solution && h.solution) twin.solution = h.solution;
+    twin.facts = [...new Set([...(twin.facts ?? []), ...(h.facts ?? [])])].slice(0, 4);
+    twin.steps = [...new Set([...(twin.steps ?? []), ...(h.steps ?? [])])].slice(0, 3);
+  }
+  parsed.hazards = kept;
+
+  // Ključ rešenja mora biti sa spiska. Model ume da napiše rečenicu i pored
+  // izričitog uputstva; tada se nalaz zadržava, ali bez proizvoda — pogrešan
+  // proizvod je gori od nijednog.
+  const allowed = new Set<string>(SOLUTION_KEYS as readonly string[]);
+  parsed.hazards = parsed.hazards.map((h: any) => {
+    const key = String(h.solution ?? '').trim().toLowerCase().replace(/\s+/g, '_');
+    return { ...h, solution: allowed.has(key) && key !== 'none' ? key : '' };
+  });
+
   parsed.safety_score = Math.max(0, Math.min(100, Number(parsed.safety_score) || 0));
   parsed._v = 4;
   parsed._provider = p.name;
@@ -355,6 +387,7 @@ async function verify(
     'For each numbered image below, decide whether it really shows the claimed object.\n' +
     'Be strict. Answer true ONLY if the claimed object is clearly visible in that image.\n' +
     'If it is a different object, or you are unsure, answer false.\n' +
+    'A generic detector produced these claims, so wrong guesses are common: pepper mills claimed as a bottle, a lamp claimed as a vase, a radiator claimed as a bench.\n' +
     crops.map((c, i) => `${i}. claimed: "${c.claim}"`).join('\n') +
     '\n\nReturn ONLY this JSON: {"verdicts":[{"i":0,"real":true}]}';
 
@@ -643,9 +676,8 @@ const CANDIDATES: Provider[] = [
   const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30), live === true);
 
   const errors: string[] = [];
-  const now = Date.now();
-  for (const provider of active) {
-    if ((asleep.get(provider.name) ?? 0) > now) continue;
+    for (const provider of active) {
+    if (isAsleep(provider.name)) continue;
     for (const model of provider.models) {
       try {
         return json(await Promise.race([
@@ -657,11 +689,7 @@ const CANDIDATES: Provider[] = [
         errors.push(why);
         // „upstream 429" i slično — nalog nema kvotu, ne vredi dalje ni sa
         // drugim modelom istog provajdera.
-        const code = why.match(/upstream (\d{3})/)?.[1];
-        if (code && DEAD.test(code)) {
-          asleep.set(provider.name, Date.now() + SLEEP_MS);
-          break;
-        }
+        if (noteFailure(provider.name, why)) break;
       }
     }
   }

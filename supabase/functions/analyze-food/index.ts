@@ -1,3 +1,4 @@
+import { providers, languageRules, isAsleep, noteFailure, TRY_MS, type Provider } from '../_shared/ai.ts';
 /**
  * analyze-food — AI provera hrane i pića za decu po uzrastu.
  * Roditelj slika obrok, namirnicu, piće ili ETIKETU proizvoda; AI vraća:
@@ -15,55 +16,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface Provider {
-  name: string;
-  key: string | undefined;
-  url: string;
-  models: string[];
-  extraHeaders?: Record<string, string>;
-  /** Dodatna polja u telu zahteva (npr. isključenje reasoning-a). */
-  extraBody?: Record<string, unknown>;
-}
-
-const PROVIDERS: Provider[] = [
-  {
-    name: 'nvidia',
-    key: Deno.env.get('NVIDIA_NIM_API_KEY'),
-    url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
-    // KLJUČNO ZA BRZINU: bez ovoga reasoning model "razmišlja" 40-60s po
-    // slici, pa klijent odustane. Sa isključenim razmišljanjem: par sekundi.
-    extraBody: { chat_template_kwargs: { enable_thinking: false } },
-  },
-  {
-    name: 'openrouter',
-    key: Deno.env.get('OPENROUTER_API_KEY'),
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    // Gemma modeli pre omni:free — omni nano piše loš srpski/nemački
-    models: (Deno.env.get('FREE_MODELS') ??
-      'nvidia/nemotron-nano-12b-v2-vl:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
-    ).split(',').map((m) => m.trim()).filter(Boolean),
-    extraHeaders: { 'HTTP-Referer': 'https://omnimeeting.app', 'X-Title': 'SafeNest AI' },
-  },
-  {
-    name: 'gemini',
-    key: Deno.env.get('GEMINI_API_KEY'),
-    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    models: ['gemini-2.5-flash'],
-  },
-  {
-    name: 'groq',
-    key: Deno.env.get('GROQ_API_KEY'),
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    models: ['meta-llama/llama-4-scout-17b-16e-instruct'],
-  },
-  {
-    name: 'lovable',
-    key: Deno.env.get('LOVABLE_API_KEY'),
-    url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
-    models: ['google/gemini-2.5-flash'],
-  },
-];
+const PROVIDERS: Provider[] = providers();
 
 // Prompt je NAMERNO ceo na engleskom: slabiji fallback modeli odgovaraju na
 // jeziku samog prompta i ignorišu direktivu. Engleski prompt + "OUTPUT
@@ -86,6 +39,8 @@ function buildPrompt(ageGroup: string, childName?: string, language = 'Serbian')
   return `OUTPUT LANGUAGE: ${language}. Every value (food_name, items, allergens, choking, prep_tip, summary) MUST be written entirely in ${language}. NEVER mix languages. If any source knowledge is in another language, translate it into ${language}.
 
 VOCABULARY: use natural, correct, everyday words that a native ${language} speaker would use. NEVER invent words or transliterate from other languages. Report ONLY what you can clearly see and confidently identify — never invent foods or ingredients.
+
+${languageRules(language)}
 
 You are a pediatric nutritionist and child food-safety expert (WHO, AAP, ESPGHAN guidelines).
 
@@ -193,6 +148,7 @@ Deno.serve(async (req) => {
 
   const errors: string[] = [];
   for (const provider of active) {
+    if (isAsleep(provider.name)) continue;
     for (const model of provider.models) {
       try {
         return json(await callVision(provider, model, image, prompt, String(language).slice(0, 30)));

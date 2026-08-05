@@ -171,12 +171,53 @@ const SOLUTION_BY_CATEGORY: Record<string, string> = {
   other: "baby proofing kit",
 };
 
+/**
+ * Zatvoren rečnik rešenja — isti spisak koji koristi i analiza.
+ *
+ * Model više ne piše ime proizvoda svojim rečima nego bira ključ odavde.
+ * Time spajanje sa policom prestaje da bude pogađanje po zajedničkim rečima:
+ * za vreo šporet ključ je `hob_guard`, i tu poklopci za utičnice ne mogu da
+ * uskoče zato što im se u nazivu nalazi reč „covers".
+ *
+ * `query` je ono što se traži na Amazonu kad partner nema svoj proizvod.
+ * `solves` su vrste opasnosti kojima taj ključ pripada — po njima se bira iz
+ * kataloga.
+ */
+export const SOLUTIONS: Record<string, { query: string; solves: string[] }> = {
+  socket_cover:        { query: "plug socket covers",            solves: ["electric"] },
+  corner_guard:        { query: "corner edge protectors",        solves: ["cutting", "crush"] },
+  stair_gate:          { query: "baby stair gate",               solves: ["fall"] },
+  cabinet_lock:        { query: "cabinet safety locks",          solves: ["choking", "poisoning", "cutting"] },
+  drawer_lock:         { query: "drawer safety locks",           solves: ["choking", "cutting"] },
+  oven_lock:           { query: "oven door child lock",          solves: ["burn"] },
+  hob_guard:           { query: "child safety hob guard",        solves: ["burn"] },
+  anti_tip_strap:      { query: "furniture anti tip straps",     solves: ["crush"] },
+  blind_cord_winder:   { query: "blind cord safety winder",      solves: ["strangulation"] },
+  medicine_box:        { query: "lockable medicine box",         solves: ["poisoning"] },
+  chemical_lock:       { query: "under sink cabinet lock",       solves: ["poisoning"] },
+  bath_mat:            { query: "non slip bath mat baby",        solves: ["drowning", "fall"] },
+  toilet_lock:         { query: "toilet seat lock child",        solves: ["drowning"] },
+  spill_proof_cup:     { query: "spill proof insulated mug",     solves: ["burn"] },
+  door_stopper:        { query: "door finger pinch guard",       solves: ["crush"] },
+  window_lock:         { query: "window restrictor child safe",  solves: ["fall"] },
+  cord_cover:          { query: "cable cover child safe",        solves: ["electric", "strangulation"] },
+  fireplace_guard:     { query: "fireplace radiator guard baby", solves: ["burn"] },
+  knife_lock:          { query: "knife block with lock",         solves: ["cutting"] },
+  small_parts_bin:     { query: "lockable storage box small parts", solves: ["choking"] },
+  furniture_edge_film: { query: "safety film glass door child",  solves: ["cutting"] },
+};
+
 /** Engleski upit za proizvod koji rešava OVU opasnost. */
 export function solutionQuery(h: {
   solution?: string;
   sourceClass?: string;
   category: string;
 }): string {
+  // Novi put: model vraća ključ sa spiska. Stari skenovi nose slobodan
+  // tekst, pa se on i dalje poštuje — ne prepravljamo ono što je već
+  // sačuvano kod roditelja.
+  const key = h.solution?.trim().toLowerCase();
+  if (key && SOLUTIONS[key]) return SOLUTIONS[key].query;
   if (h.solution && h.solution.trim()) return h.solution.trim();
   if (h.sourceClass && SOLUTION_BY_CLASS[h.sourceClass]) return SOLUTION_BY_CLASS[h.sourceClass];
   return SOLUTION_BY_CATEGORY[h.category] ?? SOLUTION_BY_CATEGORY.other;
@@ -317,6 +358,7 @@ export async function recommendationsFor(h: {
 }): Promise<Recommendation[]> {
   if (!recsEnabled()) return [];
   const query = solutionQuery(h);
+  const key = h.solution?.trim().toLowerCase();
   const want = new Set(tokens(query));
   const all = await fetchCatalog();
 
@@ -337,7 +379,11 @@ export async function recommendationsFor(h: {
       const hay = tokens(`${p.keywords ?? ""} ${p.title_en ?? ""} ${p.title}`);
       const overlap = hay.filter((w) => want.has(w)).length;
       const solves = String(p.solves ?? p.category).split(",").map((c) => c.trim());
-      const sameKind = p.category === h.category || solves.includes(h.category);
+      // Kad je model dao ključ, on je precizniji od vrste opasnosti: za
+      // `hob_guard` u izbor ulazi samo ono što gasi opekotine, bez obzira na
+      // to koju je vrstu opasnosti nalaz dobio.
+      const wanted = key && SOLUTIONS[key] ? SOLUTIONS[key].solves : [h.category];
+      const sameKind = wanted.some((c) => p.category === c || solves.includes(c));
       return { p, overlap, sameKind, score: (sameKind ? 100 : 0) + overlap * 10 };
     })
     .filter((x) => x.sameKind || x.overlap >= 2)
