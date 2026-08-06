@@ -1760,3 +1760,62 @@ body {
   color: #fff;
   font-weight: 600;
 }
+
+/* ── Oznaka opasnosti ne sme da izađe iz kadra ────────────────────────────
+   Do sada je uvek kretala od leve ivice okvira, pa je predmet uz desnu
+   ivicu ekrana imao naziv koji se ne vidi do kraja. Sada se poravnava prema
+   tome gde je predmet, i sme da prelomi u dva reda umesto da beži van. */
+.live-tag {
+  white-space: normal;
+  max-width: min(78vw, 320px);
+  text-align: left;
+  line-height: 1.25;
+}
+.live-tag[data-side="right"] { left: auto; right: -3px; }
+.live-tag[data-side="left"]  { left: -3px; right: auto; }
+/* Okvir uz sam vrh kadra: oznaka ide ISPOD njega, da ne ode pod status traku. */
+.live-box[style*="top: 0"] .live-tag,
+.live-box[style*="top: 1"] .live-tag { top: auto; bottom: -38px; }
+
+/* ── Proizvodi se moraju videti ───────────────────────────────────────────
+   Sličica je bila 54 px — na telefonu je to mrlja u kojoj se ne prepoznaje
+   ni šta je proizvod. Merenjem na kartici: 60×60. Roditelj bira zaštitu za
+   svoje dete; mora da vidi šta kupuje. */
+.alt-thumb {
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
+}
+.alt-thumb img { width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+.alt-item { gap: 14px; padding: 12px; }
+.alt-name { font-size: 1.02rem; line-height: 1.3; }
+/* Vodoravno listanje: kartica dovoljno široka da naziv stane u dva reda. */
+.alt-list.snap-row .alt-item { min-width: 268px; }
+@media (min-width: 520px) {
+  .alt-thumb { width: 112px; height: 112px; }
+}
+
+/* ── Procena cele prostorije ──────────────────────────────────────────── */
+.ra-note { margin: 0 0 10px; font-size: 13.5px; line-height: 1.5; color: #475569; }
+.ra-actions { display: flex; gap: 9px; flex-wrap: wrap; }
+.ra-btn { flex: 1; min-width: 150px; }
+.ra-score {
+  display: inline-block; font-weight: 800; font-size: 15px;
+  padding: 5px 13px; border-radius: 999px; color: #fff; margin-bottom: 9px;
+}
+.ra-score[data-level="ok"] { background: #10b981; }
+.ra-score[data-level="mid"] { background: #f59e0b; }
+.ra-score[data-level="bad"] { background: #ef4444; }
+.ra-verdict { margin: 0 0 14px; line-height: 1.55; }
+.ra-routes h4, .ra-todo h4 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; }
+/* Put je lanac, pa se i crta kao lanac — jedna linija boje ozbiljnosti. */
+.ra-route {
+  border-left: 4px solid #94a3b8; padding: 7px 0 7px 11px; margin-bottom: 9px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.ra-route b { font-size: 14.5px; }
+.ra-route span { font-size: 13px; color: #475569; line-height: 1.45; }
+.ra-rep { margin: 10px 0; font-size: 13px; color: #475569; }
+.ra-todo ul { margin: 0 0 12px; padding-left: 18px; }
+.ra-todo li { font-size: 13.5px; line-height: 1.6; }
+.ra-start { margin: 0 0 12px; line-height: 1.5; font-size: 14.5px; }

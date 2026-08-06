@@ -25,6 +25,11 @@ interface Props {
   onToggleResolved: (id: string) => void;
   onBack: () => void;
   onShare: () => void;
+  /**
+   * Kartica procene cele prostorije. Stiže spolja da bi `HazardFocus` ostao
+   * ono što jeste — prikaz jednog nalaza — a ne i mesto koje zna za uglove.
+   */
+  roomAssess?: React.ReactNode;
 }
 
 /**
@@ -273,6 +278,7 @@ export function HazardFocus({
   onToggleResolved,
   onBack,
   onShare,
+  roomAssess,
 }: Props) {
   const ranked = useMemo(() => rankHazards(hazards, ageGroup), [hazards, ageGroup]);
   const open = ranked.filter((h) => !h.resolved);
@@ -408,6 +414,10 @@ export function HazardFocus({
           {t("focus.next")}: <b>{hazardName(open[1])}</b>
         </p>
       )}
+
+      {/* Posle pojedinačnih nalaza — soba kao celina. Tu roditelj već zna
+          šta je nađeno i prirodno se pita „je li to sve". */}
+      {roomAssess}
     </div>
     </>
   );

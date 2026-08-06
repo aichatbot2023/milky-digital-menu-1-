@@ -170,7 +170,24 @@ export function factsFor(h: RankedHazard): string[] {
       en: "Found in {n} locations",
     }).replace("{n}", String(h.count)));
   }
-  return [...new Set(out)].slice(0, 4);
+  // Dvaput ista činjenica drugim rečima je gore od jedne: roditelj pomisli
+  // da su to dva razloga. Na kartici su se sudarale „Nadohvat detetu" (iz
+  // oblaka) i „Nadohvat je detetu" (naša izvedena) — tačan `Set` ih ne hvata
+  // jer se razlikuju u jednoj reči. Poređenje ide po samim rečima.
+  const seen = new Set<string>();
+  const uniq: string[] = [];
+  for (const f of out) {
+    const key = f.toLowerCase()
+      .replace(/[^\p{L}\p{N} ]/gu, "")
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+      .sort()
+      .join(" ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniq.push(f);
+  }
+  return uniq.slice(0, 4);
 }
 
 /** „Uradi ovo odmah" — imperativni koraci, najviše 3. */

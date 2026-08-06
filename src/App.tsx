@@ -35,6 +35,8 @@ import {
 } from "./lib/memory";
 import { HazardFocus } from "./components/HazardFocus";
 import { RoomReveal } from "./components/RoomReveal";
+import { RoomAssess } from "./components/RoomAssess";
+import { addAngle } from "./lib/room";
 import { AmazonPartner } from "./components/AmazonPartner";
 import { ContributeToggle } from "./components/ContributeToggle";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, onLocale, roomLabel, t } from "./lib/i18n";
@@ -219,6 +221,9 @@ export default function App() {
       setScans(loadScans());
       setCurrentScan(scan);
       setRevealFor(scan.id);
+      // Svaki sken je jedan UGAO prostorije. Tek kad ih ima više, može se
+      // reći nešto o prostoru kao celini — o putevima kojima dete ide.
+      addAngle({ scanId: scan.id, roomType, hazards: result.hazards });
 
       // Pamćenje PROSTORA, ne vrste prostorije. Dve dnevne sobe više nisu
       // jedno te isto, a roditelj koji ponovo skenira istu sobu odmah vidi
@@ -495,6 +500,16 @@ export default function App() {
     return (
       <>
         <HazardFocus
+          roomAssess={
+            <RoomAssess
+              roomType={currentScan.roomType}
+              ageGroup={selectedChild?.age ?? "1-2y"}
+              onAnother={() => {
+                setView("home");
+                setTab("scan");
+              }}
+            />
+          }
           roomSeen={roomSeen}
           imageDataUrl={currentScan.imageDataUrl}
           hazards={currentScan.result.hazards}

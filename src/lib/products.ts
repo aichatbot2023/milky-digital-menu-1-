@@ -183,6 +183,36 @@ const SOLUTION_BY_CATEGORY: Record<string, string> = {
  * `solves` su vrste opasnosti kojima taj ključ pripada — po njima se bira iz
  * kataloga.
  */
+/**
+ * Slike rešenja spakovane U APLIKACIJU.
+ *
+ * Prikaz „rešenje na svom mestu" pali se samo kad preporuka nosi sliku, a
+ * slike su do sada stizale isključivo iz kataloga preko mreže. Kad taj poziv
+ * padne — a padao je celo jedno popodne dok je Supabase stajao — preporuka
+ * ostane bez slike, prikaz se TIHO ne nacrta, i izgleda kao da ga nikad nije
+ * ni bilo. Roditelj ne vidi grešku, vidi da nečega nema.
+ *
+ * Deset slika je 112 KB ukupno. Za tu cenu prikaz radi i bez mreže, i bez
+ * kataloga, i dok backend spava.
+ */
+const SOLUTION_IMAGE: Record<string, string> = {
+  socket_cover: "socket-cover", corner_guard: "corner-guard",
+  stair_gate: "stair-gate", cabinet_lock: "cabinet-lock",
+  drawer_lock: "cabinet-lock", chemical_lock: "cabinet-lock",
+  medicine_box: "medicine-box", hob_guard: "hob-guard",
+  oven_lock: "hob-guard", fireplace_guard: "hob-guard",
+  spill_proof_cup: "spill-mug", blind_cord_winder: "cord-winder",
+  cord_cover: "cord-winder", anti_tip_strap: "anti-tip-strap",
+  bath_mat: "bath-mat", toilet_lock: "bath-mat",
+  small_parts_bin: "cabinet-lock",
+};
+
+/** Putanja do spakovane slike rešenja, ako je imamo. */
+export function solutionImage(key?: string): string | null {
+  const name = key ? SOLUTION_IMAGE[key] : undefined;
+  return name ? `${import.meta.env.BASE_URL}products/${name}.webp` : null;
+}
+
 export const SOLUTIONS: Record<string, { query: string; solves: string[] }> = {
   socket_cover:        { query: "plug socket covers",            solves: ["electric"] },
   corner_guard:        { query: "corner edge protectors",        solves: ["cutting", "crush"] },
@@ -388,7 +418,15 @@ export async function recommendationsFor(h: {
     })
     .filter((x) => x.sameKind || x.overlap >= 2)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
+    // Kad model kaže ŠTA rešava, uzima se JEDAN proizvod — onaj pravi.
+    //
+    // Katalog ima deset proizvoda i „ista vrsta opasnosti" ih spaja preširoko:
+    // neklizajuća podloga za kadu i kapija za stepenice obe pokrivaju `fall`,
+    // pa se za stepenice nudila podloga za kadu, a za kadu kapija za
+    // stepenice. Drugi proizvod tu nije izbor nego greška, i bolje ga je ne
+    // ponuditi. Bez ključa se i dalje nude dva, jer tada zaista ne znamo
+    // koje je pravo.
+    .slice(0, key && SOLUTIONS[key] ? 1 : 2);
 
   const out: Recommendation[] = scored.map(({ p }) => ({
     key: `p${p.id}`,
@@ -401,11 +439,28 @@ export async function recommendationsFor(h: {
     image: p.image_url ?? null,
   }));
 
-  // Ako partnerski katalog nema ništa u kontekstu, roditelj ipak mora da
-  // dobije konkretna rešenja — nikada praznu policu.
-  for (const b of builtinFor(h.category, query)) {
-    if (out.length >= 3) break;
-    out.push(b);
+  // DOPUNA SME DA BUDE SAMO TAČNA.
+  //
+  // Ranije se spisak popunjavao po KATEGORIJI dok se ne skupe tri stavke. Za
+  // ringle šporeta to je davalo bravu za rernu, šolju koja se ne prosipa i
+  // pretragu „pet bowl mat raised" — sve tri iz kategorije `burn`, nijedna
+  // nije štitnik za šporet. Roditelj tako ne dobija izbor nego šum, i s
+  // pravom prestane da veruje preporuci.
+  //
+  // Ključ rešenja je precizan (`hob_guard` je štitnik za šporet i ništa
+  // drugo), pa dopuna sme da uzme SAMO ono što taj ključ traži. Kad nema
+  // takvog proizvoda, ostaje jedna tačna preporuka i pretraga — a to je
+  // pošteno, dok su tri nasumične obmana.
+  if (out.length < 2) {
+    const exact = key
+      ? builtinFor(h.category, query).filter(
+          (b) => tokens(b.key.replace(/^b:/, "")).filter((w) => want.has(w)).length >= 2,
+        )
+      : builtinFor(h.category, query);
+    for (const b of exact) {
+      if (out.length >= 2) break;
+      out.push(b);
+    }
   }
 
   out.push({
@@ -416,6 +471,13 @@ export async function recommendationsFor(h: {
     url: amazonSearchUrl(query),
     isSearch: true,
   });
+
+  // Preporuka bez slike dobija spakovanu sliku rešenja. Time prikaz
+  // „na svom mestu" prestaje da zavisi od toga da li je katalog stigao.
+  const local = solutionImage(key);
+  if (local) {
+    for (const r of out) if (!r.image && !r.isSearch) r.image = local;
+  }
   return out;
 }
 

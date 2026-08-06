@@ -93,6 +93,35 @@ function onHeatSource(h: Hazard, heat: Hazard[]): boolean {
 }
 
 /**
+ * KOLIKO JE PREDMET ZAISTA VELIK — dete u kadru je merilo.
+ *
+ * Okvir predmeta govori koliki je udeo slike, a ne koliko centimetara. Zato
+ * je lokalni sloj mogao samo da nagađa: kocka na podu i kocka snimljena iz
+ * blizine daju isti okvir, a jedna staje u usta i druga ne staje.
+ *
+ * Čim se u kadru vidi dete, razmera prestaje da bude nepoznata. Visina deteta
+ * koje sedi je oko 65 cm, onog koje stoji oko 85 — grubo, ali dovoljno da se
+ * razlikuje novčić od kocke za slaganje. Iz odnosa okvira predmeta i okvira
+ * deteta dobija se procena u centimetrima.
+ *
+ * Zašto je ovo važno: gušenje je fizički moguće samo za ono što staje u usta
+ * deteta, a to je oko 4,5 cm — prečnik role toalet-papira. Kocka od 6 cm se
+ * NE guta. Prijaviti je kao opasnost za gušenje znači uplašiti roditelja zbog
+ * igračke kojom se dete upravo bezbedno igra, i pritom zatrpati ekran tako da
+ * prava opasnost ostane neprimećena.
+ */
+const CHILD_CM = 70;
+/** Šire od ovoga ne staje u usta deteta (prečnik role toalet-papira). */
+const MOUTH_CM = 4.5;
+
+/** Procena najveće stvarne mere predmeta u centimetrima, ako se dete vidi. */
+function realCm(h: HazardBox, kid: HazardBox | null): number | null {
+  if (!kid || kid.h < 0.06) return null; // dete predaleko da bi bilo merilo
+  const cmPerUnit = CHILD_CM / kid.h;
+  return Math.max(h.w, h.h) * cmPerUnit;
+}
+
+/**
  * Koliko daleko od deteta predmet još uvek „stoji pored njega", mereno u
  * širinama samog deteta. Dete koje sedi za sekund dohvati ono što mu je uz
  * ruku, a za nekoliko sekundi i ono na korak od njega.
@@ -145,6 +174,17 @@ export function judgeByContext(
         contextNote: "na izvoru toplote",
       });
       continue;
+    }
+
+    // GUŠENJE JE PITANJE VELIČINE, NE VRSTE PREDMETA.
+    //
+    // Kad se dete vidi u kadru, veličina se meri a ne pretpostavlja. Predmet
+    // koji je očigledno prevelik za usta ne prijavljuje se kao opasnost od
+    // gušenja — igračka kojom se dete bezbedno igra ne sme da stoji na ekranu
+    // kao pretnja, jer time gura pravu opasnost niže.
+    if (h.category === "choking") {
+      const cm = realCm(h.box, kid);
+      if (cm !== null && cm > MOUTH_CM * 1.35) continue;
     }
 
     // Predmet nadohvat samom detetu koje se vidi na slici. Ovo pretiče sva

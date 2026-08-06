@@ -28,8 +28,19 @@ const browser = await chromium.launch({
 });
 const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } });
 // Oblak se glumi: vraća se gotov nalaz, pa se meri EKRAN a ne model.
+const katalog = JSON.parse(readFileSync(
+  "/tmp/claude-0/-home-user-milky-digital-menu-1-/2ec40fd1-9afc-5e56-9223-9a405f8f8044/scratchpad/katalog.json", "utf8"));
 await ctx.route("https://equjrxwpxrkchicetyvs.supabase.co/**", async (r) => {
-  if (!r.request().url().includes("analyze-hazards")) return r.abort();
+  const u = r.request().url();
+  if (u.includes("/partners")) {
+    return r.fulfill({ status: 200, headers: { "access-control-allow-origin": "*",
+      "content-type": "application/json" }, body: JSON.stringify(katalog) });
+  }
+  if (u.includes("safenest-products")) {
+    return r.fulfill({ status: 200, headers: { "access-control-allow-origin": "*",
+      "content-type": "image/webp" }, body: readFileSync("public/products/socket-cover.webp") });
+  }
+  if (!u.includes("analyze-hazards")) return r.abort();
   const hazards = HZ.map(([label, category, severity, x, y, w, h]) => ({
     label, category, severity, box: { x, y, w, h },
     why: "Objašnjenje zašto je opasno za dete ovog uzrasta.",
@@ -124,5 +135,18 @@ await page.waitForTimeout(900);
 await page.screenshot({ path: "reveal-2-fokus.png" });
 console.log(`posle nastavka, otkrivanje se vidi: ${await page.locator(".reveal").count() > 0 ? "DA (greška)" : "ne"}`);
 console.log(`oznaka Amazon partnera na strani: ${await page.locator(".amzn").count()}`);
+
+// Šta roditelj vidi na kartici prve opasnosti.
+await page.waitForTimeout(3500);
+console.log(`\n=== kartica prve opasnosti ===`);
+console.log(`3D prikaz „na svom mestu": ${await page.locator(".ip").count() > 0 ? "VIDI SE" : "NE VIDI SE"}`);
+console.log(`preporuka proizvoda: ${await page.locator(".alt-item").count()}`);
+const thumbs = await page.locator(".alt-thumb img").count();
+console.log(`sličica proizvoda: ${thumbs}`);
+if (thumbs) {
+  const bb = await page.locator(".alt-thumb").first().boundingBox();
+  console.log(`veličina sličice: ${Math.round(bb.width)}×${Math.round(bb.height)} px`);
+}
+await page.screenshot({ path: "kartica.png", fullPage: true });
 
 await browser.close();

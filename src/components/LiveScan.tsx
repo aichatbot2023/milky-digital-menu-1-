@@ -538,7 +538,16 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
               {i + 1}
             </span>
             {i === focusIdx && (
-              <span className="live-tag live-tag-float">
+              <span
+                className="live-tag live-tag-float"
+                data-side={
+                  h.box.x + h.box.w / 2 > 0.62
+                    ? "right"
+                    : h.box.x + h.box.w / 2 < 0.38
+                      ? "left"
+                      : undefined
+                }
+              >
                 <span className="live-tag-name">
                   {CATEGORY_ICONS[h.category]} {hazardName(h)}
                   {h.count > 1 && ` ×${h.count}`}
@@ -564,7 +573,21 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
           onClick={() => pauseOn(active)}
           aria-label={hazardName(active)}
         >
-          <span className="live-tag">
+          <span
+            className="live-tag"
+            // Poravnanje prema položaju predmeta u kadru. Oznaka je do sada
+            // uvek kretala od LEVE ivice okvira; kad je predmet uz desnu
+            // ivicu ekrana, naziv je izlazio van kadra i roditelj ga nije
+            // mogao pročitati do kraja. Sada se uz desnu ivicu poravnava
+            // udesno, uz levu ulevo, a u sredini ostaje kako je bilo.
+            data-side={
+              active.box.x + active.box.w / 2 > 0.62
+                ? "right"
+                : active.box.x + active.box.w / 2 < 0.38
+                  ? "left"
+                  : undefined
+            }
+          >
             <span
               className="live-tag-num"
               style={{ background: SEVERITY_META[active.severity].color }}

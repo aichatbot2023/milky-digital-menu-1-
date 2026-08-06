@@ -222,6 +222,60 @@ Return ONLY valid JSON, same shape as before:
   };
 }
 
+/**
+ * PROCENA CELE PROSTORIJE IZ VIŠE UGLOVA.
+ *
+ * Jedan kadar je jedan zid. Roditelj koji slika kuhinju sa vrata ne vidi ono
+ * iza sebe, a dete se kreće po celoj prostoriji — pa opasnost nije samo
+ * predmet nego i PUT do njega: stolica uz radnu ploču, ploča uz šporet,
+ * šporet uz vrata terase. Takav lanac se iz jedne slike ne vidi ni u
+ * principu, ma koliko model bio dobar.
+ *
+ * Zato se pojedinačni nalazi iz više uglova ovde spajaju u jedan sud o
+ * prostoru. Model NE dobija slike ponovo — dobija spisak već potvrđenih
+ * nalaza sa svakog ugla i pitanje koje se na jednoj slici ne može postaviti:
+ * šta ovaj raspored znači za dete koje po njemu puzi ili hoda.
+ *
+ * Košta jedan tekstualni poziv, bez slika, pa je i brz i jeftin.
+ */
+async function roomVerdict(
+  p: Provider, model: string, language: string,
+  angles: { hazards: any[] }[], roomType: string, ageGroup: string,
+): Promise<any> {
+  const room = ROOM_EN[roomType] ?? 'room';
+  const age = AGE_EN[ageGroup] ?? ageGroup;
+  const list = angles.map((a, i) =>
+    `Angle ${i + 1}: ` + (a.hazards ?? []).map((h: any) =>
+      `${h.label} (${h.category}, ${h.severity}, reach ${h.reach ?? '?'}/10)`).join('; ')
+  ).join('\n');
+
+  const prompt = `OUTPUT LANGUAGE: ${language}. Write every value entirely in ${language}.
+
+A parent photographed one "${room}" from ${angles.length} different angles. A child aged ${age} lives here. These are the confirmed findings per angle:
+
+${list}
+
+You are not looking at photographs now. You are looking at ONE ROOM described from several sides. Answer what a single photo can never show:
+
+1. ROUTES. Which findings combine into a path the child can actually take? A chair next to the worktop next to the hob is a climbing route to boiling water — three harmless-looking items making one serious danger. Name the chain explicitly.
+2. WHAT REPEATS. A hazard seen from several angles is not several problems; it is one problem the parent walks past all day.
+3. WHAT IS MISSING. Given this room type and this age, which check does the parent still owe — something that is rarely visible in a photo (window restrictors, water temperature, what is inside the low cupboards, furniture anchored to the wall).
+4. WHERE TO START. One place, not a list. The one thing that would most reduce the risk in this room today.
+
+Return ONLY valid JSON:
+{
+  "room_score": 0-100 (whole room, for this age),
+  "verdict": "3-4 sentences in ${language}, calm, addressed to the parent",
+  "routes": [{"chain": "chair → worktop → hob, in ${language}", "why": "one sentence in ${language}", "severity": "critical|high|medium|low"}],
+  "repeated": ["names of hazards seen from several angles, in ${language}"],
+  "unchecked": ["2-4 checks the parent should still do, imperative, max 8 words each, in ${language}"],
+  "start_here": "one sentence in ${language}"
+}`;
+
+  const out = await callText(p, model, prompt, language);
+  return out;
+}
+
 function buildPrompt(roomType: string, ageGroup: string, childName?: string, language = 'Serbian', live = false): string {
   const room = ROOM_EN[roomType] ?? 'room';
   const age = AGE_EN[ageGroup] ?? ageGroup;
@@ -263,6 +317,7 @@ Before you call anything a hazard, work out how BIG it really is. Compare it to 
 - A choking hazard ONLY exists if the object (or a piece that can realistically break off it) fits inside a toddler's mouth: the longest dimension is UNDER ~4.5 cm, roughly the diameter of a toilet-paper tube. A large rubber duck, a football, a teddy bear, a full-size shoe, a book or a big toy CANNOT be swallowed — do NOT report them as choking hazards. If such an object has a small detachable part (a squeaker, an eye, a battery cover, a bell), report THAT part and say so explicitly.
 - Same logic for every other category: an object that is too heavy for a child to lift is not a throwing hazard, a shelf 2 m up is not within reach, a 5 mm gap cannot trap a head.
 - If an object is clearly big enough to be harmless in that category, leave it out completely rather than reporting it with low severity.
+- TOYS THE CHILD IS PLAYING WITH. Building blocks, stacking cups, large beads, ride-on toys and soft toys are made for this age and are NOT hazards just for being on the floor. Report a toy ONLY if you can point at the specific reason: a piece small enough to swallow (under ~4.5 cm), a long cord or strap, a button battery, a sharp break, or a pile high enough to climb. "Toys on the floor" on its own is not a finding — say nothing rather than alarm a parent about play.
 Include your estimate in "size_cm" so it can be checked.${liveRules}
 
 You are a certified child-safety (childproofing) expert with knowledge of pediatric injury epidemiology (WHO, CDC, EU Child Safety Alliance).
@@ -348,6 +403,57 @@ ANIMALS — recognize and assess:
 - YARD: farm animals (horse/cow — kick, trampling), fence between child and animals, wasp/hornet nests, rodent traces
 
 FINAL LANGUAGE CHECK: before answering, re-read every label, why, stats, fix and summary — each one must be 100% in ${language}. If any value is in another language, translate it before returning the JSON.`;
+}
+
+/**
+ * Poziv modela BEZ slike — za sud o celoj prostoriji.
+ *
+ * Sažimanje već potvrđenih nalaza ne traži oči nego pamet, pa se slike ne
+ * šalju ponovo. To je i jedini razlog zbog kog procena celog prostora sme da
+ * postoji na besplatnom planu: tekstualni poziv je red veličine jeftiniji i
+ * brži od još jednog gledanja u fotografije.
+ */
+async function callText(p: Provider, model: string, prompt: string, language = 'Serbian'): Promise<any> {
+  const res = await fetch(p.url, {
+    method: 'POST',
+    signal: AbortSignal.timeout(30000),
+    headers: {
+      'Authorization': `Bearer ${p.key}`,
+      'Content-Type': 'application/json',
+      ...(p.extraHeaders ?? {}),
+    },
+    body: JSON.stringify({
+      ...(p.extraBody ?? {}),
+      ...(p.name === 'openrouter' && model.includes('reasoning')
+        ? { reasoning: { enabled: false } }
+        : {}),
+      model,
+      max_tokens: 1600,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a child-safety expert. CRITICAL: write EVERY human-readable output value strictly in ${language}. Never use any other language, never mix languages.`,
+        },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`${p.name}/${model}: ${res.status} ${(await res.text()).slice(0, 120)}`);
+  const data = await res.json();
+  let out = String(data?.choices?.[0]?.message?.content ?? '').trim();
+  out = out.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  const a = out.indexOf('{');
+  const b = out.lastIndexOf('}');
+  if (a < 0 || b < a) throw new Error(`${p.name}/${model}: nije JSON`);
+  const parsed = JSON.parse(out.slice(a, b + 1));
+  // Isti sud kao za nalaze: engleski odgovor na srpski zahtev je neuspeh.
+  const spoken = [parsed.verdict, parsed.start_here,
+    ...(parsed.unchecked ?? []), ...((parsed.routes ?? []).map((r: any) => r?.why))]
+    .filter((x: unknown) => typeof x === 'string').join(' ');
+  if (wrongLanguage(spoken, language)) {
+    throw new Error(`${p.name}/${model}: sud o prostoriji na engleskom`);
+  }
+  return parsed;
 }
 
 async function callVision(p: Provider, model: string, image: string, prompt: string, language = 'Serbian'): Promise<any> {
@@ -747,6 +853,40 @@ const CANDIDATES: Provider[] = [
    * vreme skeniranja, cela fotografija. Zapis se namerno ne može vezati za
    * osobu — ni od nas, ni od nekoga ko bi jednog dana video bazu.
    */
+  /**
+   * PROCENA CELE PROSTORIJE — spajanje nalaza sa više uglova u jedan sud.
+   *
+   * Klijent šalje samo NALAZE, ne slike: jedan tekstualni poziv umesto još
+   * nekoliko gledanja u fotografije. Zato je ovo i brzo i besplatno.
+   */
+  if (body?.action === 'room') {
+    const angles = Array.isArray(body?.angles) ? body.angles.slice(0, 8) : [];
+    const usable = angles.filter((a: any) => Array.isArray(a?.hazards) && a.hazards.length);
+    if (usable.length < 2) {
+      return json({ error: 'treba bar dva ugla sa nalazima' }, 400);
+    }
+    const lang = String(language).slice(0, 30);
+    const errs: string[] = [];
+    const until = Date.now() + BUDGET_MS;
+    for (const provider of active) {
+      if (isAsleep(provider.name)) continue;
+      for (const model of provider.models) {
+        if (Date.now() > until) break;
+        try {
+          const v = await roomVerdict(provider, model, lang, usable,
+            String(roomType), String(ageGroup));
+          return json({ ...v, _provider: provider.name, _angles: usable.length });
+        } catch (e: any) {
+          const why = e?.message ?? String(e);
+          errs.push(why);
+          if (noteFailure(provider.name, why)) break;
+        }
+      }
+    }
+    console.error('room verdict failed:', errs.join(' | '));
+    return json({ error: 'Procena prostorije trenutno nije dostupna.' }, 502);
+  }
+
   if (body?.action === 'learn') {
     const KNOWN = new Set([
       'socket', 'stairs', 'candle', 'plastic_bag', 'blind', 'fireplace',

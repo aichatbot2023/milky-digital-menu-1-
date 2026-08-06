@@ -98,6 +98,30 @@ const out = await page.evaluate(async () => {
     ok("bez deteta važi stara procena po visini", bez.length === 0, `${bez.length}`);
   }
 
+  // 11. VELIČINA: kocka kojom se dete igra nije opasnost od gušenja.
+  //     Dete u kadru je merilo — bez njega se veličina ne zna i nalaz prolazi.
+  {
+    const kid = { x: 0.3, y: 0.5, w: 0.16, h: 0.3 };   // ~70 cm visine
+    // Kocka ~7 cm: 0.03 udela kadra × (70 / 0.3) ≈ 7 cm — ne staje u usta.
+    const kocka = hz("sports ball", "Kocka", { x: 0.42, y: 0.72, w: 0.03, h: 0.03 },
+      { category: "choking", severity: "critical" });
+    // Novčić ~1,4 cm — staje.
+    const novcic = hz("coin", "Novčić", { x: 0.5, y: 0.78, w: 0.006, h: 0.006 },
+      { category: "choking", severity: "critical" });
+    const r = judgeByContext([kocka, novcic], "1-2y", [kid]);
+    ok("kocka prevelika za usta se ne prijavljuje",
+      !r.some((h) => h.label === "Kocka"), r.map((h) => h.label).join(","));
+    ok("novčić se i dalje prijavljuje", r.some((h) => h.label === "Novčić"));
+  }
+  // 12. Bez deteta u kadru veličina se ne zna, pa se ništa ne odbacuje —
+  //     nagađanje ne sme da ućutka opasnost.
+  {
+    const kocka = hz("sports ball", "Kocka", { x: 0.42, y: 0.72, w: 0.03, h: 0.03 },
+      { category: "choking", severity: "critical" });
+    const r = judgeByContext([kocka], "1-2y", []);
+    ok("bez merila se nalaz zadržava", r.length === 1, `${r.length}`);
+  }
+
   return log;
 });
 
