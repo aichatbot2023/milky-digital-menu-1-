@@ -1,4 +1,5 @@
 import type { AgeGroup, AnalysisResult, Hazard, RoomType } from "../types";
+import { getPetKind, isPet } from "./domain";
 import { languageEnglishName } from "./i18n";
 
 interface AnalyzeParams {
@@ -61,6 +62,9 @@ async function doAnalyze(
         roomType: params.roomType,
         ageGroup: params.ageGroup,
         childName: params.childName,
+        // Departman: isti lanac i ista funkcija, drugo pitanje modelu.
+        subject: isPet() ? "pet" : "child",
+        ...(isPet() ? { petKind: getPetKind() } : {}),
       }),
     });
   } else {
@@ -77,6 +81,9 @@ async function doAnalyze(
         roomType: params.roomType,
         ageGroup: params.ageGroup,
         childName: params.childName,
+        // Departman: isti lanac i ista funkcija, drugo pitanje modelu.
+        subject: isPet() ? "pet" : "child",
+        ...(isPet() ? { petKind: getPetKind() } : {}),
         language: languageEnglishName(),
         live: params.live === true,
       }),

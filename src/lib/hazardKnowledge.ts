@@ -5,6 +5,7 @@
  */
 import type { AgeGroup, Hazard, HazardCategory, Severity } from "../types";
 import { isSr, localized } from "./i18n";
+import { getPetKind, isPet, petHazardFrom } from "./domain";
 
 export interface Detection {
   label: string;
@@ -744,10 +745,47 @@ const RULES_EN: Record<string, RuleEn> = {
   cake: { label: "Cake / pastries", why: "Pieces with nuts, raisins or hard decorations are a choking risk; candles and a lighter nearby are a burn risk.", stats: "Nuts and hard decorations top the choking list for children under 4 (AAP).", fix: "Check ingredients before serving; remove candles and lighter immediately." },
 };
 
+/**
+ * Nalazi za ljubimca. Isti oblik kao dečji, pa sve dalje — pratilac,
+ * prosuđivanje po prostoru, rangiranje, prikaz, preporuke — radi nepromenjeno.
+ */
+function petHazards(detections: Detection[]): Hazard[] {
+  const kind = getPetKind();
+  const out: Hazard[] = [];
+  const perLabel = new Map<string, number>();
+  for (const d of detections) {
+    const r = petHazardFrom(d.label, kind);
+    if (!r) continue;
+    const count = perLabel.get(d.label) ?? 0;
+    if (count >= 3) continue;
+    perLabel.set(d.label, count + 1);
+    out.push({
+      id: `pet-${out.length}-${d.label.replace(/\s/g, "_")}`,
+      label: r.label,
+      uncertain: d.score < 0.55,
+      category: r.category,
+      severity: r.severity,
+      box: d.box,
+      why: r.why,
+      stats: r.stats,
+      fix: r.fix,
+      solution: r.solution,
+      sourceClass: d.label,
+      confidence: d.score,
+    });
+  }
+  return out;
+}
+
 export function mapDetectionsToHazards(
   detections: Detection[],
   ageGroup: AgeGroup,
 ): Hazard[] {
+  // Departman za ljubimce koristi ISTE oči i drugu bazu znanja. Isti predmet
+  // znači različite stvari: saksija je detetu sitnica, a mački ljiljan u njoj
+  // otkazuje bubrege; lopta je detetu igračka, a velikom psu gušenje.
+  if (isPet()) return petHazards(detections);
+
   const hazards: Hazard[] = [];
   const perLabel = new Map<string, number>();
   for (const d of detections) {

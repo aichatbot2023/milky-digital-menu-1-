@@ -15,6 +15,7 @@ import type { AgeGroup, Hazard, HazardBox } from "../types";
 import { mapDetectionsToHazards, type Detection } from "./hazardKnowledge";
 import { thresholdAdjustment } from "./learning";
 import { judgeByContext } from "./context";
+import { isPet } from "./domain";
 import { detectHazards, preloadHazardModel } from "./hazardModel";
 
 type Source = HTMLVideoElement | HTMLImageElement | HTMLCanvasElement;
@@ -297,8 +298,14 @@ export async function detectLocal(
   // Gde je dete. `person` nema svoj nalaz i nikad se ne prijavljuje kao
   // opasnost — ali govori odakle dete dohvata stvari, pa dohvat prestaje da
   // bude procena po visini u kadru i postaje merena razdaljina.
+  // U departmanu za ljubimce merilo je sam ljubimac, ne čovek: pas i mačka
+  // su COCO klase koje detektor pouzdano vidi, i one govore odakle se stvari
+  // dohvataju u toj kući.
+  const subjects = isPet()
+    ? ["dog", "cat", "bird"]
+    : ["person"];
   const people = detections
-    .filter((d) => d.label === "person" && d.score >= 0.45)
+    .filter((d) => subjects.includes(d.label) && d.score >= 0.45)
     .map((d) => d.box);
 
   // Predmeti se prevode u opasnosti, pa se PROSUĐUJU po tome gde stoje.

@@ -31,6 +31,7 @@
  */
 import type { AgeGroup, Hazard, HazardBox } from "../types";
 import { boxIou } from "./detector";
+import { getPetKind, isPet, petReach } from "./domain";
 
 /**
  * Predmeti koji su opasni SAMO u kontekstu — svakodnevne stvari koje postoje
@@ -150,11 +151,18 @@ export function judgeByContext(
   age: AgeGroup,
   people: HazardBox[] = [],
 ): Hazard[] {
-  const reach = REACH_BY_AGE[age] ?? 0.45;
+  // Kod ljubimca dohvat određuje VRSTA, ne uzrast — i razlika je ogromna.
+  // Mačka se penje na frižider i hoda po radnoj ploči, pa za nju pravilo o
+  // visini praktično ne postoji; zec dohvata pod i ono do njega. Pravilo
+  // pisano za dete bi mački prećutalo pola stana.
+  const reach = isPet() ? petReach(getPetKind()) : (REACH_BY_AGE[age] ?? 0.45);
   const heat = hazards.filter((h) => h.sourceClass && HEAT.has(h.sourceClass));
   // Najveća osoba u kadru je ona najbliža kameri — u dečjoj sobi to je dete
   // koje roditelj i snima. Ako je u kadru odrasla osoba, dizanje hitnosti
   // predmeta oko nje ništa ne kvari; propuštena opasnost pored deteta kvari.
+  // Kod dece je merilo osoba u kadru; kod ljubimaca sam ljubimac, koga
+  // detektor prepoznaje kao `dog`, `cat` ili `bird`. Isti postupak, drugo
+  // biće — zato se okviri prosleđuju spolja i ovde se ne pita ko je ko.
   const kid = [...people].sort((a, b) => b.w * b.h - a.w * a.h)[0] ?? null;
   const out: Hazard[] = [];
 

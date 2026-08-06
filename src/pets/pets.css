@@ -1,0 +1,11 @@
+/**
+ * Departman za ljubimce nosi svoju boju, da se na prvi pogled zna gde si.
+ * Sve ostalo nasleđuje — isti raspored, ista tipografija, isti pokreti.
+ * Ovo je tema, ne drugi dizajn: dva departmana treba da izgledaju kao dva
+ * proizvoda iste kuće, a ne kao dve različite firme.
+ */
+:root[data-domain="pet"] {
+  --primary: #7c3aed;
+  --primary-dark: #5b21b6;
+}
+:root[data-domain="pet"] .live-dot { background: #a78bfa; }

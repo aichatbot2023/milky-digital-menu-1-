@@ -37,6 +37,8 @@ import { HazardFocus } from "./components/HazardFocus";
 import { RoomReveal } from "./components/RoomReveal";
 import { RoomAssess } from "./components/RoomAssess";
 import { addAngle } from "./lib/room";
+import { isPet } from "./lib/domain";
+import { PetPicker } from "./pets/PetPicker";
 import { AmazonPartner } from "./components/AmazonPartner";
 import { ContributeToggle } from "./components/ContributeToggle";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, onLocale, roomLabel, t } from "./lib/i18n";
@@ -613,12 +615,18 @@ export default function App() {
             </div>
           </div>
 
-          <ChildProfiles
-            profiles={profiles}
-            selectedId={selectedChildId}
-            onSelect={setSelectedChildId}
-            onChange={setProfiles}
-          />
+          {/* Departman za ljubimce bira VRSTU umesto uzrasta deteta —
+              to je isti izbor na istom mestu, samo drugo biće. */}
+          {isPet() ? (
+            <PetPicker onChange={() => setScans(loadScans())} />
+          ) : (
+            <ChildProfiles
+              profiles={profiles}
+              selectedId={selectedChildId}
+              onSelect={setSelectedChildId}
+              onChange={setProfiles}
+            />
+          )}
         </>
       )}
 
@@ -651,12 +659,18 @@ export default function App() {
                 ? `${t("sub.trial")} ${subStatus.daysLeft} ${subStatus.daysLeft === 1 ? t("sub.dayLeft") : t("sub.daysLeft")} ${t("sub.trialTail")}`
                 : t("sub.expired")}
           </button>
-          <ChildProfiles
-            profiles={profiles}
-            selectedId={selectedChildId}
-            onSelect={setSelectedChildId}
-            onChange={setProfiles}
-          />
+          {/* Departman za ljubimce bira VRSTU umesto uzrasta deteta —
+              to je isti izbor na istom mestu, samo drugo biće. */}
+          {isPet() ? (
+            <PetPicker onChange={() => setScans(loadScans())} />
+          ) : (
+            <ChildProfiles
+              profiles={profiles}
+              selectedId={selectedChildId}
+              onSelect={setSelectedChildId}
+              onChange={setProfiles}
+            />
+          )}
           <div className="room-picker">
             <h3>{t("profile.memory")}</h3>
             <p className="muted">{t("profile.memoryNote")}</p>

@@ -276,6 +276,74 @@ Return ONLY valid JSON:
   return out;
 }
 
+/**
+ * Isti posao, drugo biće — analiza prostora za LJUBIMCA.
+ *
+ * Ne prevodi se dečji prompt. Ljubimac se u istoj sobi ponaša drugačije, pa
+ * su i opasnosti druge: pas jede sa stola dok niko ne gleda, mačka se penje
+ * svuda i skače kroz otvoren prozor, zec grize kablove, ptica strada od
+ * isparenja iz kuhinje. Pravilo o dohvatu, koje je kod deteta pola posla,
+ * za mačku prosto ne važi.
+ */
+const PET_EN: Record<string, string> = {
+  'dog-small': 'a small dog', 'dog-large': 'a large dog', cat: 'a cat',
+  rabbit: 'a rabbit', bird: 'a pet bird', rodent: 'a small rodent (hamster, guinea pig)',
+};
+
+function buildPetPrompt(roomType: string, petKind: string, language = 'Serbian', live = false): string {
+  const room = ROOM_EN[roomType] ?? 'room';
+  const pet = PET_EN[petKind] ?? 'a pet';
+  const liveRules = live
+    ? `\n\nLIVE CAMERA MODE — a single frame from a video feed, possibly soft or partial. That lowers your CONFIDENCE, not the number of hazards. Report what you see and mark shaky findings with "certain": false. Do not report the person holding the camera.`
+    : '';
+
+  return `${languageRules(language)}
+
+You are a veterinary expert in household hazards for companion animals, with the knowledge of ASPCA Animal Poison Control, WSAVA and PDSA.
+
+Analyze this photo of a "${room}" and identify EVERY hazard for ${pet} living in this home.
+
+THINK LIKE THE ANIMAL, NOT LIKE A PERSON. This is where analyses go wrong:
+- A cat reaches EVERYTHING: worktops, the fridge top, wardrobes, open windows. Height protects nothing. Never dismiss a hazard because it is "up high".
+- A dog eats what it finds while nobody watches, and reaches further up than owners expect.
+- Rabbits and rodents gnaw anything cable-shaped; a live cable is a lethal hazard, not an untidy one.
+- Birds are killed by fumes a human does not notice: overheated non-stick pans, aerosols, scented candles.
+
+WHAT MATTERS MOST, in this order:
+1. POISONS. Lilies are lethal to cats (kidney failure from pollen alone). Also toxic: dieffenbachia, philodendron, dracaena, poinsettia, sago palm. Chocolate, xylitol, grapes, raisins, onion, garlic, alcohol, macadamia. Human medicines — a single ibuprofen or paracetamol tablet can kill a cat. Antifreeze, cleaning products, essential-oil diffusers.
+2. THINGS SWALLOWED. String, thread, yarn, ribbon, hair ties, dental floss — for a cat this is a linear foreign body and emergency surgery, and it never looks dangerous. Also: button batteries, coins, toy parts, bones.
+3. ESCAPE AND FALLS. Unscreened open windows and balconies for cats. Stairs for long-backed dog breeds and for rabbits.
+4. TRAPS. Washing machine and tumble dryer (cats sleep in them), reclining chairs, toilet bowls, tilting windows.
+5. BURNS AND FIRE. Hot hobs, candles, open fires, heaters.
+
+DO NOT report:
+- the animal itself, or its own food, bed, litter tray, scratching post or carrier when they are simply present and appropriate;
+- toys made for that species with no visible fault;
+- furniture that is merely present.
+
+Return ONLY valid JSON (no markdown fences):
+{
+  "hazards": [{
+    "label": "short everyday name of the object in ${language}, 1-3 words",
+    "category": "fall|choking|poisoning|burn|electric|cutting|drowning|crush|strangulation|other",
+    "severity": "critical|high|medium|low",
+    "box": {"x":0.1,"y":0.2,"w":0.15,"h":0.1} (tight around THIS object only, 0-1 of the whole image),
+    "why": "2-3 sentences in ${language}: what happens to THIS animal, concretely",
+    "facts": ["REQUIRED 2-4 items, max 6 words each, in ${language}, new information not repeated from why"],
+    "steps": ["1-3 imperative actions in ${language}, max 10 words each"],
+    "certain": true or false,
+    "reach": 1-10 (how easily THIS species gets to it; for a cat this is almost always 8-10),
+    "vet_urgent": true if this needs a vet the same day when it happens, false otherwise,
+    "stats": "real veterinary fact with source (ASPCA/WSAVA/PDSA) in ${language}, never invented numbers",
+    "fix": "one concrete step doable right now, in ${language}"
+  }],
+  "safety_score": 0-100,
+  "summary": "2 sentences in ${language}, calm and practical"
+}${liveRules}
+
+BE THOROUGH. A normal living room or kitchen with a cat in it usually holds SIX OR MORE real hazards. If you found only two or three, you have not finished looking — check the plants, the cables, the windows, the worktops and what is behind the low doors.`;
+}
+
 function buildPrompt(roomType: string, ageGroup: string, childName?: string, language = 'Serbian', live = false): string {
   const room = ROOM_EN[roomType] ?? 'room';
   const age = AGE_EN[ageGroup] ?? ageGroup;
@@ -638,7 +706,7 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-  const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian', live = false } = body ?? {};
+  const { image, roomType = 'living_room', ageGroup = '1-2y', childName, language = 'Serbian', live = false, subject = 'child', petKind } = body ?? {};
 
   // Stanje svakog provajdera ponaosob.
   //
@@ -982,7 +1050,12 @@ const CANDIDATES: Provider[] = [
     return json({ error: 'Missing image (data URL)' }, 400);
   if (image.length > 2_500_000) return json({ error: 'Image too large' }, 413);
 
-  const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30), live === true);
+  // Departman se bira zahtevom, a ne zasebnom funkcijom: isti lanac
+  // provajdera, isto merenje jezika, isti budžet vremena, ista provera
+  // razmere. Razlikuje se samo pitanje koje se modelu postavlja.
+  const prompt = subject === 'pet'
+    ? buildPetPrompt(String(roomType), String(petKind ?? 'dog-small'), String(language).slice(0, 30), live === true)
+    : buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30), live === true);
 
   const errors: string[] = [];
   const deadline = Date.now() + BUDGET_MS;

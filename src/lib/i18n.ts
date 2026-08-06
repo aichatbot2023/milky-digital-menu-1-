@@ -520,6 +520,12 @@ const D: Dict = {
   "space.repeated": { en: "Seen from several sides:", sr: "Viđeno sa više strana:" },
   "space.unchecked": { en: "Still worth checking", sr: "Ostaje da proverite" },
   "space.start": { en: "Start here:", sr: "Počnite odavde:" },
+  // Departman za ljubimce
+  "pet.title": { en: "Which pet lives here?", sr: "Koji ljubimac živi ovde?" },
+  "pet.hint": {
+    en: "The same room is not the same room for a cat and for a rabbit: an open window is the biggest danger to a cat, a live cable to a rabbit.",
+    sr: "Ista soba za mačku i za zeca nije ista soba: mački je otvoren prozor najveća opasnost, a zecu kabl pod naponom.",
+  },
   "shop.view": { en: "View", sr: "Pogledaj" },
   "shop.hide": { en: "Hide recommendations", sr: "Sakrij preporuke" },
   "shop.show": { en: "Show partner recommendations", sr: "Prikaži preporuke partnera" },

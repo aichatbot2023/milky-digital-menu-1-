@@ -1819,3 +1819,14 @@ body {
 .ra-todo ul { margin: 0 0 12px; padding-left: 18px; }
 .ra-todo li { font-size: 13.5px; line-height: 1.6; }
 .ra-start { margin: 0 0 12px; line-height: 1.5; font-size: 14.5px; }
+
+/* Izbor vrste ljubimca — isto mesto na kom kod dece stoji profil deteta. */
+.pet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 9px; margin-top: 11px; }
+.pet-chip {
+  display: flex; align-items: center; gap: 9px; padding: 11px 12px;
+  border: 1.5px solid #e2e8f0; border-radius: 14px; background: #fff;
+  font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  color: #0f172a; text-align: left;
+}
+.pet-chip-on { border-color: var(--primary); background: #faf5ff; color: var(--primary-dark); }
+.pet-emoji { font-size: 21px; line-height: 1; }
