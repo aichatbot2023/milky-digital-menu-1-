@@ -711,6 +711,7 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
           hazard={selectedHazard}
           onClose={resume}
           onToggleResolved={() => resume()}
+          imageDataUrl={frozenFrame ?? undefined}
         />
       )}
     </div>

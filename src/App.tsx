@@ -36,6 +36,7 @@ import {
 import { HazardFocus } from "./components/HazardFocus";
 import { RoomReveal } from "./components/RoomReveal";
 import { AmazonPartner } from "./components/AmazonPartner";
+import { ContributeToggle } from "./components/ContributeToggle";
 import { LANGS, ageLabel, applyDir, getLang, langChosen, onLocale, roomLabel, t } from "./lib/i18n";
 import { recognise, remember } from "./lib/roomMemory";
 import { roomPrint } from "./lib/roomPrint";
@@ -656,6 +657,7 @@ export default function App() {
               {t("profile.memoryClear")}
             </button>
           </div>
+          <ContributeToggle />
         </>
       )}
 

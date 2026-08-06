@@ -32,3 +32,8 @@ dubina-uporedi.png
 public/ort/
 safenest-shot.mjs
 sn-*.png
+
+# Skup podataka i treninzi — veliki, obnovljivi iz tools/hazard-dataset.py
+data/
+runs/
+*.pt

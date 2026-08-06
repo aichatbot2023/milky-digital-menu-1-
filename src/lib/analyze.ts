@@ -19,11 +19,11 @@ function splitDataUrl(dataUrl: string): [string, string] {
 
 // Podrazumevani backend: OMNI Supabase projekat (edge funkcija analyze-hazards,
 // besplatni OpenRouter vision modeli — nula troškova po pozivu).
-const DEFAULT_OMNI_URL =
+export const DEFAULT_OMNI_URL =
   "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/analyze-hazards";
 // Javni anon ključ omni projekta (isti kao u omni frontend kodu) — omogućava
 // poziv i ako je funkcija deploy-ovana sa uključenom JWT proverom.
-const OMNI_ANON_KEY =
+export const OMNI_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
 
 const CLOUD_TIMEOUT_MS = 35000;

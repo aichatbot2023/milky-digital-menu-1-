@@ -3,6 +3,7 @@ import type { Hazard } from "../types";
 import { SEVERITY_META } from "../types";
 import { categoryLabel, hazardName, severityLabel, t } from "../lib/i18n";
 import { recordFeedback } from "../lib/learning";
+import { contribute } from "../lib/contribute";
 import {
   openProduct,
   productsForCategory,
@@ -16,9 +17,15 @@ interface Props {
   hazard: Hazard;
   onClose: () => void;
   onToggleResolved: (id: string) => void;
+  /**
+   * Fotografija na kojoj je nalaz uočen. Potrebna je samo da bi se, uz
+   * izričit pristanak, poslao ISEČAK ovog predmeta kao primer za učenje.
+   * Bez pristanka se ne koristi ni za šta.
+   */
+  imageDataUrl?: string;
 }
 
-export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) {
+export function HazardDetailSheet({ hazard, onClose, onToggleResolved, imageDataUrl }: Props) {
   const meta = SEVERITY_META[hazard.severity];
   const [voted, setVoted] = useState<null | "up" | "down">(null);
   const [products, setProducts] = useState<PartnerProduct[]>([]);
@@ -47,6 +54,10 @@ export function HazardDetailSheet({ hazard, onClose, onToggleResolved }: Props) 
     if (voted || !hazard.sourceClass) return;
     recordFeedback(hazard.sourceClass, correct);
     setVoted(correct ? "up" : "down");
+    // Ista ocena, dva učinka: prag na ovom telefonu se pomera odmah, a sam
+    // model se popravlja tek kad se skupi dovoljno ovakvih ispravki. Drugo
+    // se dešava samo ako je roditelj na to izričito pristao.
+    if (imageDataUrl) void contribute(imageDataUrl, hazard, correct);
   };
 
   return (

@@ -483,6 +483,20 @@ const D: Dict = {
     en: "SafeNest AI is a participant in the Amazon Associates Programme. As an Amazon Associate we earn from qualifying purchases.",
     sr: "SafeNest AI je učesnik Amazon Associates programa. Kao Amazon Associate partner, zarađujemo od kvalifikovanih kupovina.",
   },
+  // Pristanak na doprinos učenju — podrazumevano isključeno.
+  "give.title": { en: "Help the AI learn", sr: "Pomozi da AI nauči" },
+  "give.note": {
+    en: "When you mark a finding as wrong, that correction can help improve the detector for every parent. This is off unless you turn it on.",
+    sr: "Kada označite da nalaz nije tačan, ta ispravka može da popravi detektor za sve roditelje. Ovo je isključeno dok ga sami ne uključite.",
+  },
+  "give.opt": {
+    en: "Send my corrections to help improve the detector",
+    sr: "Šalji moje ispravke da bi detektor bio bolji",
+  },
+  "give.what": {
+    en: "Only a small cutout of the marked object is sent — never the whole photo, never your name, account or location. You can switch this off at any time.",
+    sr: "Šalje se samo mali isečak označenog predmeta — nikad cela fotografija, nikad vaše ime, nalog ni lokacija. Možete isključiti kad god želite.",
+  },
   "shop.view": { en: "View", sr: "Pogledaj" },
   "shop.hide": { en: "Hide recommendations", sr: "Sakrij preporuke" },
   "shop.show": { en: "Show partner recommendations", sr: "Prikaži preporuke partnera" },
