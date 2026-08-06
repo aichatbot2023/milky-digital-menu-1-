@@ -258,6 +258,10 @@ const D: Dict = {
   "live.finish": { en: "Finish scan", sr: "Završi sken" },
   "live.resume": { en: "▶ Resume scanning", sr: "▶ Nastavi skeniranje" },
   "live.tapMore": { en: "Tap for the fix and statistics →", sr: "Dodirnite za rešenje i statistiku →" },
+  "live.cloudDown": {
+    en: "Deep AI analysis is not responding. What you see is only what the phone recognises on its own — treat it as a quick check, not a full room review.",
+    sr: "Dubinska AI analiza ne odgovara. Ovo je samo ono što telefon prepoznaje sam — brza provera, ne pregled cele sobe.",
+  },
   "live.cloudnote": {
     en: "On-device AI active · deep AI explanations are on their way…",
     sr: "Lokalni AI aktivan · dubinska AI objašnjenja samo što nisu stigla…",

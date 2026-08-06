@@ -294,9 +294,16 @@ export async function detectLocal(
       .filter((d) => d.box.w * d.box.h >= MIN_AREA)
       .filter((d) => plausiblePosition(d.label, d.box)),
   );
+  // Gde je dete. `person` nema svoj nalaz i nikad se ne prijavljuje kao
+  // opasnost — ali govori odakle dete dohvata stvari, pa dohvat prestaje da
+  // bude procena po visini u kadru i postaje merena razdaljina.
+  const people = detections
+    .filter((d) => d.label === "person" && d.score >= 0.45)
+    .map((d) => d.box);
+
   // Predmeti se prevode u opasnosti, pa se PROSUĐUJU po tome gde stoje.
   // Bez tog drugog koraka detektor nabraja posuđe umesto da nalazi opasnosti:
   // izmereno je da na fotografiji kuhinje vrati sedam činija i saksija, a
   // nijednu od opasnosti koje u toj istoj kuhinji zaista postoje.
-  return judgeByContext(mapDetectionsToHazards(detections, ageGroup), ageGroup);
+  return judgeByContext(mapDetectionsToHazards(detections, ageGroup), ageGroup, people);
 }

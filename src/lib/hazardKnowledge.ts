@@ -305,11 +305,18 @@ const RULES: Record<string, HazardRule> = {
     stats: "Prignječenja prstiju vratima su među čestim manjim povredama male dece u domu (EU Child Safety Alliance).",
     fix: "Postavite bravicu za frižider ako dete samo otvara vrata.",
   },
+  // Knjiga NIJE polica. Detektor vidi knjigu — na podu, u ruci, na stolu —
+  // a nalaz je govorio o polici koja se prevrće. Roditelj je na kućnom snimku
+  // dobio jedan jedini nalaz: okvir oko knjige na podu, ispod njega tekst o
+  // nepričvršćenoj polici, i ocenu „nisko". U toj istoj sobi bilo je dete na
+  // podu, sitne igračke svuda oko njega, nepričvršćena polica do plafona i
+  // radijator. Pogrešan nalaz nije samo beskoristan — zauzeo je jedino mesto
+  // koje roditelj pogleda.
   book: {
-    labelSr: "Police/knjige",
+    labelSr: "Knjiga",
     category: "crush",
-    severity: sev(["1-2y", "2-4y"], "low"),
-    why: "Ako su knjige na polici koja nije pričvršćena, dete koje se penje može prevrnuti celu policu.",
+    severity: sev(["6-12m", "1-2y"], "low"),
+    why: "Sama knjiga nije opasna. Proverite policu sa koje je pala: ako nije pričvršćena za zid, dete koje se penje može je prevrnuti na sebe.",
     stats: "Prevrtanje nameštaja (police, komode) izaziva teške povrede dece koja se penju (CPSC/CDC).",
     fix: "Pričvrstite police i komode na zid protiv prevrtanja.",
   },
@@ -692,7 +699,7 @@ const RULES_EN: Record<string, RuleEn> = {
   sink: { label: "Sink", why: "Water and chemicals under the sink; a child climbing to the tap risks hot-water scalds.", stats: "Hot tap water causes serious scalds in young children; WHO recommends boiler ≤ 50°C.", fix: "Move or lock away under-sink chemicals; limit the boiler temperature." },
   toilet: { label: "Toilet", why: "A child leaning into the bowl can lose balance — little water is enough for a small child to drown.", stats: "Drowning is possible in just 5 cm of water; bathrooms are high-risk for children under 3 (WHO).", fix: "Fit a toilet-lid lock and keep the bathroom door closed." },
   refrigerator: { label: "Fridge", why: "Finger crush in the door, and glass jars within reach when it opens.", stats: "Door finger-crush injuries are common minor injuries in young children (EU Child Safety Alliance).", fix: "Fit a fridge lock if your child opens the door alone." },
-  book: { label: "Shelf / books", why: "If books sit on an unanchored shelf, a climbing child can pull the whole unit over.", stats: "Furniture tip-overs (shelves, dressers) cause severe injuries to climbing children (CPSC/CDC).", fix: "Anchor shelves and dressers to the wall." },
+  book: { label: "Book", why: "The book itself is not the danger. Check the shelf it came from: if it is not anchored to the wall, a climbing child can pull the whole unit over.", stats: "Furniture tip-overs (shelves, dressers) cause severe injuries to climbing children (CPSC/CDC).", fix: "Anchor shelves and dressers to the wall." },
   remote: { label: "Remote (batteries!)", why: "Remotes contain button batteries — a swallowed battery causes severe chemical burns to the oesophagus within 2 hours.", stats: "Button-battery ingestion is a medical emergency; severe cases in children under 6 have risen sharply (CDC/poison centres).", fix: "Make sure the battery cover is screwed or taped shut; keep remotes out of reach." },
   "sports ball": { label: "Small ball", why: "Small balls and their parts can block the airway — anything that fits through a toilet-paper tube is a choking risk under 3.", stats: "Choking on small objects is a leading cause of accidental death in children under 1 (CDC).", fix: "Remove balls under 4.5 cm while your child is small; check older siblings' toys." },
   "teddy bear": { label: "Plush toy", why: "Plush toys in a baby's cot are a suffocation risk during sleep; detachable plastic eyes/noses can be swallowed.", stats: "Soft objects in the cot are linked to SIDS — the recommendation is a bare cot (AAP/WHO).", fix: "Keep the cot empty for babies under 12 months: no plush toys, pillows or blankets." },

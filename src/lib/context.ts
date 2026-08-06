@@ -29,7 +29,7 @@
  * Pravila NE diraju predmete koji su opasni sami po sebi: nož je nož i na
  * najvišoj polici, jer odatle pada.
  */
-import type { AgeGroup, Hazard } from "../types";
+import type { AgeGroup, Hazard, HazardBox } from "../types";
 import { boxIou } from "./detector";
 
 /**
@@ -93,12 +93,40 @@ function onHeatSource(h: Hazard, heat: Hazard[]): boolean {
 }
 
 /**
- * Prosudi lokalne nalaze prema tome GDE su i pored ČEGA su.
- * Vraća samo ono što na ovoj slici zaista predstavlja opasnost.
+ * Koliko daleko od deteta predmet još uvek „stoji pored njega", mereno u
+ * širinama samog deteta. Dete koje sedi za sekund dohvati ono što mu je uz
+ * ruku, a za nekoliko sekundi i ono na korak od njega.
  */
-export function judgeByContext(hazards: Hazard[], age: AgeGroup): Hazard[] {
+const NEAR_CHILD = 1.6;
+
+/** Rastojanje centara dva okvira, izraženo u širinama deteta. */
+function childWidths(h: HazardBox, kid: HazardBox): number {
+  const dx = h.x + h.w / 2 - (kid.x + kid.w / 2);
+  const dy = h.y + h.h / 2 - (kid.y + kid.h / 2);
+  return Math.hypot(dx, dy) / Math.max(0.05, kid.w);
+}
+
+/**
+ * Prosudi lokalne nalaze prema tome GDE su, pored ČEGA su i — ako se vidi —
+ * koliko su daleko od samog deteta.
+ *
+ * `people` su okviri osoba sa iste slike. To je najvredniji podatak koji
+ * detektor uopšte daje, a do sada se bacao: dok se dete ne vidi, dohvat se
+ * pogađa po visini u kadru, a čim se vidi, dohvat se MERI. Na kućnom snimku
+ * sa detetom koje sedi na podu među igračkama aplikacija je prijavila jednu
+ * jedinu stvar, i to „nisko" — dete u sredini kadra nije značilo ništa.
+ */
+export function judgeByContext(
+  hazards: Hazard[],
+  age: AgeGroup,
+  people: HazardBox[] = [],
+): Hazard[] {
   const reach = REACH_BY_AGE[age] ?? 0.45;
   const heat = hazards.filter((h) => h.sourceClass && HEAT.has(h.sourceClass));
+  // Najveća osoba u kadru je ona najbliža kameri — u dečjoj sobi to je dete
+  // koje roditelj i snima. Ako je u kadru odrasla osoba, dizanje hitnosti
+  // predmeta oko nje ništa ne kvari; propuštena opasnost pored deteta kvari.
+  const kid = [...people].sort((a, b) => b.w * b.h - a.w * a.h)[0] ?? null;
   const out: Hazard[] = [];
 
   for (const h of hazards) {
@@ -115,6 +143,18 @@ export function judgeByContext(hazards: Hazard[], age: AgeGroup): Hazard[] {
         category: "burn",
         severity: h.severity === "critical" ? "critical" : "high",
         contextNote: "na izvoru toplote",
+      });
+      continue;
+    }
+
+    // Predmet nadohvat samom detetu koje se vidi na slici. Ovo pretiče sva
+    // ostala pravila: nije važno kako se predmet zove ni gde je u kadru, nego
+    // to što je dete pored njega SADA.
+    if (kid && childWidths(h.box, kid) <= NEAR_CHILD) {
+      out.push({
+        ...h,
+        severity: h.severity === "low" ? "medium" : h.severity,
+        contextNote: "uz samo dete",
       });
       continue;
     }

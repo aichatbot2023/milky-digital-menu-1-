@@ -83,7 +83,17 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
   const [cloudResult, setCloudResult] = useState<AnalysisResult | null>(null);
   const [modelReady, setModelReady] = useState(false);
   const [modelFail, setModelFail] = useState<string | null>(null);
-  const [cloudError, setCloudError] = useState<string | null>(null);
+  /**
+   * Koliko puta zaredom dubinska analiza nije odgovorila.
+   *
+   * Ranije se ovde držala samo zastavica „bilo je greške", a poruka je
+   * glasila da objašnjenja „samo što nisu stigla". Kad oblak padne trajno —
+   * a padne, videli smo — ta rečenica je neistina koja se ponavlja u
+   * nedogled: roditelj čeka nešto što nikad neće doći i u međuvremenu misli
+   * da je soba proverena. Aplikacija koja štiti dete ne sme da umiruje dok
+   * je slepa.
+   */
+  const [cloudDown, setCloudDown] = useState(0);
   const [paused, setPaused] = useState(false);
   /** Šta petlja upravo radi — status traka bez ovoga ćuti sekundama. */
   const [phase, setPhase] = useState<"idle" | "moving" | "looking" | "closer">("idle");
@@ -303,16 +313,16 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
           live: true,
         });
         cloudFails.current = 0;
+        setCloudDown(0);
         if (!pausedRef.current) {
           setCloudResult(res);
-          setCloudError(null);
         }
       } catch {
         // Cloud pad NIJE fatalan — lokalna detekcija nastavlja; korisniku
         // se prikazuje smirena poruka, a pokušaji se proredе automatski
         cloudFails.current += 1;
         cloudSkip.current = Math.min(4, cloudFails.current);
-        setCloudError("retry");
+        setCloudDown(cloudFails.current);
       } finally {
         cloudBusy.current = false;
       }
@@ -618,8 +628,10 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
         </div>
       </div>
 
-      {cloudError && !cameraError && (
-        <div className="live-cloudnote">{t("live.cloudnote")}</div>
+      {cloudDown > 0 && !cameraError && (
+        <div className={`live-cloudnote${cloudDown >= 2 ? " live-cloudnote-bad" : ""}`}>
+          {cloudDown >= 2 ? t("live.cloudDown") : t("live.cloudnote")}
+        </div>
       )}
 
       {/* Donji stub: listač IZNAD kartice — nikad se ne preklapaju */}

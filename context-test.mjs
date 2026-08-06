@@ -76,6 +76,28 @@ const out = await page.evaluate(async () => {
     ok("prave opasnosti prolaze sve", r.length === 4, `${r.length}/4`);
   }
 
+  // 9. DETE U KADRU — ono zbog čega je sve i pisano. Na kućnom snimku dete
+  //    sedi na podu među igračkama, a aplikacija je prijavila jednu stvar,
+  //    i to „nisko". Predmet uz samo dete ne sme da bude „nisko".
+  {
+    const kid = { x: 0.3, y: 0.55, w: 0.14, h: 0.25 };
+    const uz = hz("bowl", "Igračka", { x: 0.36, y: 0.66, w: 0.08, h: 0.07 }, { severity: "low" });
+    const daleko = hz("bowl", "Činija", { x: 0.9, y: 0.06, w: 0.06, h: 0.06 }, { severity: "low" });
+    const r = judgeByContext([uz, daleko], "1-2y", [kid]);
+    const blizu = r.find((h) => h.label === "Igračka");
+    ok("predmet uz dete se prijavljuje", !!blizu, `${r.length} nalaza`);
+    ok("i nije više „nisko\"", blizu?.severity === "medium", blizu?.severity);
+    ok("i kaže da je uz dete", blizu?.contextNote === "uz samo dete", blizu?.contextNote);
+    ok("predmet daleko od deteta pod plafonom otpada",
+      !r.some((h) => h.label === "Činija"), `${r.length}`);
+  }
+  // 10. Bez deteta u kadru pravila rade kao i pre — dodatak ništa ne kvari.
+  {
+    const mid = { x: 0.4, y: 0.45, w: 0.12, h: 0.1 };
+    const bez = judgeByContext([hz("bowl", "Činija", mid)], "0-6m", []);
+    ok("bez deteta važi stara procena po visini", bez.length === 0, `${bez.length}`);
+  }
+
   return log;
 });
 
