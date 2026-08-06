@@ -5,6 +5,7 @@
  * dok link nije podešen, dugme vodi na kontakt mejl. Nakon uplate korisnik
  * dobija aktivacioni kod koji unosi u aplikaciju.
  */
+import { isPet } from "./domain";
 
 const TRIAL_KEY = "safenest.trialStart";
 const SUB_KEY = "safenest.subscribed";
@@ -132,7 +133,11 @@ export function track(
         "Authorization": `Bearer ${ANON}`,
         "apikey": ANON,
       },
-      body: JSON.stringify({ action: "track", type, ref: ref ?? getRef(), meta }),
+      body: JSON.stringify({
+        action: "track", type, ref: ref ?? getRef(), meta,
+        // Departman uz svaki događaj — inače se CRM ne može razdvojiti.
+        domain: isPet() ? "pet" : "child",
+      }),
     }).catch(() => {});
   } catch {
     /* ignoriši */

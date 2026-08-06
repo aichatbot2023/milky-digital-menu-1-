@@ -28,11 +28,27 @@ th{color:#64748b;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
 .ok{color:#166534;margin-top:10px}
 code{background:#f1f5f9;padding:2px 7px;border-radius:6px;font-size:.85rem}
 .muted{color:#64748b;font-size:.85rem}
+.dom{padding:7px 14px;border:1.5px solid #e2e8f0;border-radius:999px;background:#fff;
+  font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;color:#0f172a}
+.dom.on{border-color:#0f766e;background:#f0fdfa;color:#0f766e}
+body[data-domain="pet"] .dom.on{border-color:#7c3aed;background:#faf5ff;color:#5b21b6}
 </style>
 </head>
 <body><div class="wrap">
-<h1>🛡️ SafeNest AI — Admin panel</h1>
+<h1 id="title">🛡️ SafeNest AI — Admin panel</h1>
 <p class="muted">Referral partneri, prodaje i registrovani korisnici. Pristup samo uz admin ključ (ADMIN_KEY secret u Supabase). · <a href="/launch.html">🚀 Launch paket (marketing tekstovi)</a></p>
+
+<!-- DVA DEPARTMANA, JEDAN ULAZ.
+     Bebe i ljubimci su dva proizvoda sa različitim kupcima, partnerima i
+     katalogom. Zbirni broj ne odgovara ni na jedno pitanje koje vlasnik
+     zaista ima („koliko ljudi skenira za mačku?"), pa se sve — korisnici,
+     skenovi, klikovi, proizvodi — gleda po departmanu. -->
+<div class="card" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+  <b style="margin-right:4px">Departman:</b>
+  <button id="dom-child" class="dom on" onclick="setDomain('child')">👶 Bebe i deca</button>
+  <button id="dom-pet" class="dom" onclick="setDomain('pet')">🐾 Ljubimci</button>
+  <span class="muted" id="dom-note">Podaci ispod su za izabrani departman.</span>
+</div>
 
 <div class="card">
   <div class="row">
@@ -170,6 +186,19 @@ async function call(body) {
   return data;
 }
 
+let DOMAIN = (localStorage.getItem("sn.admin.domain") || "child");
+
+function setDomain(d) {
+  DOMAIN = d;
+  localStorage.setItem("sn.admin.domain", d);
+  document.getElementById("dom-child").className = "dom" + (d === "child" ? " on" : "");
+  document.getElementById("dom-pet").className = "dom" + (d === "pet" ? " on" : "");
+  document.getElementById("title").textContent =
+    d === "pet" ? "🐾 SafeNest Pets — Admin panel" : "🛡️ SafeNest AI — Admin panel";
+  document.body.dataset.domain = d;
+  if (getKey()) loadStats();
+}
+
 function getKey() {
   const k = document.getElementById("key").value.trim() || sessionStorage.getItem("snkey") || "";
   if (k) sessionStorage.setItem("snkey", k);
@@ -179,7 +208,7 @@ function getKey() {
 async function loadStats() {
   document.getElementById("err").textContent = "";
   try {
-    const data = await call({ action: "stats", admin_key: getKey() });
+    const data = await call({ action: "stats", admin_key: getKey(), domain: DOMAIN });
     render(data);
     document.getElementById("panel").style.display = "block";
   } catch (e) {
@@ -193,7 +222,7 @@ async function addProduct() {
   try {
     await call({
       action: "product-add",
-      admin_key: getKey(),
+      admin_key: getKey(), domain: DOMAIN,
       category: document.getElementById("prcat").value,
       brand: document.getElementById("prbrand").value.trim(),
       title: document.getElementById("prtitle").value.trim(),
@@ -365,4 +394,5 @@ function render(data) {
 
 if (sessionStorage.getItem("snkey")) { document.getElementById("key").value = sessionStorage.getItem("snkey"); loadStats(); }
 </script>
-</div></body></html>
+</div><script>setDomain(DOMAIN);</script>
+</body></html>

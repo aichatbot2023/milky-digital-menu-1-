@@ -108,14 +108,23 @@ Deno.serve(async (req) => {
       if (!VALID_TYPES.has(type)) return json({ error: 'Bad type' }, 400);
       const ref = body?.ref ? String(body.ref).slice(0, 40).replace(/[^A-Za-z0-9_-]/g, '') : null;
       const meta = body?.meta && typeof body.meta === 'object' ? body.meta : null;
-      await s`INSERT INTO sn_events (type, ref_code, meta) VALUES (${type}, ${ref}, ${meta ? s.json(meta) : null})`;
+      // Departman se upisuje uz svaki događaj — bez toga se CRM ne može
+      // razdvojiti unazad, a razdvojiti se mora: bebe i ljubimci su dva
+      // proizvoda sa različitim kupcima.
+      const dom = body?.domain === 'pet' ? 'pet' : 'child';
+      await s`INSERT INTO sn_events (type, ref_code, meta, domain)
+              VALUES (${type}, ${ref}, ${meta ? s.json(meta) : null}, ${dom})`;
       return json({ ok: true });
     }
 
     if (action === 'products') {
+      // Katalog se deli po DEPARTMANU. Bez ovoga bi mačka dobijala poklopce
+      // za utičnice a beba mrežicu za balkon — proizvodi jednog departmana su
+      // u drugom u najboljem slučaju smetnja, a u najgorem pogrešan savet.
+      const domain = body?.domain === 'pet' ? 'pet' : 'child';
       const products = await s`
         SELECT id, category, brand, title, title_en, url, price, keywords, image_url, solves
-        FROM sn_products WHERE active ORDER BY category, id`;
+        FROM sn_products WHERE active AND domain = ${domain} ORDER BY category, id`;
       return json({ products });
     }
 
@@ -154,8 +163,11 @@ Deno.serve(async (req) => {
       if (!brand || !title || !/^https?:\/\//.test(url)) {
         return json({ error: 'brand, title i ispravan url su obavezni' }, 400);
       }
-      const [row] = await s`INSERT INTO sn_products (category, brand, title, title_en, url, price, keywords)
-        VALUES (${category}, ${brand}, ${title}, ${titleEn}, ${url}, ${price}, ${keywords}) RETURNING id`;
+      // Proizvod pripada departmanu u kom je dodat. Bez toga bi mrežica za
+      // balkon završila u dečjem katalogu, a poklopci za utičnice kod mačke.
+      const pdom = body?.domain === 'pet' ? 'pet' : 'child';
+      const [row] = await s`INSERT INTO sn_products (category, brand, title, title_en, url, price, keywords, domain)
+        VALUES (${category}, ${brand}, ${title}, ${titleEn}, ${url}, ${price}, ${keywords}, ${pdom}) RETURNING id`;
       return json({ ok: true, id: row.id });
     }
 
@@ -182,17 +194,33 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'stats') {
+      // CRM se gleda PO DEPARTMANU. Bebe i ljubimci su dva proizvoda sa
+      // različitim kupcima i različitim partnerima; jedan zbirni broj ne
+      // odgovara ni na jedno pitanje koje vlasnik zaista ima.
+      //
+      // Događaji stariji od uvođenja departmana nemaju upisan `domain`. Oni
+      // pripadaju dečjoj aplikaciji, jer druge tada nije ni bilo — zato
+      // `is null` ide uz 'child', a ne u nepoznato.
+      const dom = body?.domain === 'pet' ? 'pet' : 'child';
+      const isChild = dom === 'child';
+
       const partners = await s`SELECT code, name, created_at FROM sn_partners ORDER BY created_at`;
       const rows = await s`
         SELECT coalesce(ref_code, '(direktno)') AS code, type, count(*)::int AS n
-        FROM sn_events GROUP BY 1, 2`;
-      const totals = await s`SELECT type, count(*)::int AS n FROM sn_events GROUP BY type`;
+        FROM sn_events
+        WHERE (domain = ${dom} OR (${isChild} AND domain IS NULL))
+        GROUP BY 1, 2`;
+      const totals = await s`
+        SELECT type, count(*)::int AS n FROM sn_events
+        WHERE (domain = ${dom} OR (${isChild} AND domain IS NULL))
+        GROUP BY type`;
       // CRM lista: poslednji registrovani korisnici (ime + email + partner)
       const users = await s`
         SELECT meta->>'name' AS name, meta->>'email' AS email,
                coalesce(ref_code, '(direktno)') AS code, created_at
         FROM sn_events
         WHERE type = 'signup' AND meta ? 'email'
+          AND (domain = ${dom} OR (${isChild} AND domain IS NULL))
         ORDER BY created_at DESC LIMIT 500`;
       // Marketplace: svi proizvodi + broj klikova po proizvodu
       const products = await s`
@@ -209,6 +237,7 @@ Deno.serve(async (req) => {
             FROM sn_events WHERE type = 'click'
           ) k WHERE pid IS NOT NULL GROUP BY pid
         ) c ON c.pid = p.id
+        WHERE p.domain = ${dom}
         ORDER BY p.active DESC, clicks DESC, p.id`;
       // Aktivnost po danima (poslednjih 14 dana)
       const daily = await s`
@@ -216,19 +245,23 @@ Deno.serve(async (req) => {
                type, count(*)::int AS n
         FROM sn_events
         WHERE created_at > now() - interval '14 days'
+          AND (domain = ${dom} OR (${isChild} AND domain IS NULL))
         GROUP BY 1, 2 ORDER BY 1 DESC`;
       // Šta se skenira (poslednjih 1000 skenova — agregacija na admin strani)
       const scans = await s`
         SELECT meta, created_at FROM sn_events
-        WHERE type = 'scan' ORDER BY created_at DESC LIMIT 1000`;
+        WHERE type = 'scan'
+          AND (domain = ${dom} OR (${isChild} AND domain IS NULL))
+        ORDER BY created_at DESC LIMIT 1000`;
       // Lokacije: vremenska zona uređaja iz registracija i otvaranja
       const locations = await s`
         SELECT meta->>'tz' AS tz, count(*)::int AS n
         FROM sn_events
         WHERE type IN ('signup', 'app_open', 'scan') AND meta ? 'tz' AND meta->>'tz' <> ''
+          AND (domain = ${dom} OR (${isChild} AND domain IS NULL))
         GROUP BY 1 ORDER BY n DESC LIMIT 60`;
       const gifts = await s`SELECT email, note, created_at FROM sn_gifts ORDER BY created_at DESC`;
-      return json({ partners, rows, totals, users, products, daily, scans, locations, gifts });
+      return json({ partners, rows, totals, users, products, daily, scans, locations, gifts, domain: dom });
     }
 
     return json({ error: 'Nepoznata akcija' }, 400);

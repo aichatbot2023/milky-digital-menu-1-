@@ -25,5 +25,5 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 http.server.ThreadingHTTPServer(
-    ("127.0.0.1", PORT), functools.partial(Handler, directory="public")
+    ("127.0.0.1", PORT), functools.partial(Handler, directory=sys.argv[2] if len(sys.argv) > 2 else "public")
 ).serve_forever()

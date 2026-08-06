@@ -5,6 +5,7 @@
  * linka partnera, a svaki klik se beleži za obračun provizije.
  */
 import { isSr } from "./i18n";
+import { isPet } from "./domain";
 import { getRef, track } from "./subscription";
 
 export interface PartnerProduct {
@@ -67,7 +68,7 @@ export function fetchCatalog(): Promise<PartnerProduct[]> {
         "Authorization": `Bearer ${ANON}`,
         "apikey": ANON,
       },
-      body: JSON.stringify({ action: "products" }),
+      body: JSON.stringify({ action: "products", domain: isPet() ? "pet" : "child" }),
     })
       .then((r) => r.json())
       .then((d) => {
