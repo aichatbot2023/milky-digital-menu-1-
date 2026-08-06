@@ -15,6 +15,7 @@ import type { AgeGroup, Hazard, HazardBox } from "../types";
 import { mapDetectionsToHazards, type Detection } from "./hazardKnowledge";
 import { thresholdAdjustment } from "./learning";
 import { judgeByContext } from "./context";
+import { detectHazards, preloadHazardModel } from "./hazardModel";
 
 type Source = HTMLVideoElement | HTMLImageElement | HTMLCanvasElement;
 
@@ -46,6 +47,13 @@ const CLASS_MIN: Record<string, number> = {
   // Krupni objekti — stroži prag (model ih često "vidi" pogrešno)
   chair: 0.5, couch: 0.5, bed: 0.5, "dining table": 0.5, tv: 0.45,
   refrigerator: 0.5, oven: 0.45, sink: 0.45, toilet: 0.45, book: 0.45,
+  // Klase našeg modela. Ono što ubija — struja, gušenje, davljenje, pad niz
+  // stepenice — prolazi sa niskim pragom: roditelj radije jednom proveri
+  // višak nego da mu utičnica promakne. Fioka i kada su krupne i lako se
+  // vide, pa smeju da traže više.
+  socket: 0.3, plastic_bag: 0.3, blind: 0.3, stairs: 0.35, candle: 0.35,
+  coin: 0.35, kettle: 0.4, stove: 0.4, fireplace: 0.4, heater: 0.4,
+  bathtub: 0.45, drawer: 0.45,
 };
 // Ispod ove normalizovane površine box je šum senzora, ne objekat
 const MIN_AREA = 0.0004;
@@ -143,6 +151,8 @@ function getModel(): Promise<CocoModel> {
 /** Pokreće preuzimanje modela unapred (poziva se pri ulasku u live mod). */
 export function preloadDetector() {
   getModel().catch(() => {});
+  // Naš model kućnih opasnosti ide uz COCO, ne umesto njega.
+  preloadHazardModel();
 }
 
 /** Ručni ponovni pokušaj učitavanja (dugme u UI). */
@@ -265,6 +275,16 @@ export async function detectLocal(
     } catch {
       /* jedna pločica pala (memorija/canvas) — ostale i ceo kadar važe */
     }
+  }
+
+  // 2b) NAŠ model: utičnica, stepenice, sveća, kesa, gajtan roletne, kamin,
+  // šporet, grejalica, čajnik, novčić, kada, fioka. COCO nijednu od tih ne
+  // poznaje, a to su predmeti zbog kojih roditelj i skenira sobu. Ako model
+  // nedostaje ili padne, vraća prazno i sve ostalo radi nepromenjeno.
+  try {
+    all.push(...(await detectHazards(source, srcW, srcH)));
+  } catch {
+    /* dodatni model je dodatak — njegov pad ne sme da odnese ceo nalaz */
   }
 
   // 3) Filtar po klasi (osetljivost + samoučenje) → šum → NMS spajanje

@@ -50,10 +50,17 @@ const ALWAYS = new Set([
   "knife", "scissors", "fork", "oven", "toaster", "microwave", "hair drier",
   "toilet", "refrigerator", "tv", "fire hydrant", "cell phone", "remote",
   "mouse", "keyboard", "teddy bear", "sports ball", "toothbrush",
+  // Klase NAŠEG modela. Sve do jedne su birane baš zato što su opasnost, pa
+  // nijedna ne prolazi kroz sito „je li nadohvat". Gajtan roletne visi pri
+  // vrhu prozora i po visini bi ispao bezopasan — a omča je na visini vrata
+  // deteta koje stoji. Sveća na stolu je isto tako iznad pojasa, i isto tako
+  // opasna. Pravilo o dohvatu je za posuđe, ne za ovo.
+  "socket", "stairs", "candle", "plastic_bag", "blind", "fireplace",
+  "stove", "heater", "kettle", "coin", "bathtub", "drawer",
 ]);
 
 /** Izvori toplote: šta god stoji na njima ili uz njih — vrelo je. */
-const HEAT = new Set(["oven", "toaster", "microwave"]);
+const HEAT = new Set(["oven", "toaster", "microwave", "stove", "fireplace", "heater"]);
 
 /**
  * Dokle seže dete. Broj je udeo visine kadra mereno odozdo: beba koja puzi

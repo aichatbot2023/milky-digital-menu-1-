@@ -11,8 +11,11 @@ jezgra i za to da rezultat mora da stane u telefon:
   - ulaz 320 px umesto 640: izmereno je koliko traje jedan korak, i 640 bi
     značilo dane. Utičnica je sitna pa se time nešto gubi, ali model koji
     postoji i greši je bolji od savršenog koji nikad nije istreniran.
-  - `cache="disk"`: slike se jednom obrade i drže spremne, jer je na CPU-u
-    priprema slike uporediva sa samim učenjem.
+  - BEZ keširanja na disk. Prva verzija je koristila `cache="disk"` da
+    ubrza pripremu slike; izmereno je da svaka keširana slika zauzme 2,2 MB,
+    a to je za 5.692 slike 12 GB — tačno onoliko koliko je na ovoj mašini
+    ostalo slobodno. Trening bi stao na pola, kad se disk napuni. Priprema
+    u hodu je sporija po prolazu, ali se posao završi.
   - bez mozaika u poslednjih par prolaza: mozaik pomaže na početku, a pri
     kraju uči model na spojevima koji u stanu ne postoje.
 
@@ -48,7 +51,7 @@ def main():
         batch=a.batch,
         device="cpu",
         workers=4,
-        cache="disk",
+        cache=False,
         fraction=a.fraction,
         name=a.name,
         exist_ok=True,
