@@ -14,6 +14,7 @@
 import type { AgeGroup, Hazard, HazardBox } from "../types";
 import { mapDetectionsToHazards, type Detection } from "./hazardKnowledge";
 import { thresholdAdjustment } from "./learning";
+import { judgeByContext } from "./context";
 
 type Source = HTMLVideoElement | HTMLImageElement | HTMLCanvasElement;
 
@@ -273,5 +274,9 @@ export async function detectLocal(
       .filter((d) => d.box.w * d.box.h >= MIN_AREA)
       .filter((d) => plausiblePosition(d.label, d.box)),
   );
-  return mapDetectionsToHazards(detections, ageGroup);
+  // Predmeti se prevode u opasnosti, pa se PROSUĐUJU po tome gde stoje.
+  // Bez tog drugog koraka detektor nabraja posuđe umesto da nalazi opasnosti:
+  // izmereno je da na fotografiji kuhinje vrati sedam činija i saksija, a
+  // nijednu od opasnosti koje u toj istoj kuhinji zaista postoje.
+  return judgeByContext(mapDetectionsToHazards(detections, ageGroup), ageGroup);
 }

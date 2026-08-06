@@ -152,6 +152,9 @@ function FocusCard({
         {hazardName(h)}
         {h.count > 1 && <span className="focus-count">×{h.count}</span>}
       </h2>
+      {/* Zašto baš OVDE — jedino što lokalni nalaz zna, a ne vidi se iz
+          naziva: da li je predmet detetu nadohvat ili stoji na vrelom. */}
+      {h.contextNote && <p className="focus-context">📍 {h.contextNote}</p>}
       <p className="focus-desc">{h.why}</p>
 
       {steps.length > 0 && (

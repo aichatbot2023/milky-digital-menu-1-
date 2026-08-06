@@ -54,6 +54,12 @@ export interface Hazard {
    */
   uncertain?: boolean;
   /**
+   * Zašto je ovaj predmet OVDE opasan — „na izvoru toplote", „nadohvat
+   * detetu". Postavlja ga prosuđivanje po prostoru (`context.ts`): to je
+   * jedino što lokalni nalaz kaže, a ne vidi se iz samog naziva predmeta.
+   */
+  contextNote?: string;
+  /**
    * Da li je NEKO ZAISTA POGLEDAO ovu sliku i potvrdio nalaz.
    *
    * Nalazi iz oblaka su potvrđeni po definiciji — nastali su gledanjem

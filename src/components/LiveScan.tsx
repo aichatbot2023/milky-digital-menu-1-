@@ -667,7 +667,10 @@ export function LiveScan({ roomType, ageGroup, childName, onClose, onFinish }: P
             </span>
             <span className="live-strip-body">
               <strong>{hazardName(topHazard)}</strong>
-              <span className="live-strip-why">{topHazard.why}</span>
+              <span className="live-strip-why">
+                {topHazard.contextNote ? `📍 ${topHazard.contextNote} · ` : ""}
+                {topHazard.why}
+              </span>
               <span className="live-strip-hint">{t("live.tapMore")}</span>
             </span>
           </button>
