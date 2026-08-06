@@ -109,6 +109,50 @@ export function noteFailure(name: string, why: string): boolean {
 
 /** Jedan pokušaj ne sme da pojede ceo budžet telefona. Gemmi treba 16–20 s. */
 export const TRY_MS = 26000;
+/**
+ * ODGOVOR NA POGREŠNOM JEZIKU JE NEUSPEO ODGOVOR.
+ *
+ * Uputstvo o jeziku stoji na vrhu svakog prompta, izričito i ponovljeno — i
+ * slabiji modeli ga svejedno preskoče. Izmereno na pravoj fotografiji: kad
+ * lanac padne na nemotron, vrati uredan JSON i u njemu rečenicu „bright and
+ * modern but hides several dangers for a 1-2-year-old". Roditelj koji je
+ * izabrao srpski dobija izveštaj o svom stanu na engleskom.
+ *
+ * Do sada je takav odgovor prolazio kao ispravan, jer je JSON bio validan.
+ * Provera oblika nije provera sadržaja. Ovde se meri jedino što se pouzdano
+ * meri bez još jednog poziva modelu: gustina engleskih službenih reči. Kad
+ * je tražen jezik bilo koji osim engleskog, engleski odgovor se odbacuje i
+ * pita se sledeći provajder.
+ *
+ * Namerno se NE pokušava prepoznavanje svih jezika — greška koja se dešava
+ * je uvek ista: model se vrati na engleski. Provera koja hvata tu jednu
+ * grešku pouzdano vredi više od pametne koja se koleba na četrdeset jezika.
+ */
+const EN_WORDS =
+  /\b(the|and|is|are|was|were|of|with|for|from|that|this|these|those|can|could|should|would|keep|away|child|children|danger|dangerous|risk|make|sure|out|reach)\b/gi;
+
+export function wrongLanguage(text: string, language: string): boolean {
+  if (/english/i.test(language)) return false;
+  const words = text.trim().split(/\s+/).length;
+  if (words < 12) return false; // prekratko da bi se sudilo
+  const hits = (text.match(EN_WORDS) ?? []).length;
+  return hits / words > 0.12;
+}
+
+/**
+ * Ukupan budžet vremena za JEDAN poziv funkcije.
+ *
+ * Lanac ima šest provajdera; uz 26 s po svakome to je 156 s u jednom pozivu.
+ * Supabase edge funkcija toliko ne izdrži i ruši se sa WORKER_RESOURCE_LIMIT
+ * — a to je gore od poštenog neuspeha, jer klijent dobije šifru greške
+ * umesto poruke i ne zna da pokuša ponovo. Kad budžet istekne, prestaje se
+ * sa pokušajima i vraća se uredan odgovor.
+ *
+ * Provajder koji je pao pamti se kao „uspavan" (vidi `noteFailure`), pa
+ * sledeći pokušaj klijenta kreće od drugog i ne ponavlja isti zid.
+ */
+export const BUDGET_MS = 95000;
+
 
 /**
  * Jezik i imenovanje — pravila koja važe za SVAKI tekst koji roditelj čita.

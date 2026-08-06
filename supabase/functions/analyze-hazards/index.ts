@@ -1,4 +1,12 @@
-import { providers, isAsleep, noteFailure, TRY_MS, type Provider } from '../_shared/ai.ts';
+import {
+  BUDGET_MS,
+  TRY_MS,
+  isAsleep,
+  noteFailure,
+  providers,
+  type Provider,
+  wrongLanguage,
+} from '../_shared/ai.ts';
 /**
  * analyze-hazards — AI detekcija opasnosti po decu na fotografiji prostora.
  *
@@ -431,6 +439,16 @@ async function callVision(p: Provider, model: string, image: string, prompt: str
     return { ...h, solution: allowed.has(key) && key !== 'none' ? key : '' };
   });
 
+  // Ispravan JSON na pogrešnom jeziku nije ispravan odgovor. Baca se kao i
+  // svaka druga greška provajdera, pa lanac ide dalje na sledećeg.
+  const spoken = [
+    parsed.summary,
+    ...parsed.hazards.flatMap((h: any) => [h.label, h.why, h.fix, ...(h.facts ?? [])]),
+  ].filter((x: unknown) => typeof x === 'string').join(' ');
+  if (wrongLanguage(spoken, language)) {
+    throw new Error(`${p.name}/${model}: odgovorio na engleskom umesto na ${language}`);
+  }
+
   parsed.safety_score = Math.max(0, Math.min(100, Number(parsed.safety_score) || 0));
   parsed._v = 4;
   parsed._found = foundByModel;
@@ -827,9 +845,17 @@ const CANDIDATES: Provider[] = [
   const prompt = buildPrompt(String(roomType), String(ageGroup), childName ? String(childName).slice(0, 40) : undefined, String(language).slice(0, 30), live === true);
 
   const errors: string[] = [];
-    for (const provider of active) {
+  const deadline = Date.now() + BUDGET_MS;
+  for (const provider of active) {
     if (isAsleep(provider.name)) continue;
     for (const model of provider.models) {
+      // Bolje uredan neuspeh nego rušenje funkcije: kad ponestane budžeta,
+      // klijent dobija poruku i može da pokuša ponovo, a uspavani provajderi
+      // znače da sledeći pokušaj kreće od drugog mesta u lancu.
+      if (Date.now() > deadline) {
+        errors.push('istekao budžet vremena');
+        break;
+      }
       try {
         const first = await Promise.race([
           callVision(provider, model, image, prompt, String(language).slice(0, 30)),
@@ -838,7 +864,12 @@ const CANDIDATES: Provider[] = [
         // Fotografija dobija i drugi pogled; uživo ne, tamo je brzina važnija.
         // Pad drugog pogleda ne sme da odnese prvi nalaz — zato `catch` koji
         // vraća ono što već imamo.
-        if (live === true) return json(first);
+        //
+        // Drugi pogled se preskače kad je prvi prolaz pojeo budžet. Kad lanac
+        // padne na spor provajder, prvi prolaz zna da traje devedeset sekundi;
+        // drugi bi tada oborio celu funkciju, pa bi roditelj umesto sedam
+        // nalaza dobio šifru greške. Bolje pet nalaza nego nijedan.
+        if (live === true || Date.now() > deadline - TRY_MS) return json(first);
         try {
           return json(await Promise.race([
             secondLook(provider, model, image, String(language).slice(0, 30), first,
