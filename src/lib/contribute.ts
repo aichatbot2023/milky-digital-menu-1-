@@ -104,14 +104,16 @@ export async function contribute(
     if (!crop) return;
 
     sentThisSession += 1;
-    await fetch(DEFAULT_OMNI_URL.replace("analyze-hazards", "learn"), {
+    // Ide kao RADNJA postojeće funkcije, ne kao zasebna: projekat je
+    // dostigao dozvoljen broj funkcija, a veći plan se ne plaća.
+    await fetch(DEFAULT_OMNI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${OMNI_ANON_KEY}`,
         apikey: OMNI_ANON_KEY,
       },
-      body: JSON.stringify({ claim, correct: verdict, crop }),
+      body: JSON.stringify({ action: "learn", claim, correct: verdict, crop }),
     });
   } catch {
     // Doprinos koji padne se ne pominje i ne pokušava ponovo. Roditelj je

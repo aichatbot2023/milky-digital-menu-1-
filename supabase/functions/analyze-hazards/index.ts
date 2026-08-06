@@ -715,6 +715,83 @@ const CANDIDATES: Provider[] = [
     return json({ providers: out });
   }
 
+  /**
+   * PRIJEM ISPRAVKI OD RODITELJA — građa za sledeći trening modela.
+   *
+   * Ovo je zaseban posao i po logici bi mu pripadala zasebna funkcija. Nije
+   * je dobila jer je projekat dostigao dozvoljen broj funkcija, a plaćanje
+   * većeg plana nije opcija. Stoji dakle ovde, kao još jedna radnja, i to je
+   * jedina veza sa ostatkom fajla.
+   *
+   * Šta SME da stigne, i ništa više: isečak označenog predmeta (klijent ga
+   * pravi najviše 224 px), ime klase koju je model tvrdio, i sud roditelja.
+   * Šta se NE prima i ne upisuje: nalog, ime, e-pošta, uređaj, mesto, tačno
+   * vreme skeniranja, cela fotografija. Zapis se namerno ne može vezati za
+   * osobu — ni od nas, ni od nekoga ko bi jednog dana video bazu.
+   */
+  if (body?.action === 'learn') {
+    const KNOWN = new Set([
+      'socket', 'stairs', 'candle', 'plastic_bag', 'blind', 'fireplace',
+      'stove', 'heater', 'kettle', 'coin', 'bathtub', 'drawer',
+      'knife', 'scissors', 'fork', 'spoon', 'bottle', 'cup', 'bowl',
+      'wine glass', 'vase', 'oven', 'toaster', 'microwave', 'sink',
+      'refrigerator', 'toilet', 'potted plant', 'book', 'remote',
+      'cell phone', 'hair drier', 'teddy bear', 'handbag', 'backpack',
+      'suitcase', 'umbrella', 'chair', 'couch', 'bed', 'dining table', 'tv',
+      'sports ball', 'frisbee', 'kite', 'clock', 'toothbrush', 'mouse',
+      'keyboard', 'apple', 'orange', 'carrot', 'banana', 'tie',
+    ]);
+    const claim = String(body?.claim ?? '').trim();
+    const crop = String(body?.crop ?? '');
+    const correct = body?.correct;
+    if (!KNOWN.has(claim)) return json({ error: 'unknown class' }, 400);
+    if (typeof correct !== 'boolean') return json({ error: 'missing verdict' }, 400);
+    if (!crop.startsWith('data:image/jpeg;base64,')) return json({ error: 'crop must be jpeg' }, 400);
+    if (crop.length > 220_000) return json({ error: 'crop too large' }, 413);
+
+    const dbUrl = Deno.env.get('SUPABASE_URL');
+    const dbKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!dbUrl || !dbKey) return json({ error: 'not configured' }, 500);
+
+    const bytes = Uint8Array.from(atob(crop.split(',')[1]), (c) => c.charCodeAt(0));
+    // Ime je nasumično i ne govori ništa: ni ko, ni kada, ni odakle.
+    const name = `${claim}/${correct ? 'da' : 'ne'}/${crypto.randomUUID()}.jpg`;
+
+    const up = await fetch(`${dbUrl}/storage/v1/object/sn-learning/${name}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${dbKey}`,
+        'Content-Type': 'image/jpeg',
+        'Cache-Control': 'private, max-age=0',
+      },
+      body: bytes,
+    });
+    if (!up.ok) {
+      console.error('learn upload failed:', up.status, await up.text());
+      return json({ error: 'store failed' }, 500);
+    }
+    // Dan, ne trenutak: tačno vreme skeniranja je podatak o navikama
+    // porodice, a za učenje ne znači ništa.
+    const ins = await fetch(`${dbUrl}/rest/v1/sn_learning`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${dbKey}`,
+        apikey: dbKey,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        claim, correct, crop_path: name,
+        day: new Date().toISOString().slice(0, 10),
+      }),
+    });
+    if (!ins.ok) {
+      console.error('learn insert failed:', ins.status, await ins.text());
+      return json({ error: 'store failed' }, 500);
+    }
+    return json({ ok: true });
+  }
+
   if (body?.action === 'verify') {
     const crops = Array.isArray(body.crops) ? body.crops.slice(0, 6) : [];
     const clean = crops.filter(

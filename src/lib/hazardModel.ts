@@ -32,6 +32,38 @@ interface Meta {
 
 /** Ispod ovoga je nagađanje; iznad se prosleđuje na prosuđivanje konteksta. */
 const SCORE_MIN = 0.3;
+
+/**
+ * IZMERENO na 1.006 proverenih slika koje model nije video u treningu.
+ * mAP50 / odziv po klasi:
+ *
+ *     kada        0,87 / 0,84      kesa        0,56 / 0,54
+ *     čajnik      0,80 / 0,79      UTIČNICA    0,55 / 0,47
+ *     roletna     0,78 / 0,76      sveća       0,39 / 0,31
+ *     novčić      0,69 / 0,55      fioka       0,30 / 0,23
+ *     stepenice   0,69 / 0,68      GREJALICA   0,05 / 0,00
+ *     kamin       0,68 / 0,73
+ *     šporet      0,67 / 0,60      ukupno      0,58
+ *
+ * GREJALICA SE NE PRIKAZUJE. Odziv joj je nula — nije da greši, nego ne
+ * pronalazi ništa. Open Images je imao samo 54 primera i to nije dovoljno.
+ * Klasa koja nikad ne opali je mrtav teret; klasa koja opali nasumično je
+ * gore od toga, jer roditelj ne zna da joj ne veruje. Ostaje u modelu (novi
+ * trening košta tri sata) ali se njeni nalazi odbacuju ovde, na jednom mestu.
+ *
+ * Fioka i sveća imaju nizak odziv, ali ono što nađu uglavnom jeste tačno, pa
+ * traže više poverenja umesto da se gase.
+ */
+const BLOCKED = new Set(["heater"]);
+const CLASS_MIN: Record<string, number> = {
+  bathtub: 0.35, kettle: 0.35, blind: 0.35, stairs: 0.35,
+  fireplace: 0.4, stove: 0.4, coin: 0.4, plastic_bag: 0.4,
+  // Utičnica je najvažnija klasa i najslabije potkrepljena (359 primera,
+  // više ih u Open Images nema). Prag je nizak namerno: bolje da roditelj
+  // jednom proveri višak nego da mu utičnica promakne.
+  socket: 0.3,
+  candle: 0.5, drawer: 0.55,
+};
 const NMS_IOU = 0.5;
 
 let session: any = null;
@@ -146,7 +178,9 @@ export async function detectHazards(
         bestC = c;
       }
     }
-    if (best < SCORE_MIN) continue;
+    const name = meta.names[bestC] ?? "";
+    if (BLOCKED.has(name)) continue;
+    if (best < (CLASS_MIN[name] ?? SCORE_MIN)) continue;
     const cx = d[i];
     const cy = d[cols + i];
     const bw = d[2 * cols + i];
