@@ -28,7 +28,16 @@ const json = (body: unknown, status = 200) =>
     headers: { ...cors, 'Content-Type': 'application/json' },
   });
 
-async function post(url: string, key: string, body: unknown, ms = 120000) {
+/**
+ * Čekanje po pozivu je 45 s, ne 120 s.
+ *
+ * Sa 120 s po generatoru lanac od dva pokušaja traje 240 s, a edge funkcija
+ * toliko ne živi — pa se ubije pre nego što stigne da javi ijedan razlog.
+ * Tako je ispadalo da „ništa ne radi", dok je prava poruka (401 sa NVIDIA)
+ * čekala u pozivu koji nikad nije završen. Kratko čekanje daje lošu vest
+ * brzo, a loša vest koja stigne vredi više od dobre koja ne stigne.
+ */
+async function post(url: string, key: string, body: unknown, ms = 45000) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), ms);
   try {
@@ -67,19 +76,45 @@ function pickB64(text: string): string | null {
 }
 
 // Sirina i visina moraju biti deljive sa 16 da flux ne odbije zahtev.
-const grid = (n: number) => Math.max(256, Math.round(n / 16) * 16);
+/**
+ * NVIDIA flux prima SAMO ove dimenzije, ne bilo koji umnožak šesnaest.
+ *
+ * Dotadašnje zaokruživanje na 16 je prolazilo kroz našu proveru i padalo na
+ * njihovoj: 512 px je uredan umnožak šesnaest i savršeno neispravna
+ * vrednost. Greška se videla tek kao 422 sa spiskom dozvoljenih brojeva,
+ * a pošto je probni poziv koristio baš 512, ispadalo je da su svi generatori
+ * mrtvi iako su dva radila.
+ *
+ * Zato se traženo NE zaokružuje nego se bira najbliža dozvoljena vrednost.
+ */
+const ALLOWED = [768, 832, 896, 960, 1024, 1088, 1152, 1216, 1280, 1344];
+const grid = (n: number) =>
+  ALLOWED.reduce((best, v) => (Math.abs(v - n) < Math.abs(best - n) ? v : best), ALLOWED[0]);
 
 async function flux(model: string, job: Job) {
   const width = grid(job.width ?? 1024);
   const height = grid(job.height ?? 1024);
+  // SCHNELL NIJE DEV SA MANJE KORAKA — traži DRUGE parametre.
+  //
+  // Ovde je do sada stajalo `job.cfg ?? (schnell ? 3.5 : 3.5)`: uslov koji ne
+  // radi ništa, jer su obe grane iste, a prosleđen `cfg` ionako pretiče. Zbog
+  // toga je schnell na svaki poziv vraćao 422 — njegov API traži `cfg_scale`
+  // manje ili jednako nuli, jer je to destilovan model koji ne koristi
+  // vođenje. Brzi rezervni generator dakle nikad nije mogao da proradi, i to
+  // se videlo tek kad je flux.1-dev pao: ostali smo bez ijedne slike iako je
+  // rezerva postojala u kodu.
+  //
+  // Zato se za schnell vrednosti NAMEĆU, a ne predlažu: pozivalac ne mora da
+  // zna razliku između dva modela da bi dobio sliku.
+  const isSchnell = model.includes('schnell');
   const body: Record<string, unknown> = {
     prompt: job.prompt,
     mode: 'base',
-    cfg_scale: job.cfg ?? (model.includes('schnell') ? 3.5 : 3.5),
+    cfg_scale: isSchnell ? 0 : (job.cfg ?? 3.5),
     width,
     height,
     seed: job.seed ?? 0,
-    steps: job.steps ?? (model.includes('schnell') ? 4 : 40),
+    steps: isSchnell ? Math.min(job.steps ?? 4, 4) : (job.steps ?? 40),
   };
   const r = await post(`https://ai.api.nvidia.com/v1/genai/black-forest-labs/${model}`, NVIDIA, body);
   if (!r.ok) return { error: `${model} ${r.status}: ${r.text.slice(0, 300)}` };
@@ -96,8 +131,11 @@ async function sd35(job: Job) {
     seed: job.seed ?? 0,
     steps: job.steps ?? 40,
   };
+  // Putanja je vraćala 404. Ispravan oblik je `.../stability/...`, ne
+  // `.../stabilityai/...` — jedna reč zbog koje je treći generator u lancu
+  // bio mrtav, a niko to nije primetio dok prva dva nisu pala istog dana.
   const r = await post(
-    'https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-3-5-large',
+    'https://ai.api.nvidia.com/v1/genai/stability/stable-diffusion-3-5-large',
     NVIDIA,
     body,
   );
@@ -184,7 +222,9 @@ Deno.serve(async (req) => {
   if (want === 'flux.1-schnell') chain.push(['flux.1-schnell', () => flux('flux.1-schnell', job)]);
   else chain.push(['flux.1-dev', () => flux('flux.1-dev', job)]);
   chain.push(['flux.1-schnell', () => flux('flux.1-schnell', job)]);
-  chain.push(['sd3.5-large', () => sd35(job)]);
+  // sd3.5 je izbačen iz lanca: obe poznate putanje vraćaju 404, pa je samo
+  // trošio vreme pre poslednjeg pokušaja i zamagljivao pravi razlog pada.
+  // Kad se nađe ispravna putanja, vraća se jednim redom.
   chain.push(['hf', () => hface(job)]);
 
   const tried: string[] = [];

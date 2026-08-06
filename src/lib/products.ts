@@ -205,12 +205,26 @@ const SOLUTION_IMAGE: Record<string, string> = {
   spill_proof_cup: "spill-mug", blind_cord_winder: "cord-winder",
   cord_cover: "cord-winder", anti_tip_strap: "anti-tip-strap",
   bath_mat: "bath-mat", toilet_lock: "bath-mat",
-  small_parts_bin: "cabinet-lock",
+  small_parts_bin: "medicine-box",
+
+  // ── Departman za ljubimce ──────────────────────────────────────────────
+  // Pet katalog za sada koristi one slike koje prikazuju ISTI predmet: brava
+  // za ormarić je ista brava, kapija za stepenice ista kapija. Tu nema
+  // izmišljanja — predmet je doslovno taj.
+  //
+  // Ono što nije isto NAMERNO ostaje bez slike: mrežica za balkon, zaštitna
+  // cev za kablove, viseća saksija i kutija za šivenje. Podmetnuti im tuđu
+  // sliku značilo bi da vlasnik mačke naruči nešto drugo nego što je video,
+  // a to je gore nego kartica bez slike. Slike čekaju obnovljen NVIDIA ključ.
+  plant_shelf: "",
+  window_net: "",
+  sewing_box: "",
 };
 
 /** Putanja do spakovane slike rešenja, ako je imamo. */
 export function solutionImage(key?: string): string | null {
   const name = key ? SOLUTION_IMAGE[key] : undefined;
+  // Prazan naziv je namerno „nemamo sliku", ne greška — vidi spisak iznad.
   return name ? `${import.meta.env.BASE_URL}products/${name}.webp` : null;
 }
 
