@@ -76,9 +76,29 @@ export function providers(): Provider[] {
       name: 'nvidia',
       key: Deno.env.get('NVIDIA_NIM_API_KEY'),
       url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-      models: ['nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'],
-      // Bez ovoga reasoning model „razmišlja" 40–60 s po slici.
-      extraBody: { chat_template_kwargs: { enable_thinking: false } },
+      /**
+       * NEMOTRON JE IZBAČEN, i to na osnovu merenja a ne ukusa.
+       *
+       * Na pitanje „zašto je otvorena utičnica opasna za dete?" odgovorio je:
+       * „Open prisons are dangerous for children because they lack strict
+       * security, allowing kids to escape". Dakle nije samo pisao loš srpski —
+       * pročitao je „otvorena utičnica" kao „otvoreni zatvor". Odatle i one
+       * izmišljene reči koje smo ranije videli na pravim fotografijama
+       * („Gašalica", „Plovacka kola"): model taj jezik ne razume, pa ga
+       * pogađa.
+       *
+       * Isto pitanje, isti nalog, izmereno:
+       *   llama-3.2-11b-vision   2,2 s  tačan i tečan srpski
+       *   llama-3.2-90b-vision  33,3 s  besprekoran, ali predugo za jedan kadar
+       *   nemotron-nano-12b-vl   2,4 s  „potopljenja", „da dete se bavi"
+       *
+       * Zato 11b ide prvi (brz i tačan), a 90b stoji iza njega za slučaj da
+       * prvi zataji — bolje trideset sekundi tačnog nego dve sekunde besmisla.
+       */
+      models: [
+        'meta/llama-3.2-11b-vision-instruct',
+        'meta/llama-3.2-90b-vision-instruct',
+      ],
     },
   ];
 }
