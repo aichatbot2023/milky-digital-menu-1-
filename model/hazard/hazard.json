@@ -1,0 +1,17 @@
+{
+ "imgsz": 320,
+ "names": [
+  "socket",
+  "stairs",
+  "candle",
+  "plastic_bag",
+  "blind",
+  "fireplace",
+  "stove",
+  "heater",
+  "kettle",
+  "coin",
+  "bathtub",
+  "drawer"
+ ]
+}

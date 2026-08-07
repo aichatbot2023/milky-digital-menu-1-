@@ -1,0 +1,17 @@
+{
+  "name": "SafeNest AI — Child Safety Scanner",
+  "short_name": "SafeNest AI",
+  "description": "Scan any room with your camera — AI marks the dangers for your child and shows you how to remove them. Food safety checks, voice assistant, 40+ languages.",
+  "start_url": "/app/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "categories": ["parenting", "safety", "lifestyle"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

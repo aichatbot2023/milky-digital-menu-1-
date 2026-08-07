@@ -1,0 +1,1 @@
+import{R as r,j as e,a as o}from"./index-CwG0gOk5.js";import{l as t,A as a}from"./motion-omFv-KJu.js";t().finally(()=>{r.createRoot(document.getElementById("root")).render(e.jsx(o.StrictMode,{children:e.jsx(a,{})}))});"serviceWorker"in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});

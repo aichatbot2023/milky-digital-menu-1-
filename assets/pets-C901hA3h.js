@@ -1,0 +1,1 @@
+import{R as r,j as e,a as t}from"./index-CwG0gOk5.js";import{s as a,l as o,A as s}from"./motion-omFv-KJu.js";a("pet");o().finally(()=>{r.createRoot(document.getElementById("root")).render(e.jsx(t.StrictMode,{children:e.jsx(s,{})}))});"serviceWorker"in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});
