@@ -938,7 +938,8 @@ const CANDIDATES: Provider[] = [
     const until = Date.now() + BUDGET_MS;
     for (const provider of active) {
       if (isAsleep(provider.name)) continue;
-      for (const model of provider.models) {
+      // Bez slike se pitaju tekstualni modeli tamo gde ih provajder ima.
+      for (const model of provider.textModels ?? provider.models) {
         if (Date.now() > until) break;
         try {
           const v = await roomVerdict(provider, model, lang, usable,

@@ -16,6 +16,15 @@ export interface Provider {
   key: string | undefined;
   url: string;
   models: string[];
+  /**
+   * Modeli za poslove BEZ slike (sud o celoj prostoriji).
+   *
+   * Postoji zato što kod NVIDIA-e to nisu isti modeli. Njihovi vizuelni
+   * modeli na tekstualnom poslu troše budžet i vraćaju besmislice, a
+   * njihovi tekstualni modeli su na istom nalogu i besplatni i dobri.
+   * Kad nije zadato, važi `models`.
+   */
+  textModels?: string[];
   extraHeaders?: Record<string, string>;
   extraBody?: Record<string, unknown>;
 }
@@ -29,7 +38,9 @@ export interface Provider {
  *   openrouter  gemma-4-26b:free  29,4 s   radi, rezerva
  *   lovable     gemini-2.5-flash     403   nema kredita, čeka dopunu
  *   gemini      gemini-2.5-flash     429   nema kredita, čeka dopunu
- *   nvidia      nemotron           uvek odgovori, ali piše loš srpski
+ *   nvidia      llama-3.2-90b     150 s   tačan, ali daleko preko naših 30 s
+ *                                         — za gledanje poslednja rezerva,
+ *                                         za sud o prostoriji prvorazredan
  *
  * Gemma je jedina od besplatnih koja piše pristojan srpski, a preko Cerebrasa
  * stiže dvadeset dva puta brže nego preko OpenRoutera. Zato je prva.
@@ -87,17 +98,53 @@ export function providers(): Provider[] {
        * („Gašalica", „Plovacka kola"): model taj jezik ne razume, pa ga
        * pogađa.
        *
-       * Isto pitanje, isti nalog, izmereno:
-       *   llama-3.2-11b-vision   2,2 s  tačan i tečan srpski
-       *   llama-3.2-90b-vision  33,3 s  besprekoran, ali predugo za jedan kadar
-       *   nemotron-nano-12b-vl   2,4 s  „potopljenja", „da dete se bavi"
+       * PRETHODNO MERENJE JE BILO POGREŠNO POSTAVLJENO, pa ga ovde ispravljam.
        *
-       * Zato 11b ide prvi (brz i tačan), a 90b stoji iza njega za slučaj da
-       * prvi zataji — bolje trideset sekundi tačnog nego dve sekunde besmisla.
+       * Merio sam kratko pitanje („zašto je otvorena utičnica opasna?") i
+       * dobio: 11b 2,2 s tačan srpski. Na osnovu toga je 11b bio prvi. Ali
+       * aplikacija ne šalje kratko pitanje — šalje 14 kB prompta, sliku od
+       * 1024 px i traži 4000 tokena JSON-a. Na TOM poslu, izmereno:
+       *
+       *   llama-3.2-11b-vision    85 s  vrti se u krug, JSON se preseče
+       *                                 (finish_reason "length") — ništa
+       *   llama-3.2-90b-vision   150 s  ispravan JSON, besprekoran srpski
+       *   nemotron-nano-12b-vl    72 s  raspad: „Tajisa može da se upakuje
+       *                                 i de früheren stehrop kampe"
+       *   nemotron-nano-vl-8b     23 s  ispravan JSON, ali ista opasnost
+       *                                 dvaput i „može uđeti", „sloms"
+       *
+       * Prazan poziv od 16 tokena razdvaja dva uzroka: 11b odgovori za 0,5 s
+       * (znači red nije kriv, model ne ume da stane), a 90b i za 16 tokena
+       * čeka 18–90 s (znači red JESTE kriv). Nijedan ne staje u naših 30 s.
+       *
+       * Zato NVIDIA za GLEDANJE ostaje samo kao poslednja rezerva, i to sa
+       * jedinim modelom koji bar piše ispravan srpski. 11b je izbačen: model
+       * koji pouzdano potroši ceo budžet i ne vrati ništa je gori od
+       * provajdera koji odmah kaže da ne može.
        */
       models: [
-        'meta/llama-3.2-11b-vision-instruct',
         'meta/llama-3.2-90b-vision-instruct',
+      ],
+      /**
+       * Sud o prostoriji nema sliku, pa ga ne rade oči nego pamet — i tu je
+       * isti besplatni nalog odjednom jak. Izmereno na pravom `action: 'room'`
+       * promptu (tri ugla, devet nalaza, srpski):
+       *
+       *   gpt-oss-20b              20 s  ispravan JSON, prirodan srpski
+       *                                  („Dragi roditelju, vaša kuhinja…")
+       *   nemotron-super-49b-v1.5  23 s  ispravan JSON, ali „djeteta",
+       *                                  „poduzeti" — ijekavica, pa druga
+       *   deepseek-v4-flash        21 s  IZBAČEN: kuhinji sa otrovom, vrelom
+       *                                  ringlom i golom utičnicom dao je
+       *                                  ocenu 85/100. Ostali su dali 20–35.
+       *                                  Pogrešna ocena je gora od nikakve.
+       *   llama-3.3-70b           162 s  tačan, ali van svake upotrebe
+       *   gpt-oss-120b             48 s  najbolji srpski, ali i prazan poziv
+       *                                  čeka 36–86 s — red je prezauzet
+       */
+      textModels: [
+        'openai/gpt-oss-20b',
+        'nvidia/llama-3.3-nemotron-super-49b-v1.5',
       ],
     },
   ];
