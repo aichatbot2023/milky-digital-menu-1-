@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /launch.html
+
+Sitemap: https://safenessai.co.uk/sitemap.xml

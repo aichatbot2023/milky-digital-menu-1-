@@ -1,0 +1,239 @@
+/**
+ * MOTION SISTEM — taktilan, organski, premium.
+ *
+ * Pravila kojih se ceo sistem drži:
+ *  1. Animira se ISKLJUČIVO transform i opacity (kompozitorske osobine) —
+ *     nikad width/height/top/left, da ne izazovemo reflow i pad ispod 60fps.
+ *  2. Nula pomeranja sadržaja (CLS): elementi ulaze iz svog konačnog mesta,
+ *     prostor im je rezervisan pre animacije.
+ *  3. prefers-reduced-motion gasi svako kretanje i ostavlja samo prelaz
+ *     providnosti — pristupačnost nije opcija.
+ */
+
+:root {
+  /* Krive: opružna za dodir, meka za ulaz, fluidna za prelaze ekrana */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-fluid: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --dur-tap: 90ms;
+  --dur-fast: 180ms;
+  --dur-base: 300ms;
+  --dur-slow: 480ms;
+
+  /* Razmak između uzastopnih elemenata u koreografiji ulaza */
+  --stagger: 55ms;
+}
+
+/* ---------- 1. KOREOGRAFIJA ULAZA ---------- */
+/* Elementi se pojavljuju uz nežno podizanje (10px → 0) i blago uvećanje. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stagger > * {
+  animation: rise-in var(--dur-slow) var(--ease-out-soft) backwards;
+}
+.stagger > *:nth-child(1) { animation-delay: calc(var(--stagger) * 0); }
+.stagger > *:nth-child(2) { animation-delay: calc(var(--stagger) * 1); }
+.stagger > *:nth-child(3) { animation-delay: calc(var(--stagger) * 2); }
+.stagger > *:nth-child(4) { animation-delay: calc(var(--stagger) * 3); }
+.stagger > *:nth-child(5) { animation-delay: calc(var(--stagger) * 4); }
+.stagger > *:nth-child(6) { animation-delay: calc(var(--stagger) * 5); }
+.stagger > *:nth-child(7) { animation-delay: calc(var(--stagger) * 6); }
+.stagger > *:nth-child(8) { animation-delay: calc(var(--stagger) * 7); }
+.stagger > *:nth-child(n + 9) { animation-delay: calc(var(--stagger) * 8); }
+
+/* Pojedinačni ulaz bez roditelja-koreografa */
+.rise { animation: rise-in var(--dur-slow) var(--ease-out-soft) backwards; }
+
+/* ---------- 2. TAKTILNI ODZIV NA DODIR ---------- */
+/* Pritisak: brzo skupljanje. Otpuštanje: opružno vraćanje sa prebačajem. */
+button,
+.chip,
+.alt-item,
+.mem-item,
+.history-item {
+  transition:
+    transform var(--dur-base) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out-soft),
+    background-color var(--dur-fast) var(--ease-out-soft);
+  -webkit-tap-highlight-color: transparent;
+}
+button:active,
+.chip:active,
+.alt-item:active,
+.history-item:active {
+  transform: scale(0.96);
+  transition-duration: var(--dur-tap);
+}
+/* Velika primarna dugmad se skupljaju suptilnije — masa deluje veće */
+.btn-primary:active,
+.btn-fixed:active,
+.scan-cta:active,
+.cam-shutter:active {
+  transform: scale(0.975);
+}
+/* Okrugli elementi dodaju blagi otklon dubine */
+.pager-arrow:active,
+.live-iconbtn:active,
+.focus-back:active {
+  transform: scale(0.9);
+}
+
+/* ---------- 3. MIKRO-BURST NA POTVRDU ---------- */
+/* „Rešeno" nije obično dugme — to je trenutak nagrade. Prsten se širi,
+   čestice se razlete, sve u akcentnoj boji. */
+@keyframes burst-ring {
+  from { opacity: 0.85; transform: translate(-50%, -50%) scale(0.2); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
+}
+@keyframes burst-particle {
+  from { opacity: 1; transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateY(-52px) scale(0.3); }
+}
+.burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
+}
+.burst::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90px;
+  height: 90px;
+  margin: -45px 0 0 -45px;
+  border-radius: 999px;
+  border: 3px solid var(--burst-color, #10b981);
+  animation: burst-ring 620ms var(--ease-out-soft) forwards;
+}
+.burst i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--burst-color, #10b981);
+  animation: burst-particle 700ms var(--ease-out-soft) forwards;
+}
+/* Blesak akcentne boje preko same površine dugmeta */
+@keyframes accent-flash {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  100% { box-shadow: 0 0 0 26px rgba(16, 185, 129, 0); }
+}
+.flash { animation: accent-flash 620ms var(--ease-out-soft); }
+
+/* ---------- 4. PRELAZI EKRANA I LISTOVA ---------- */
+@keyframes sheet-up {
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sheet-backdrop { animation: fade-in var(--dur-base) var(--ease-fluid); }
+.sheet { animation: sheet-up var(--dur-slow) var(--ease-out-soft); will-change: transform; }
+
+/* Prelazak između kartica u fokusu: odlazak ulevo, dolazak zdesna */
+@keyframes card-in {
+  from { opacity: 0; transform: translate3d(26%, 0, 0) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes card-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(-32%, 0, 0) scale(0.97); }
+}
+
+/* ---------- 5. ŽIVI ELEMENTI ---------- */
+/* Skor koji raste: kratak elastičan skok, bez pomeranja okoline */
+@keyframes score-pop {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+/* Frosted staklo — jedna klasa, dosledno svuda */
+.frost {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+/* ---------- 6. PRISTUPAČNOST ---------- */
+/* Korisnik koji traži manje kretanja dobija SAMO providnost: bez pomeranja,
+   bez skaliranja, bez čestica. Ništa se ne gubi u smislu informacije. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .stagger > *,
+  .rise {
+    animation: fade-in 200ms linear backwards !important;
+  }
+  button:active,
+  .chip:active,
+  .alt-item:active,
+  .history-item:active,
+  .btn-primary:active,
+  .pager-arrow:active {
+    transform: none !important;
+  }
+  .burst { display: none !important; }
+}
+
+/* ---------- 7. MOMENTUM SNAPPING ---------- */
+/* Horizontalne liste (preporuke, sličice) klize inercijom i „uhvate se"
+   na kartici; aktivna kartica dobija blagu dubinsku razliku u razmeri. */
+.snap-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.snap-row::-webkit-scrollbar { display: none; }
+.snap-row > * {
+  scroll-snap-align: center;
+  flex: 0 0 82%;
+  transition: transform var(--dur-base) var(--ease-out-soft),
+    opacity var(--dur-base) var(--ease-out-soft);
+}
+/* Susedne kartice se blago povuku u dubinu — fokus ostaje na jednoj */
+.snap-row > *:not(:hover):not(:focus-within) { opacity: 0.92; }
+
+/* ---------- 8. NAVIGACIJA: aktivan tab „diše" ---------- */
+.bn-item .bn-icon { transition: transform var(--dur-base) var(--ease-spring); }
+.bn-active .bn-icon { transform: translateY(-2px) scale(1.12); }
+.bn-item:active .bn-icon { transform: scale(0.88); }
+
+/* ---------- 9. ULAZ EKRANA KAMERE ---------- */
+@keyframes frame-in {
+  from { opacity: 0; transform: translate(-50%, -58%) scale(1.14); }
+  to { opacity: 1; transform: translate(-50%, -58%) scale(1); }
+}
+.cam-frame { animation: frame-in var(--dur-slow) var(--ease-out-soft) 120ms backwards; }
+@keyframes shutter-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+.cam-shutter { animation: shutter-in var(--dur-slow) var(--ease-spring) 200ms backwards; }

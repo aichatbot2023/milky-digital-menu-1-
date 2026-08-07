@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SafeNest AI — Admin</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" type="image/png" href="/icon-192.png" />
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f8fafc;color:#0f172a;margin:0;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:30px 16px}
+h1{letter-spacing:-.02em;color:#115e59}
+h2{font-size:1.1rem;margin-top:30px}
+.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(15,23,42,.08);margin-top:14px}
+input{padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:1rem;width:100%;box-sizing:border-box}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row input{flex:1;min-width:140px}
+button{background:#0f766e;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:1rem;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.92rem}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #e2e8f0}
+th{color:#64748b;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.tot{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
+.tot div{background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:12px;text-align:center}
+.tot b{font-size:1.5rem;color:#115e59;display:block}
+.tot span{color:#64748b;font-size:.8rem}
+.err{color:#b91c1c;margin-top:10px}
+.ok{color:#166534;margin-top:10px}
+code{background:#f1f5f9;padding:2px 7px;border-radius:6px;font-size:.85rem}
+.muted{color:#64748b;font-size:.85rem}
+.dom{padding:7px 14px;border:1.5px solid #e2e8f0;border-radius:999px;background:#fff;
+  font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;color:#0f172a}
+.dom.on{border-color:#0f766e;background:#f0fdfa;color:#0f766e}
+body[data-domain="pet"] .dom.on{border-color:#7c3aed;background:#faf5ff;color:#5b21b6}
+</style>
+</head>
+<body><div class="wrap">
+<h1 id="title">🛡️ SafeNest AI — Admin panel</h1>
+<p class="muted">Referral partneri, prodaje i registrovani korisnici. Pristup samo uz admin ključ (ADMIN_KEY secret u Supabase). · <a href="/launch.html">🚀 Launch paket (marketing tekstovi)</a></p>
+
+<!-- DVA DEPARTMANA, JEDAN ULAZ.
+     Bebe i ljubimci su dva proizvoda sa različitim kupcima, partnerima i
+     katalogom. Zbirni broj ne odgovara ni na jedno pitanje koje vlasnik
+     zaista ima („koliko ljudi skenira za mačku?"), pa se sve — korisnici,
+     skenovi, klikovi, proizvodi — gleda po departmanu. -->
+<div class="card" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+  <b style="margin-right:4px">Departman:</b>
+  <button id="dom-child" class="dom on" onclick="setDomain('child')">👶 Bebe i deca</button>
+  <button id="dom-pet" class="dom" onclick="setDomain('pet')">🐾 Ljubimci</button>
+  <span class="muted" id="dom-note">Podaci ispod su za izabrani departman.</span>
+</div>
+
+<div class="card">
+  <div class="row">
+    <input id="key" type="password" placeholder="Admin ključ" />
+    <button onclick="loadStats()">Prijavi se / Osveži</button>
+  </div>
+  <p class="err" id="err"></p>
+</div>
+
+<div id="panel" style="display:none">
+  <h2>📊 CRM — ukupno</h2>
+  <div class="tot" id="totals"></div>
+
+  <h2>📈 Aktivnost po danima (14 dana)</h2>
+  <div class="card">
+    <table id="dtable">
+      <thead><tr><th>Datum</th><th>Otvaranja</th><th>Skenovi</th><th>Registracije</th><th>Prodaje</th><th>Klikovi</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">Otvaranje = korisnik pokrenuo aplikaciju (1× dnevno po uređaju). Merenje korišćenja bez praćenja pojedinca.</p>
+  </div>
+
+  <h2>🔍 Šta se skenira</h2>
+  <div class="card">
+    <div class="tot" id="scantot"></div>
+    <table id="stable" style="margin-top:14px">
+      <thead><tr><th>Prostorija</th><th>Skenova</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <table id="htable" style="margin-top:14px">
+      <thead><tr><th>Uočena opasnost (kategorija)</th><th>Puta</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>🌍 Lokacije korisnika</h2>
+  <div class="card">
+    <table id="ltable">
+      <thead><tr><th>Grad (vremenska zona uređaja)</th><th>Zemlja/region</th><th>Događaja</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">Lokacija se izvodi iz vremenske zone uređaja (GDPR-prijateljski — bez IP praćenja i bez dozvola).</p>
+  </div>
+
+  <h2>🎁 Poklonjeni (free) nalozi</h2>
+  <div class="card">
+    <div class="row">
+      <input id="gemail" type="email" placeholder="email korisnika" />
+      <input id="gnote" placeholder="napomena (npr. 'mama bloger IG')" />
+      <button onclick="addGift()">+ Pokloni Premium</button>
+    </div>
+    <p class="ok" id="gmsg"></p>
+    <table id="gtable" style="margin-top:10px">
+      <thead><tr><th>Email</th><th>Napomena</th><th>Od</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">Korisnik koji se registruje (ili je registrovan) ovim emailom automatski dobija Premium bez plaćanja.</p>
+  </div>
+
+  <h2>🤝 Partneri / influenseri</h2>
+  <div class="card">
+    <div class="row">
+      <input id="pcode" placeholder="Kod (npr. MAMA-ANA)" />
+      <input id="pname" placeholder="Ime partnera / brenda" />
+      <button onclick="createPartner()">+ Dodaj partnera</button>
+    </div>
+    <p class="ok" id="created"></p>
+  </div>
+  <div class="card">
+    <table id="ptable">
+      <thead><tr><th>Partner</th><th>Kod / link</th><th>Posete</th><th>Registracije</th><th>Prodaje</th><th>Prihod</th><th>Konverzija</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">Prihod = prodaje × 7 €. „(direktno)" = korisnici bez referral koda. Link partnera: <code>https://safenessai.co.uk/?ref=KOD</code></p>
+  </div>
+
+  <h2>🛍️ Brend marketplace — partnerski proizvodi</h2>
+  <div class="card">
+    <div class="row">
+      <select id="prcat" style="flex:1;min-width:140px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:1rem">
+        <option value="fall">Pad (kapije, zaštite prozora, ankeri)</option>
+        <option value="cutting">Sečenje (štitnici za uglove i ivice)</option>
+        <option value="electric">Struja (poklopci utičnica, kablovi)</option>
+        <option value="choking">Gušenje (brave za fioke, sitni predmeti)</option>
+        <option value="poisoning">Trovanje (brave za ormariće, sefovi za lekove)</option>
+        <option value="burn">Opekotine (zaštite šporeta, termometri)</option>
+        <option value="drowning">Davljenje (zaštite kade, ograde bazena)</option>
+        <option value="crush">Prignječenje (usporivači vrata, anti-tip)</option>
+        <option value="strangulation">Davljenje trakom (namotači kablova)</option>
+        <option value="other">Ostalo</option>
+      </select>
+      <input id="prbrand" placeholder="Brend (npr. IKEA)" />
+      <input id="prtitle" placeholder="Naziv (srpski)" />
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input id="prtitleen" placeholder="Naziv (engleski, opciono)" />
+      <input id="prurl" placeholder="Affiliate URL (https://...)" />
+      <input id="prprice" placeholder="Cena (npr. 9,99 €)" style="max-width:120px" />
+      <input id="prkw" placeholder="Ključne reči (engleski): spill proof mug" />
+      <button onclick="addProduct()">+ Dodaj</button>
+    </div>
+    <p class="ok" id="prmsg"></p>
+  </div>
+  <div class="card">
+    <table id="prtable">
+      <thead><tr><th>Kategorija</th><th>Brend</th><th>Proizvod</th><th>Cena</th><th>Ključne reči</th><th>Klikovi</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted">Klik = korisnik otvorio proizvod iz aplikacije (osnov za obračun provizije sa brendom). Proizvodi se prikazuju uz opasnosti iste kategorije.</p>
+  </div>
+
+  <h2>👤 Registrovani korisnici</h2>
+  <div class="card">
+    <table id="utable">
+      <thead><tr><th>Ime</th><th>Email</th><th>Preko partnera</th><th>Datum</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="muted" id="unote"></p>
+  </div>
+</div>
+
+<script>
+const URL_FN = "https://equjrxwpxrkchicetyvs.supabase.co/functions/v1/partners";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWpyeHdweHJrY2hpY2V0eXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTgxNjYsImV4cCI6MjA2NTQ3NDE2Nn0.xU8in9GwHQK5tYXuN4yZG4f9aVXPjy4GhbbmlnHuBo8";
+const PRICE = 7;
+
+async function call(body) {
+  const res = await fetch(URL_FN, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ANON, "apikey": ANON },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ("Greška " + res.status));
+  return data;
+}
+
+let DOMAIN = (localStorage.getItem("sn.admin.domain") || "child");
+
+function setDomain(d) {
+  DOMAIN = d;
+  localStorage.setItem("sn.admin.domain", d);
+  document.getElementById("dom-child").className = "dom" + (d === "child" ? " on" : "");
+  document.getElementById("dom-pet").className = "dom" + (d === "pet" ? " on" : "");
+  document.getElementById("title").textContent =
+    d === "pet" ? "🐾 SafeNest Pets — Admin panel" : "🛡️ SafeNest AI — Admin panel";
+  document.body.dataset.domain = d;
+  if (getKey()) loadStats();
+}
+
+function getKey() {
+  const k = document.getElementById("key").value.trim() || sessionStorage.getItem("snkey") || "";
+  if (k) sessionStorage.setItem("snkey", k);
+  return k;
+}
+
+async function loadStats() {
+  document.getElementById("err").textContent = "";
+  try {
+    const data = await call({ action: "stats", admin_key: getKey(), domain: DOMAIN });
+    render(data);
+    document.getElementById("panel").style.display = "block";
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+    document.getElementById("panel").style.display = "none";
+  }
+}
+
+async function addProduct() {
+  document.getElementById("prmsg").textContent = "";
+  try {
+    await call({
+      action: "product-add",
+      admin_key: getKey(), domain: DOMAIN,
+      category: document.getElementById("prcat").value,
+      brand: document.getElementById("prbrand").value.trim(),
+      title: document.getElementById("prtitle").value.trim(),
+      title_en: document.getElementById("prtitleen").value.trim() || null,
+      url: document.getElementById("prurl").value.trim(),
+      price: document.getElementById("prprice").value.trim() || null,
+      keywords: document.getElementById("prkw").value.trim() || null,
+    });
+    document.getElementById("prmsg").textContent = "✓ Proizvod dodat — odmah je vidljiv u aplikaciji.";
+    for (const id of ["prbrand", "prtitle", "prtitleen", "prurl", "prprice", "prkw"]) document.getElementById(id).value = "";
+    loadStats();
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+}
+
+async function delProduct(id) {
+  if (!confirm("Ukloniti proizvod #" + id + " iz aplikacije?")) return;
+  try {
+    await call({ action: "product-del", admin_key: getKey(), id });
+    loadStats();
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+}
+
+async function addGift() {
+  document.getElementById("gmsg").textContent = "";
+  try {
+    await call({ action: "gift-add", admin_key: getKey(),
+      email: document.getElementById("gemail").value.trim(),
+      note: document.getElementById("gnote").value.trim() || null });
+    document.getElementById("gmsg").textContent = "✓ Poklonjeno — korisnik sa ovim emailom ima Premium.";
+    document.getElementById("gemail").value = ""; document.getElementById("gnote").value = "";
+    loadStats();
+  } catch (e) { document.getElementById("err").textContent = e.message; }
+}
+
+async function delGift(email) {
+  if (!confirm("Ukloniti poklon za " + email + "?")) return;
+  try { await call({ action: "gift-del", admin_key: getKey(), email }); loadStats(); }
+  catch (e) { document.getElementById("err").textContent = e.message; }
+}
+
+async function createPartner() {
+  document.getElementById("created").textContent = "";
+  try {
+    const code = document.getElementById("pcode").value.trim();
+    const name = document.getElementById("pname").value.trim();
+    const r = await call({ action: "create", admin_key: getKey(), code, name });
+    document.getElementById("created").textContent = "✓ Partner dodat. Link: " + r.link;
+    document.getElementById("pcode").value = ""; document.getElementById("pname").value = "";
+    loadStats();
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+}
+
+function render(data) {
+  const by = {};
+  for (const r of data.rows) {
+    by[r.code] = by[r.code] || { visit: 0, signup: 0, sale: 0 };
+    by[r.code][r.type] = r.n;
+  }
+  const tot = { visit: 0, signup: 0, sale: 0, scan: 0, app_open: 0, click: 0 };
+  for (const t of data.totals) tot[t.type] = t.n;
+  document.getElementById("totals").innerHTML =
+    `<div><b>${tot.signup}</b><span>registrovanih korisnika</span></div>` +
+    `<div><b>${tot.sale}</b><span>prodaja (pretplate)</span></div>` +
+    `<div><b>${tot.sale * PRICE} €</b><span>mesečni prihod</span></div>` +
+    `<div><b>${tot.scan}</b><span>skenova ukupno</span></div>` +
+    `<div><b>${tot.app_open}</b><span>otvaranja aplikacije</span></div>` +
+    `<div><b>${tot.click}</b><span>klikova na proizvode</span></div>` +
+    `<div><b>${tot.visit}</b><span>referral poseta</span></div>`;
+  const names = {};
+  for (const p of data.partners) names[p.code] = p.name;
+  const codes = new Set([...Object.keys(by), ...Object.keys(names)]);
+  const tbody = document.querySelector("#ptable tbody");
+  tbody.innerHTML = "";
+  for (const code of codes) {
+    const s = by[code] || { visit: 0, signup: 0, sale: 0 };
+    const conv = s.visit > 0 ? ((s.sale / s.visit) * 100).toFixed(1) + "%" : "—";
+    const link = code === "(direktno)" ? "—" : `<code>?ref=${code}</code>`;
+    tbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${names[code] ?? "<i>nepoznat</i>"}</td><td>${link}</td><td>${s.visit}</td><td>${s.signup}</td><td><b>${s.sale}</b></td><td>${s.sale * PRICE} €</td><td>${conv}</td></tr>`);
+  }
+
+  const esc = (x) => String(x ?? "").replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+
+  const CATS = { fall: "Pad", cutting: "Sečenje", electric: "Struja", choking: "Gušenje",
+    poisoning: "Trovanje", burn: "Opekotine", drowning: "Davljenje", crush: "Prignječenje",
+    strangulation: "Davljenje trakom", other: "Ostalo" };
+  const prtbody = document.querySelector("#prtable tbody");
+  prtbody.innerHTML = "";
+  for (const p of (data.products ?? []).filter((p) => p.active)) {
+    prtbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${CATS[p.category] ?? esc(p.category)}</td><td>${esc(p.brand)}</td>` +
+      `<td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a></td>` +
+      `<td>${esc(p.price) || "—"}</td><td class="muted">${esc(p.keywords) || "—"}</td><td><b>${p.clicks}</b></td>` +
+      `<td><button onclick="delProduct(${p.id})" style="background:#b91c1c;padding:6px 10px;font-size:.8rem">Ukloni</button></td></tr>`);
+  }
+  const utbody = document.querySelector("#utable tbody");
+  utbody.innerHTML = "";
+  for (const u of data.users ?? []) {
+    utbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${esc(u.name) || "—"}</td><td>${esc(u.email)}</td><td>${esc(u.code)}</td><td>${new Date(u.created_at).toLocaleDateString("sr-RS")}</td></tr>`);
+  }
+  document.getElementById("unote").textContent =
+    (data.users?.length ?? 0) === 0
+      ? "Još nema registrovanih korisnika sa emailom (registracija u aplikaciji je od sada obavezna)."
+      : `Prikazano poslednjih ${data.users.length} registracija.`;
+
+  // Aktivnost po danima
+  const byDay = {};
+  for (const r of data.daily ?? []) { (byDay[r.d] = byDay[r.d] || {})[r.type] = r.n; }
+  const dtbody = document.querySelector("#dtable tbody");
+  dtbody.innerHTML = "";
+  for (const d of Object.keys(byDay).sort().reverse()) {
+    const v = byDay[d];
+    dtbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${d}</td><td>${v.app_open ?? 0}</td><td><b>${v.scan ?? 0}</b></td><td>${v.signup ?? 0}</td><td>${v.sale ?? 0}</td><td>${v.click ?? 0}</td></tr>`);
+  }
+
+  // Šta se skenira: vrsta / prostorija / uočene kategorije opasnosti
+  const ROOMS = { living_room: "Dnevna soba", kitchen: "Kuhinja", bathroom: "Kupatilo",
+    bedroom: "Spavaća/dečja soba", restaurant_table: "Restoran", outdoor: "Dvorište", food: "Hrana" };
+  const kinds = {}; const rooms = {}; const cats = {};
+  for (const srow of data.scans ?? []) {
+    const m = srow.meta || {};
+    if (m.kind) kinds[m.kind] = (kinds[m.kind] || 0) + 1;
+    if (m.room) rooms[m.room] = (rooms[m.room] || 0) + 1;
+    for (const c of String(m.cats || "").split(",").filter(Boolean)) cats[c] = (cats[c] || 0) + 1;
+  }
+  document.getElementById("scantot").innerHTML =
+    `<div><b>${(data.scans ?? []).length}</b><span>skenova (poslednjih)</span></div>` +
+    `<div><b>${kinds.photo ?? 0}</b><span>foto</span></div>` +
+    `<div><b>${kinds.live ?? 0}</b><span>uživo</span></div>` +
+    `<div><b>${kinds.food ?? 0}</b><span>hrana</span></div>`;
+  const stbody = document.querySelector("#stable tbody");
+  stbody.innerHTML = "";
+  for (const [room, n] of Object.entries(rooms).sort((a, b) => b[1] - a[1])) {
+    stbody.insertAdjacentHTML("beforeend", `<tr><td>${ROOMS[room] ?? esc(room)}</td><td><b>${n}</b></td></tr>`);
+  }
+  const htbody = document.querySelector("#htable tbody");
+  htbody.innerHTML = "";
+  for (const [c, n] of Object.entries(cats).sort((a, b) => b[1] - a[1])) {
+    htbody.insertAdjacentHTML("beforeend", `<tr><td>${CATS[c] ?? esc(c)}</td><td><b>${n}</b></td></tr>`);
+  }
+
+  // Lokacije iz vremenske zone (Europe/Belgrade → Belgrade / Europe)
+  const ltbody = document.querySelector("#ltable tbody");
+  ltbody.innerHTML = "";
+  for (const l of data.locations ?? []) {
+    const parts = String(l.tz).split("/");
+    const city = (parts[parts.length - 1] || "").replace(/_/g, " ");
+    ltbody.insertAdjacentHTML("beforeend",
+      `<tr><td><b>${esc(city)}</b></td><td>${esc(parts[0])}</td><td>${l.n}</td></tr>`);
+  }
+
+  // Pokloni
+  const gtbody = document.querySelector("#gtable tbody");
+  gtbody.innerHTML = "";
+  for (const g of data.gifts ?? []) {
+    gtbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${esc(g.email)}</td><td>${esc(g.note) || "—"}</td><td>${new Date(g.created_at).toLocaleDateString("sr-RS")}</td>` +
+      `<td><button onclick="delGift('${esc(g.email)}')" style="background:#b91c1c;padding:6px 10px;font-size:.8rem">Ukloni</button></td></tr>`);
+  }
+}
+
+if (sessionStorage.getItem("snkey")) { document.getElementById("key").value = sessionStorage.getItem("snkey"); loadStats(); }
+</script>
+</div><script>setDomain(DOMAIN);</script>
+</body></html>
