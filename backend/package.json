@@ -1,0 +1,25 @@
+{
+  "name": "milky-omnimeeting-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Milky Digital Menu backend + OmniMeeting AI Video Security (AIVS) and Video Camera Management (VCM)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "doctor": "node src/tools/doctor.js",
+    "probe": "node src/tools/probe.js"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

@@ -7,6 +7,8 @@ pnpm-lock.yaml
 dist/
 build/
 backend/milky.db
+backend/milky.db-*
 backend/uploads/
+backend/media/
 .DS_Store
 Thumbs.db

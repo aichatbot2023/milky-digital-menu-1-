@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OmniMeeting AIVS — Milky Video Security</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>OmniMeeting <span>AIVS</span></h1>
+    <div class="token-box">
+      <label for="token">API token</label>
+      <input id="token" type="password" placeholder="Bearer token / API key (optional)" />
+      <button id="saveToken">Save</button>
+      <span id="healthDot" class="dot" title="backend health"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Cameras</h2>
+      <form id="cameraForm" class="camera-form">
+        <input name="name" placeholder="Name" required />
+        <input name="source" placeholder="Source URL (rtsp://, http://, or YouTube link)" required />
+        <select name="kind">
+          <option value="rtsp">rtsp</option>
+          <option value="http">http</option>
+          <option value="youtube">youtube</option>
+          <option value="file">file</option>
+        </select>
+        <input name="location" placeholder="Location (optional)" />
+        <select name="alertMinLevel">
+          <option value="low" selected>alert at: low+</option>
+          <option value="medium">alert at: medium+</option>
+          <option value="high">alert at: high+</option>
+          <option value="critical">alert at: critical only</option>
+        </select>
+        <label class="checkbox"><input type="checkbox" name="record" /> record</label>
+        <button type="submit">Add camera</button>
+      </form>
+      <div id="cameraGrid" class="camera-grid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Recent events</h2>
+      <div id="eventList" class="event-list"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
